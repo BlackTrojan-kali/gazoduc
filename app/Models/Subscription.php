@@ -7,4 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 class Subscription extends Model
 {
     //
+    public function entreprise(){
+        return $this->belongsTo(Entreprise::class,"entreprise_id");
+    }
+    public function licence(){
+        return $this->hasOne(Licence::class);
+    }
 }

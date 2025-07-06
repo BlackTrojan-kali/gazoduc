@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Notification extends Model
+class Reception extends Model
 {
     //
 
@@ -12,7 +12,7 @@ class Notification extends Model
         return $this->belongsTo(Agency::class,"agency_id");
     }
 
-    public function user(){
-        return $this->belongsTo(User::class,"agency_id");
+    public function citerne(){
+        return $this->belongsTo(Citerne::class,"citerne_mobile_id");
     }
 }

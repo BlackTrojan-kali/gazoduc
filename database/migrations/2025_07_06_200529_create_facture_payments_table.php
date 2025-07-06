@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('facture_payments', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger("bank_id");
-            $table->foreign("bank_id")->on("banks")->references("id");
+            $table->unsignedBigInteger("payment_id");
+            $table->foreign("payment_id")->on("payments")->references("id");
             $table->unsignedBigInteger("facture_id");
             $table->foreign("facture_id")->on("factures")->references("id");
             $table->decimal("amount")->nullable();
