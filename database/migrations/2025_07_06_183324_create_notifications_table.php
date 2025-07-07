@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger("user_id");
             $table->foreign("user_id")->on("users")->references("id");
-            $table->unsignedBigInteger("agency_id");
+            $table->unsignedBigInteger("agency_id")->nullable();
             $table->foreign("agency_id")->on("agencies")->references("id");
             $table->string("notification_type");
             $table->text("message");
