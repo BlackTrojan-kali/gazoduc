@@ -4,13 +4,23 @@ import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import Checkbox from "../form/input/Checkbox";
 import Button from "../ui/button/Button";
-import { Link } from "@inertiajs/react";
+import { Link, useForm, usePage } from "@inertiajs/react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 
 export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
+  const [email,setEmail] = useState("");
+  const [password,setPassword] = useState("");
+  const {data,setData,post,processing,errors} = useForm({
+    "email":"",
+    "password":""
+  })
+  const onSubmit = (e)=>{
+    e.preventDefault()
+    post(route("login"))
+  }
   return (
     <div className="flex flex-col flex-1 px-10">
       <div className="w-full max-w-md pt-10 mx-auto">
@@ -32,13 +42,17 @@ export default function SignInForm() {
             <div className="relative py-3 sm:py-5">
               
             </div>
-            <form>
+            <form onSubmit={onSubmit}>
               <div className="space-y-6">
                 <div>
                   <Label>
                     Email <span className="text-error-500">*</span>{" "}
                   </Label>
-                  <Input placeholder="info@gmail.com" />
+                  <Input placeholder="info@gmail.com" name="email" 
+                  onChange={e=>setData("email",e.target.value)}
+                  error={errors.email ? true:false}
+                  hint={errors.email ? errors.email:""}
+                  />
                 </div>
                 <div>
                   <Label>
@@ -48,6 +62,10 @@ export default function SignInForm() {
                     <Input
                       type={showPassword ? "text" : "password"}
                       placeholder="Entrez votre mot de passe"
+                      name="password"
+                      onChange={e=>setData("password",e.target.value)}
+                      error={errors.password ? true:false}
+                      hint={errors.password ? errors.password:""}
                     />
                     <span
                       onClick={() => setShowPassword(!showPassword)}

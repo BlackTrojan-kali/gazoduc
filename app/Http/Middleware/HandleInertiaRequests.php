@@ -38,6 +38,25 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             //
+               'auth' => [
+                'user' => $request->user() ? [
+                    'id' => $request->user()->id,
+                    'first_name' => $request->user()->first_name,
+                    'last_name' => $request->user()->last_name,
+                    'email' => $request->user()->email,
+                    'role' => $request->user()->role->name ?? null, // Assuming a role relationship
+                    "agency"=>$request->user()->agency ??null,
+                    "entreprice"=>$request->user()->entreprise ?? null,
+                    ] : null,
+            ],
+
+             'flash' => [
+                'success' => fn () => $request->session()->get('success'),
+                'info' => fn () => $request->session()->get('info'),
+                'warning' => fn () => $request->session()->get('warning'),
+                'error' => fn () => $request->session()->get('error'),
+            
+            ],
         ];
     }
 }

@@ -1,15 +1,6 @@
-import { Link } from "react-router";
 
-interface AlertProps {
-  variant: "success" | "error" | "warning" | "info"; // Alert type
-  title: string; // Title of the alert
-  message: string; // Message of the alert
-  showLink?: boolean; // Whether to show the "Learn More" link
-  linkHref?: string; // Link URL
-  linkText?: string; // Link text
-}
 
-const Alert: React.FC<AlertProps> = ({
+const Alert = ({
   variant,
   title,
   message,
@@ -113,7 +104,7 @@ const Alert: React.FC<AlertProps> = ({
 
   return (
     <div
-      className={`rounded-xl border p-4 ${variantClasses[variant].container}`}
+      className={`rounded-xl border w-full p-4 ${variantClasses[variant].container}`}
     >
       <div className="flex items-start gap-3">
         <div className={`-mt-0.5 ${variantClasses[variant].icon}`}>
@@ -127,14 +118,6 @@ const Alert: React.FC<AlertProps> = ({
 
           <p className="text-sm text-gray-500 dark:text-gray-400">{message}</p>
 
-          {showLink && (
-            <Link
-              to={linkHref}
-              className="inline-block mt-3 text-sm font-medium text-gray-500 underline dark:text-gray-400"
-            >
-              {linkText}
-            </Link>
-          )}
         </div>
       </div>
     </div>

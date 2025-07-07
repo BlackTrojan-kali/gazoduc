@@ -7,7 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 class Notification extends Model
 {
     //
-
+    protected $fillable=[
+        "user_id",
+        "notification_type",
+        "message",
+        "is_read"
+    ];
     public function agency(){
         return $this->belongsTo(Agency::class,"agency_id");
     }

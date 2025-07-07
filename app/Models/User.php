@@ -18,7 +18,13 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'name',
+        'first_name',
+        "last_name",
+        "phone_number",
+        "code",
+        "role_id",
+        "agency_id",
+        "entreprise_id",
         'email',
         'password',
     ];
@@ -46,7 +52,7 @@ class User extends Authenticatable
         ];
     }
     public function role(){
-        return $this->hasOne(Role::class,"role_id");
+        return $this->belongsTo(Role::class,"role_id");
     }
     public function agency(){
         return $this->belongsTo(Agency::class,"agency_id");
