@@ -1,17 +1,20 @@
 // resources/js/components/Modals/EditAgenceModal.jsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
+import Modal from './Modal';
+import Form from '../form/Form'; // Votre composant Form
+import Label from '../form/Label'; // Votre composant Label
+import Input from '../form/input/InputField'; // Votre composant InputField
+
 import { useForm, usePage } from '@inertiajs/react';
-import Modal from './Modal'; // Assurez-vous que le chemin vers votre composant Modal est correct
-import Swal from 'sweetalert2';
-import Input from '../form/input/InputField';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faSpinner } from '@fortawesome/free-solid-svg-icons';
+import Swal from 'sweetalert2'; // Pour les notifications
 
-const EditAgenceModal = ({ isOpen, onClose, agence,entreprises, licences, regions, cities  }) => {
-  // agence est la prop qui contiendra les données de l'agence à modifier
-  // Récupérer les props nécessaires (entreprises, licences, régions, villes)
- 
+const EditAgenceModal = ({ isOpen, onClose, agence,entreprises, licences, regions, cities }) => {
+  
 
-  const { data, setData, put, processing, errors, reset } = useForm({
+  const { data, setData, put, processing, errors, reset, recentlySuccessful } = useForm({
     entreprise_id: agence?.entreprise_id || '',
     licence_id: agence?.licence_id || '',
     region_id: agence?.region_id || '',
@@ -20,7 +23,7 @@ const EditAgenceModal = ({ isOpen, onClose, agence,entreprises, licences, region
     address: agence?.address || '',
   });
 
-  // Mettre à jour les données du formulaire lorsque la prop 'agence' change
+  // Met à jour les données du formulaire lorsque la prop 'agence' change
   useEffect(() => {
     if (agence) {
       setData({
@@ -31,30 +34,50 @@ const EditAgenceModal = ({ isOpen, onClose, agence,entreprises, licences, region
         name: agence.name,
         address: agence.address,
       });
+    } else {
+      reset(); // Réinitialise si agence est null ou undefined
     }
-  }, [agence]); // Dépendance à 'agence'
+  }, [agence, setData, reset]); // Ajouter les dépendances manquantes
+
+  // Gérer la réinitialisation du formulaire après une soumission réussie et fermer la modale
+  useEffect(() => {
+    if (recentlySuccessful) {
+      reset();
+      onClose();
+      Swal.fire({
+        title: 'Succès !',
+        text: 'Agence modifiée avec succès.',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    }
+  }, [recentlySuccessful, reset, onClose]);
 
   const handleSubmit = (e) => {
-    e.preventDefault();
-    put(route('agencies.update', agence.id), { // Assurez-vous que 'agencies.update' est votre route de mise à jour
-      onSuccess: () => {
-        Swal.fire({
-          title: 'Succès !',
-          text: 'Agence modifiée avec succès !',
-          icon: 'success',
-          timer: 1500,
-          showConfirmButton: false
-        });
-        onClose(); // Ferme la modale après succès
-      },
-      onError: (errors) => {
+    e.preventDefault(); // S'assurer que le rechargement par défaut est prévenu si Form ne le gère pas
+    if (!agence || !agence.id) {
+      console.error("Impossible de modifier: ID d'agence manquant, monsieur.");
+      Swal.fire({
+        title: 'Erreur !',
+        text: "L'agence à modifier n'a pas été trouvée.",
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+    console.log(`Données du formulaire agence ${agence.id} avant modification, monsieur:`, data);
+
+    put(route('agencies.update', agence.id), { // Assurez-vous que 'agencies.update' est la bonne route
+      preserveScroll: true,
+      onError: (validationErrors) => {
         Swal.fire({
           title: 'Erreur !',
           text: 'Veuillez corriger les erreurs dans le formulaire.',
           icon: 'error',
           confirmButtonText: 'OK'
         });
-        console.error("Erreurs de validation:", errors);
+        console.error("Erreurs de validation:", validationErrors);
       },
     });
   };
@@ -64,18 +87,19 @@ const EditAgenceModal = ({ isOpen, onClose, agence,entreprises, licences, region
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Modifier l'Agence : ${agence?.name || ''}`}>
-      <form onSubmit={handleSubmit} className="p-4">
+      <Form onSubmit={handleSubmit} className="space-y-4">
         {/* Champ Entreprise */}
-        <div className="mb-4">
-          <label htmlFor="entreprise_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Entreprise</label>
+        <div>
+          <Label htmlFor="edit-entreprise_id">Entreprise <span className="text-red-500">*</span></Label>
           <select
-            id="entreprise_id"
+            id="edit-entreprise_id"
             value={data.entreprise_id}
             onChange={(e) => setData('entreprise_id', e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            disabled={processing}
+            className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.entreprise_id ? 'border-red-500' : ''}`}
           >
             <option value="">Sélectionner une entreprise</option>
-            {entreprises.map((entreprise) => (
+            {entreprises && entreprises.map((entreprise) => (
               <option key={entreprise.id} value={entreprise.id}>
                 {entreprise.name}
               </option>
@@ -85,16 +109,17 @@ const EditAgenceModal = ({ isOpen, onClose, agence,entreprises, licences, region
         </div>
 
         {/* Champ Licence */}
-        <div className="mb-4">
-          <label htmlFor="licence_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Licence</label>
+        <div>
+          <Label htmlFor="edit-licence_id">Licence <span className="text-red-500">*</span></Label>
           <select
-            id="licence_id"
+            id="edit-licence_id"
             value={data.licence_id}
             onChange={(e) => setData('licence_id', e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            disabled={processing}
+            className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.licence_id ? 'border-red-500' : ''}`}
           >
             <option value="">Sélectionner une licence</option>
-            {licences.map((licence) => (
+            {licences && licences.map((licence) => (
               <option key={licence.id} value={licence.id}>
                 {licence.name} ({licence.type})
               </option>
@@ -104,19 +129,20 @@ const EditAgenceModal = ({ isOpen, onClose, agence,entreprises, licences, region
         </div>
 
         {/* Champ Région */}
-        <div className="mb-4">
-          <label htmlFor="region_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Région</label>
+        <div>
+          <Label htmlFor="edit-region_id">Région <span className="text-red-500">*</span></Label>
           <select
-            id="region_id"
+            id="edit-region_id"
             value={data.region_id}
             onChange={(e) => {
               setData('region_id', e.target.value);
               setData('city_id', ''); // Réinitialise la ville quand la région change
             }}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            disabled={processing}
+            className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.region_id ? 'border-red-500' : ''}`}
           >
             <option value="">Sélectionner une région</option>
-            {regions.map((region) => (
+            {regions && regions.map((region) => (
               <option key={region.id} value={region.id}>
                 {region.name}
               </option>
@@ -126,14 +152,14 @@ const EditAgenceModal = ({ isOpen, onClose, agence,entreprises, licences, region
         </div>
 
         {/* Champ Ville (dépend de la région) */}
-        <div className="mb-4">
-          <label htmlFor="city_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Ville</label>
+        <div>
+          <Label htmlFor="edit-city_id">Ville <span className="text-red-500">*</span></Label>
           <select
-            id="city_id"
+            id="edit-city_id"
             value={data.city_id}
             onChange={(e) => setData('city_id', e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-            disabled={!data.region_id} // Désactive si aucune région n'est sélectionnée
+            disabled={processing || !data.region_id || filteredCities.length === 0} // Désactive si aucune région ou pas de villes
+            className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.city_id ? 'border-red-500' : ''}`}
           >
             <option value="">Sélectionner une ville</option>
             {filteredCities.map((city) => (
@@ -146,50 +172,61 @@ const EditAgenceModal = ({ isOpen, onClose, agence,entreprises, licences, region
         </div>
 
         {/* Champ Nom */}
-        <div className="mb-4">
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Nom de l'agence</label>
+        <div>
+          <Label htmlFor="edit-agence-name">Nom de l'agence <span className="text-red-500">*</span></Label>
           <Input
             type="text"
-            id="name"
+            id="edit-agence-name"
+            name="name"
             value={data.name}
-            disabled={true}
             onChange={(e) => setData('name', e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            disabled={true}
+            error={!!errors.name}
+            hint={errors.name}
           />
-          {errors.name && <div className="text-red-500 text-sm mt-1">{errors.name}</div>}
         </div>
 
         {/* Champ Adresse */}
-        <div className="mb-4">
-          <label htmlFor="address" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Adresse</label>
-          <input
+        <div>
+          <Label htmlFor="edit-agence-address">Adresse <span className="text-red-500">*</span></Label>
+          <Input
             type="text"
-            id="address"
+            id="edit-agence-address"
+            name="address"
             value={data.address}
             onChange={(e) => setData('address', e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            disabled={processing}
+            error={!!errors.address}
+            hint={errors.address}
           />
-          {errors.address && <div className="text-red-500 text-sm mt-1">{errors.address}</div>}
         </div>
 
-        {/* Boutons d'action */}
-        <div className="flex justify-end gap-3 mt-6">
+        {/* Pied de la modale (boutons) */}
+        <div className="flex items-center justify-end p-6 border-t border-solid border-gray-200 rounded-b dark:border-gray-700">
           <button
             type="button"
+            className="text-red-500 background-transparent font-bold uppercase px-6 py-2 text-sm outline-none focus:outline-none mr-1 mb-1 ease-linear transition-all duration-150"
             onClick={onClose}
-            className="inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600"
+            disabled={processing}
           >
             Annuler
           </button>
           <button
             type="submit"
+            className="bg-blue-500 text-white active:bg-blue-600 font-bold uppercase text-sm px-6 py-3 rounded shadow hover:shadow-lg outline-none focus:outline-none ease-linear transition-all duration-150"
             disabled={processing}
-            className="inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-600"
           >
-            {processing ? 'Mise à jour...' : 'Mettre à jour l\'agence'}
+            {processing ? (
+              <>
+                <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
+                Mise à jour...
+              </>
+            ) : (
+              'Mettre à jour'
+            )}
           </button>
         </div>
-      </form>
+      </Form>
     </Modal>
   );
 };

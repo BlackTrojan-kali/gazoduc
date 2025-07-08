@@ -3,7 +3,7 @@ import { Link, usePage } from "@inertiajs/react"; // <--- IMPORT usePage HERE
 
 import { useSidebar } from "../context/SidebarContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronDown, faCube, faDashboard, faDotCircle, faDriversLicense, faFile, faFileWord, faGlobe, faPieChart, faPlug, faSign, faSync, faTable, faUserCircle } from "@fortawesome/free-solid-svg-icons";
+import { faChevronDown, faCube, faDashboard, faDotCircle, faDriversLicense, faFile, faFileWord, faGlobe, faPieChart, faPlug, faSign, faSync, faTable, faUser, faUserCircle } from "@fortawesome/free-solid-svg-icons";
 
 
 const navItems = [
@@ -34,7 +34,17 @@ const navItems = [
 ];
 
 const othersItems= [
- 
+  { icon:  <FontAwesomeIcon icon={faUser} />,
+    name: "Users",
+    subItems: [
+      { name: "CEO's", path: "/ceos", pro: false },
+      { name: "Direction", path: "/direction", pro: false },
+      { name: "Regional", path: "/regional", pro: false },
+      { name: "Magasin", path: "/magasin", pro: false },
+      { name: "Production", path: "/production", pro: false },
+      { name: "Commercial", path: "/commercial", pro: false },
+    ],
+  }
 ];
 
 const AppSidebar = () => {
@@ -301,7 +311,7 @@ const AppSidebar = () => {
                 }`}
               >
                 {isExpanded || isHovered || isMobileOpen ? (
-                  "Autres"
+                  "Users"
                 ) : (
                   <FontAwesomeIcon icon={faDotCircle} /> 
                 )}

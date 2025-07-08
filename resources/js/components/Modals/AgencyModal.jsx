@@ -1,17 +1,20 @@
 // resources/js/components/Modals/CreateAgenceModal.jsx
 
-import React, { useState, useEffect } from 'react';
-import { useForm, usePage } from '@inertiajs/react';
-import Modal from './Modal'; // Assurez-vous que le chemin vers votre composant Modal est correct
-import Swal from 'sweetalert2';
+import React, { useEffect } from 'react'; // Gardez useEffect
+import Modal from './Modal';
+import Form from '../form/Form'; // Votre composant Form
+import Label from '../form/Label'; // Votre composant Label
+import Input from '../form/input/InputField'; // Votre composant InputField
 
-const CreateAgenceModal = ({ isOpen, onClose,entreprises, licences, regions, cities  }) => {
-  // Récupérer les props nécessaires (entreprises, licences, régions, villes)
-  // Ces props devraient être passées depuis votre contrôleur Laravel vers la page qui rend le Dashboard
-  // et ensuite injectées ici via usePage().props.
+import { useForm, usePage } from '@inertiajs/react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faSpinner } from '@fortawesome/free-solid-svg-icons';
+import Swal from 'sweetalert2'; // Pour les notifications
+
+const CreateAgenceModal = ({ isOpen, onClose,entreprises, licences, regions, cities }) => {
   
 
-  const { data, setData, post, processing, errors, reset } = useForm({
+  const { data, setData, post, processing, errors, reset, recentlySuccessful } = useForm({
     entreprise_id: '',
     licence_id: '',
     region_id: '',
@@ -20,40 +23,47 @@ const CreateAgenceModal = ({ isOpen, onClose,entreprises, licences, regions, cit
     address: '',
   });
 
-  // Réinitialiser le formulaire quand la modale s'ouvre ou se ferme
+  // Réinitialiser le formulaire quand la modale s'ouvre
+  // ou définir les premières valeurs par défaut des selects
   useEffect(() => {
     if (isOpen) {
-      reset(); // Réinitialise les champs quand la modale s'ouvre
-      // Définir des valeurs par défaut si vous le souhaitez, par exemple le premier élément
-      if (entreprises.length > 0) setData('entreprise_id', entreprises[0].id);
-      if (licences.length > 0) setData('licence_id', licences[0].id);
-      if (regions.length > 0) setData('region_id', regions[0].id);
-      // La ville pourrait dépendre de la région sélectionnée
-      // if (cities.length > 0) setData('city_id', cities[0].id); // Peut-être pas la meilleure stratégie
+      reset();
+      // Si les listes sont disponibles, pré-sélectionner le premier élément
+      if (entreprises && entreprises.length > 0) setData('entreprise_id', entreprises[0].id);
+      if (licences && licences.length > 0) setData('licence_id', licences[0].id);
+      if (regions && regions.length > 0) setData('region_id', regions[0].id);
+      // La ville ne doit pas être pré-sélectionnée car elle dépend de la région
+      setData('city_id', '');
     }
-  }, [isOpen]);
+  }, [isOpen, entreprises, licences, regions, setData, reset]); // Ajouter les dépendances manquantes
+
+  // Gérer la réinitialisation du formulaire après une soumission réussie et fermer la modale
+  useEffect(() => {
+    if (recentlySuccessful) {
+      reset();
+      onClose();
+      Swal.fire({
+        title: 'Succès !',
+        text: 'Agence créée avec succès.',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    }
+  }, [recentlySuccessful, reset, onClose]);
 
   const handleSubmit = (e) => {
-    e.preventDefault();
-    post(route('agencies.store'), { // Assurez-vous que 'agencies.store' est votre route de création d'agence
-      onSuccess: () => {
-        Swal.fire({
-          title: 'Succès !',
-          text: 'Agence créée avec succès !',
-          icon: 'success',
-          timer: 1500,
-          showConfirmButton: false
-        });
-        onClose(); // Ferme la modale après succès
-      },
-      onError: (errors) => {
+    e.preventDefault(); // S'assurer que le rechargement par défaut est prévenu si Form ne le gère pas
+    post(route('agencies.store'), {
+      preserveScroll: true,
+      onError: (validationErrors) => {
         Swal.fire({
           title: 'Erreur !',
           text: 'Veuillez corriger les erreurs dans le formulaire.',
           icon: 'error',
           confirmButtonText: 'OK'
         });
-        console.error("Erreurs de validation:", errors);
+        console.error("Erreurs de validation:", validationErrors);
       },
     });
   };
@@ -63,18 +73,19 @@ const CreateAgenceModal = ({ isOpen, onClose,entreprises, licences, regions, cit
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Créer une Nouvelle Agence">
-      <form onSubmit={handleSubmit} className="p-4">
+      <Form onSubmit={handleSubmit} className="space-y-4">
         {/* Champ Entreprise */}
-        <div className="mb-4">
-          <label htmlFor="entreprise_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Entreprise</label>
+        <div>
+          <Label htmlFor="create-entreprise_id">Entreprise <span className="text-red-500">*</span></Label>
           <select
-            id="entreprise_id"
+            id="create-entreprise_id"
             value={data.entreprise_id}
             onChange={(e) => setData('entreprise_id', e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            disabled={processing}
+            className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.entreprise_id ? 'border-red-500' : ''}`}
           >
             <option value="">Sélectionner une entreprise</option>
-            {entreprises.map((entreprise) => (
+            {entreprises && entreprises.map((entreprise) => ( // Vérifiez que entreprises existe
               <option key={entreprise.id} value={entreprise.id}>
                 {entreprise.name}
               </option>
@@ -84,16 +95,17 @@ const CreateAgenceModal = ({ isOpen, onClose,entreprises, licences, regions, cit
         </div>
 
         {/* Champ Licence */}
-        <div className="mb-4">
-          <label htmlFor="licence_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Licence</label>
+        <div>
+          <Label htmlFor="create-licence_id">Licence <span className="text-red-500">*</span></Label>
           <select
-            id="licence_id"
+            id="create-licence_id"
             value={data.licence_id}
             onChange={(e) => setData('licence_id', e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            disabled={processing}
+            className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.licence_id ? 'border-red-500' : ''}`}
           >
             <option value="">Sélectionner une licence</option>
-            {licences.map((licence) => (
+            {licences && licences.map((licence) => ( // Vérifiez que licences existe
               <option key={licence.id} value={licence.id}>
                 {licence.name} ({licence.type})
               </option>
@@ -103,19 +115,20 @@ const CreateAgenceModal = ({ isOpen, onClose,entreprises, licences, regions, cit
         </div>
 
         {/* Champ Région */}
-        <div className="mb-4">
-          <label htmlFor="region_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Région</label>
+        <div>
+          <Label htmlFor="create-region_id">Région <span className="text-red-500">*</span></Label>
           <select
-            id="region_id"
+            id="create-region_id"
             value={data.region_id}
             onChange={(e) => {
               setData('region_id', e.target.value);
               setData('city_id', ''); // Réinitialise la ville quand la région change
             }}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            disabled={processing}
+            className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.region_id ? 'border-red-500' : ''}`}
           >
             <option value="">Sélectionner une région</option>
-            {regions.map((region) => (
+            {regions && regions.map((region) => ( // Vérifiez que regions existe
               <option key={region.id} value={region.id}>
                 {region.name}
               </option>
@@ -125,14 +138,14 @@ const CreateAgenceModal = ({ isOpen, onClose,entreprises, licences, regions, cit
         </div>
 
         {/* Champ Ville (dépend de la région) */}
-        <div className="mb-4">
-          <label htmlFor="city_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Ville</label>
+        <div>
+          <Label htmlFor="create-city_id">Ville <span className="text-red-500">*</span></Label>
           <select
-            id="city_id"
+            id="create-city_id"
             value={data.city_id}
             onChange={(e) => setData('city_id', e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-            disabled={!data.region_id} // Désactive si aucune région n'est sélectionnée
+            disabled={processing || !data.region_id || filteredCities.length === 0} // Désactive si aucune région ou pas de villes
+            className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.city_id ? 'border-red-500' : ''}`}
           >
             <option value="">Sélectionner une ville</option>
             {filteredCities.map((city) => (
@@ -145,49 +158,61 @@ const CreateAgenceModal = ({ isOpen, onClose,entreprises, licences, regions, cit
         </div>
 
         {/* Champ Nom */}
-        <div className="mb-4">
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Nom de l'agence</label>
-          <input
+        <div>
+          <Label htmlFor="create-agence-name">Nom de l'agence <span className="text-red-500">*</span></Label>
+          <Input
             type="text"
-            id="name"
+            id="create-agence-name"
+            name="name"
             value={data.name}
             onChange={(e) => setData('name', e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            disabled={processing}
+            error={!!errors.name}
+            hint={errors.name}
           />
-          {errors.name && <div className="text-red-500 text-sm mt-1">{errors.name}</div>}
         </div>
 
         {/* Champ Adresse */}
-        <div className="mb-4">
-          <label htmlFor="address" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Adresse</label>
-          <input
+        <div>
+          <Label htmlFor="create-agence-address">Adresse <span className="text-red-500">*</span></Label>
+          <Input
             type="text"
-            id="address"
+            id="create-agence-address"
+            name="address"
             value={data.address}
             onChange={(e) => setData('address', e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            disabled={processing}
+            error={!!errors.address}
+            hint={errors.address}
           />
-          {errors.address && <div className="text-red-500 text-sm mt-1">{errors.address}</div>}
         </div>
 
-        {/* Boutons d'action */}
-        <div className="flex justify-end gap-3 mt-6">
+        {/* Pied de la modale (boutons) */}
+        <div className="flex items-center justify-end p-6 border-t border-solid border-gray-200 rounded-b dark:border-gray-700">
           <button
             type="button"
+            className="text-red-500 background-transparent font-bold uppercase px-6 py-2 text-sm outline-none focus:outline-none mr-1 mb-1 ease-linear transition-all duration-150"
             onClick={onClose}
-            className="inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600"
+            disabled={processing}
           >
             Annuler
           </button>
           <button
             type="submit"
+            className="bg-blue-500 text-white active:bg-blue-600 font-bold uppercase text-sm px-6 py-3 rounded shadow hover:shadow-lg outline-none focus:outline-none ease-linear transition-all duration-150"
             disabled={processing}
-            className="inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-600"
           >
-            {processing ? 'Création...' : 'Créer l\'agence'}
+            {processing ? (
+              <>
+                <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
+                Création...
+              </>
+            ) : (
+              'Créer l\'agence'
+            )}
           </button>
         </div>
-      </form>
+      </Form>
     </Modal>
   );
 };
