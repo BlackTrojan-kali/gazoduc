@@ -1,20 +1,7 @@
 import type React from "react";
 import { useState } from "react";
 
-interface Option {
-  value: string;
-  text: string;
-}
-
-interface MultiSelectProps {
-  label: string;
-  options: Option[];
-  defaultSelected?: string[];
-  onChange?: (selected: string[]) => void;
-  disabled?: boolean;
-}
-
-const MultiSelect: React.FC<MultiSelectProps> = ({
+const MultiSelect = ({
   label,
   options,
   defaultSelected = [],
@@ -22,7 +9,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
   disabled = false,
 }) => {
   const [selectedOptions, setSelectedOptions] =
-    useState<string[]>(defaultSelected);
+    useState(defaultSelected);
   const [isOpen, setIsOpen] = useState(false);
 
   const toggleDropdown = () => {

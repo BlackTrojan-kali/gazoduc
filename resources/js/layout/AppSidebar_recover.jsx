@@ -10,7 +10,7 @@ const navItems = [
   {
     icon:  <FontAwesomeIcon icon={faDashboard} />,
     name: "Dashboard",
-    subItems: [{ name: "Entreprises", path: "/", pro: false }],
+    subItems: [{ name: "Ecommerce", path: "/", pro: false }],
   },
   {
     icon:  <FontAwesomeIcon icon={faCalendar} />,
@@ -73,7 +73,7 @@ const othersItems= [
   },
 ];
 
-const AppSidebar = () => {
+const AppSidebar_recover = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const { url } = usePage(); // <--- GET CURRENT URL FROM INERTIA
   
@@ -301,7 +301,7 @@ const AppSidebar = () => {
             </>
           ) : (
             <img
-              src="/images/logo-erp.png"
+              src="/images/logo/logo-erp.png"
               alt="Logo"
               width={32}
               height={32}
@@ -337,7 +337,7 @@ const AppSidebar = () => {
                 }`}
               >
                 {isExpanded || isHovered || isMobileOpen ? (
-                  "Autres"
+                  "Others"
                 ) : (
                   <FontAwesomeIcon icon={faDotCircle} /> 
                 )}
@@ -351,4 +351,4 @@ const AppSidebar = () => {
   );
 };
 
-export default AppSidebar;
+export default AppSidebar_recover;

@@ -13,19 +13,19 @@ export default function TextAreaInput() {
         <div>
           <Label>Description</Label>
           <TextArea
-            value={message}
+            value=""
             onChange={(value) => setMessage(value)}
             rows={6}
           />
         </div>
 
-        {/* Disabled TextArea */}
+        {/* Disabled TextArea 
         <div>
           <Label>Description</Label>
           <TextArea rows={6} disabled />
         </div>
 
-        {/* Error TextArea */}
+        {/* Error TextArea }
         <div>
           <Label>Description</Label>
           <TextArea
@@ -36,6 +36,7 @@ export default function TextAreaInput() {
             hint="Please enter a valid message."
           />
         </div>
+        */}
       </div>
     </ComponentCard>
   );

@@ -3,17 +3,6 @@ import flatpickr from "flatpickr";
 import "flatpickr/dist/flatpickr.css";
 import Label from "./Label";
 import { CalenderIcon } from "../../icons";
-import Hook = flatpickr.Options.Hook;
-import DateOption = flatpickr.Options.DateOption;
-
-type PropsType = {
-  id: string;
-  mode?: "single" | "multiple" | "range" | "time";
-  onChange?: Hook | Hook[];
-  defaultDate?: DateOption;
-  label?: string;
-  placeholder?: string;
-};
 
 export default function DatePicker({
   id,
@@ -22,7 +11,7 @@ export default function DatePicker({
   label,
   defaultDate,
   placeholder,
-}: PropsType) {
+}) {
   useEffect(() => {
     const flatPickr = flatpickr(`#${id}`, {
       mode: mode || "single",
