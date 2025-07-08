@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AgencyController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CityController;
 use App\Http\Controllers\SuperAdminController;
@@ -9,7 +10,7 @@ use Inertia\Inertia;
 use App\Http\Controllers\EntrepriseController;
 use App\Http\Controllers\licenceController;
 use App\Http\Controllers\RegionController;
-
+use App\Models\Agency;
 
 //auth routes
 Route::get('/login',[AuthController::class,"loginPage"] )->name("login");
@@ -32,4 +33,10 @@ Route::middleware(SuperAdminMiddleWare::class)->group(function(){
     Route::put("/edit-cities/{idcity}",[CityController::class,"edit"])->name("cities.edit");
     //licences routes
     Route::get("/licences",[licenceController::class,"index"])->name("licences");
+    Route::post("/store-licence",[licenceController::class,"store"])->name("licences.store");
+    Route::put("/edit-licence/{idLic}",[licenceController::class,"edit"])->name("licences.edit");
+    //agencies routes
+    Route::get("/agencies",[AgencyController::class,"index"])->name("agencies");
+    Route::post("/store-agency",[AgencyController::class,"store"])->name("agencies.store");
+    Route::put("/edit-agency/{idLic}",[AgencyController::class,"update"])->name("agencies.update");
 });

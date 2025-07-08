@@ -4,7 +4,6 @@ import AppHeader from "./AppHeader";
 import Backdrop from "./Backdrop";
 import AppSidebar from "./AppSidebar";
 import ToastProvider from "../components/ui/alert/ToastProvider";
-
 const LayoutContent = ({children}) => {
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
 

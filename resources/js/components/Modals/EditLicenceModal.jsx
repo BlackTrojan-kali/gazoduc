@@ -3,16 +3,16 @@ import Modal from '../Modals/Modal';
 import Form from '../form/Form';
 import Label from '../form/Label';
 import Input from '../form/input/InputField';
-import Select from '../form/form-elements/SelectInputs'// <-- Assurez-vous d'importer votre composant Select ici
+import Select from '../form/form-elements/SelectInputs'; // <-- Assurez-vous d'importer votre composant Select ici
 import { useForm } from '@inertiajs/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner } from '@fortawesome/free-solid-svg-icons';
 
-const CreateLicenseModal = ({ isOpen, onClose }) => {
-  const { data, setData, post, processing, errors, reset, recentlySuccessful } = useForm({
-    name: '',
-    type: 'Annuel', // Définir une valeur par défaut, par exemple 'Annuel'
-    description: '',
+const EditLicenseModal = ({ isOpen, onClose, license }) => {
+  const { data, setData, put, processing, errors, reset, recentlySuccessful } = useForm({
+    name: license ? license.name : '',
+    type: license ? license.type : 'Annuel', // Définir une valeur par défaut si la licence n'est pas encore chargée
+    description: license ? license.description : '',
   });
 
   // Options pour le type de licence
@@ -20,6 +20,19 @@ const CreateLicenseModal = ({ isOpen, onClose }) => {
     { value: 'Annuel', label: 'Annuel' },
     { value: 'Mensuel', label: 'Mensuel' },
   ];
+
+  // Met à jour les données du formulaire lorsque la prop 'license' change
+  useEffect(() => {
+    if (license) {
+      setData({
+        name: license.name || '',
+        type: license.type || 'Annuel', // Assurez-vous qu'il y a une valeur par défaut si absente
+        description: license.description || '',
+      });
+    } else {
+      reset();
+    }
+  }, [license, setData, reset]);
 
   useEffect(() => {
     if (recentlySuccessful) {
@@ -29,21 +42,25 @@ const CreateLicenseModal = ({ isOpen, onClose }) => {
   }, [recentlySuccessful, reset, onClose]);
 
   const handleSubmit = () => {
-    console.log("Données du formulaire de licence avant soumission, monsieur:", data);
-    post(route('licences.store'), {
+    if (!license || !license.id) {
+      console.error("Impossible de modifier: ID de licence manquant, monsieur.");
+      return;
+    }
+    console.log(`Données du formulaire de licence ${license.id} avant modification, monsieur:`, data);
+    put(route('licences.edit', license.id), {
       preserveScroll: true,
     });
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Créer une nouvelle licence">
+    <Modal isOpen={isOpen} onClose={onClose} title={`Modifier la licence: ${license ? license.name : ''}`}>
       <Form onSubmit={handleSubmit} className="space-y-4">
         {/* Champ Nom de la licence */}
         <div>
-          <Label htmlFor="license-name">Nom de la licence <span className="text-red-500">*</span></Label>
+          <Label htmlFor="edit-license-name">Nom de la licence <span className="text-red-500">*</span></Label>
           <Input
             type="text"
-            id="license-name"
+            id="edit-license-name"
             name="name"
             value={data.name}
             onChange={(e) => setData('name', e.target.value)}
@@ -55,9 +72,9 @@ const CreateLicenseModal = ({ isOpen, onClose }) => {
 
         {/* Sélecteur Type de la licence */}
         <div>
-          <Label htmlFor="license-type">Type de la licence <span className="text-red-500">*</span></Label>
+          <Label htmlFor="edit-license-type">Type de la licence <span className="text-red-500">*</span></Label>
           <Select
-            id="license-type"
+            id="edit-license-type"
             name="type"
             options={typeOptions} // Passe les options prédéfinies
             value={data.type}
@@ -72,10 +89,10 @@ const CreateLicenseModal = ({ isOpen, onClose }) => {
 
         {/* Champ Description de la licence */}
         <div>
-          <Label htmlFor="license-description">Description</Label>
+          <Label htmlFor="edit-license-description">Description</Label>
           <Input
             type="textarea"
-            id="license-description"
+            id="edit-license-description"
             name="description"
             value={data.description}
             onChange={(e) => setData('description', e.target.value)}
@@ -103,10 +120,10 @@ const CreateLicenseModal = ({ isOpen, onClose }) => {
             {processing ? (
               <>
                 <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
-                Création...
+                Mise à jour...
               </>
             ) : (
-              'Créer'
+              'Mettre à jour'
             )}
           </button>
         </div>
@@ -115,4 +132,4 @@ const CreateLicenseModal = ({ isOpen, onClose }) => {
   );
 };
 
-export default CreateLicenseModal;
+export default EditLicenseModal;

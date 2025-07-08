@@ -188,6 +188,12 @@ layer(base);
   body {
     @apply relative font-normal font-outfit z-1 bg-gray-50;
   }
+  select{
+    @apply px-4 py-2;
+  }
+  input{
+    @apply p-2
+  }
 }
 
 @utility menu-item {

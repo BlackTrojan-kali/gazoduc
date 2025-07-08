@@ -10,7 +10,9 @@ const navItems = [
   {
     icon:  <FontAwesomeIcon icon={faDashboard} />,
     name: "Dashboard",
-    subItems: [{ name: "Entreprises", path: "/", pro: false }],
+    subItems: [{ name: "Entreprises", path: "/", pro: false },
+      { name: "Agency", path: "/agencies", pro: false },
+    ],
   },
   {
     icon:  <FontAwesomeIcon icon={faGlobe} />,
@@ -28,55 +30,11 @@ const navItems = [
       { name: "Souscriptions", path: "/cities", pro: false },
     ],
   },
-  {
-    name: "Forms",
-    icon:  <FontAwesomeIcon icon={faFileWord} />,
-    subItems: [{ name: "Form Elements", path: "/form-elements", pro: false }],
-  },
-  {
-    name: "Tables",
-    icon:  <FontAwesomeIcon icon={faTable} />,
-    subItems: [{ name: "Basic Tables", path: "/basic-tables", pro: false }],
-  },
-  {
-    name: "Pages",
-    icon:  <FontAwesomeIcon icon={faFile} />,
-    subItems: [
-      { name: "Blank Page", path: "/blank", pro: false },
-      { name: "404 Error", path: "/error-404", pro: false },
-    ],
-  },
+ 
 ];
 
 const othersItems= [
-  {
-    icon:  <FontAwesomeIcon icon={faPieChart} />,
-    name: "Charts",
-    subItems: [
-      { name: "Line Chart", path: "/line-chart", pro: false },
-      { name: "Bar Chart", path: "/bar-chart", pro: false },
-    ],
-  },
-  {
-    icon: <FontAwesomeIcon icon={faCube} />,
-    name: "UI Elements",
-    subItems: [
-      { name: "Alerts", path: "/alerts", pro: false },
-      { name: "Avatar", path: "/avatars", pro: false },
-      { name: "Badge", path: "/badge", pro: false },
-      { name: "Buttons", path: "/buttons", pro: false },
-      { name: "Images", path: "/images", pro: false },
-      { name: "Videos", path: "/videos", pro: false },
-    ],
-  },
-  {
-    icon: <FontAwesomeIcon icon={faPlug} />,
-    name: "Authentication",
-    subItems: [
-      { name: "Sign In", path: "/signin", pro: false },
-      { name: "Sign Up", path: "/signup", pro: false },
-    ],
-  },
+ 
 ];
 
 const AppSidebar = () => {

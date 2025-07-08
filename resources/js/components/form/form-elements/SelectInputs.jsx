@@ -12,13 +12,13 @@ const Select = ({ id, name, value, onChange, disabled, error, hint, options, pla
         value={value}
         onChange={onChange}
         disabled={disabled}
-        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+        className={`mt-1  block w-full  rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
           error ? 'border-red-500' : ''
         } ${className}`}
       >
         {placeholder && <option value="">{placeholder}</option>}
         {options && options.map((option) => (
-          <option key={option.value} value={option.value}>
+          <option   key={option.value} value={option.value}>
             {option.label}
           </option>
         ))}

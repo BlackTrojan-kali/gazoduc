@@ -79,7 +79,7 @@ const Region = ({ regions }) => {
             </TableHeader>
 
             <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {regions.map((region) => (
+              {regions.data.map((region) => (
                 <TableRow key={region.id} className="">
                   <TableCell className="py-3">
                     <div className="flex items-center gap-3">
@@ -109,6 +109,33 @@ const Region = ({ regions }) => {
               ))}
             </TableBody>
           </Table>
+
+                    
+                 <nav className="flex gap-2">
+                          {regions.links.map((link, index) => (
+                            <Link
+                              key={index}
+                              // link.url peut être null pour le lien courant ou les "dots" (...)
+                              href={link.url || '#'}
+                              className={`px-3 py-1 text-sm font-medium border rounded-lg shadow-sm
+                                ${link.active
+                                  ? 'bg-blue-600 text-white border-blue-600 cursor-default' // Style pour la page active
+                                  : link.url === null
+                                    ? 'bg-white border-gray-300 text-gray-700 disabled:opacity-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 cursor-not-allowed' // Style pour les liens null (disabled/dots)
+                                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-800 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 dark:hover:bg-white/[0.03] dark:hover:text-gray-200' // Style pour les liens normaux
+                                }`}
+                              preserveState
+                              preserveScroll
+                              only={['entreprises']}
+                              // Désactive le clic pour les liens 'null' (prev/next désactivé ou "...")
+                              onClick={(e) => {
+                                if (!link.url) e.preventDefault();
+                              }}
+                              dangerouslySetInnerHTML={{ __html: link.label }}
+                            />
+                          ))}
+                        </nav>
+          
         </div>
       </div>
 

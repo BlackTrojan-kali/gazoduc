@@ -13,4 +13,14 @@ export default defineConfig({
         react(),
         svgr(),
     ],
+       build: {
+        rollupOptions: {
+            external: ['jquery'], // Déclare jQuery comme une dépendance externe
+            output: {
+                globals: {
+                    jquery: '$', // Mappe jQuery au global '$'
+                },
+            },
+        },
+    },
 });

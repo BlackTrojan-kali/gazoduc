@@ -10,7 +10,7 @@ class SuperAdminController extends Controller
 {
     //
     public function dashboard(){
-        $entreprises = Entreprise::with("agency","subscription")->get();
+        $entreprises = Entreprise::with("agency","subscription")->orderBy('created_at', 'desc')->paginate(15);
         return Inertia("Dashboard",["entreprises"=>$entreprises]);
     }
    
