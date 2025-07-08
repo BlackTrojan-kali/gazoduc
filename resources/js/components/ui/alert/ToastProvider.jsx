@@ -10,7 +10,7 @@ export default function ToastProvider() {
         // We'll set duration here, but other visual styles will come from Alert component.
         const defaultToastOptions = {
             duration: 5000, // Message visible for 5 seconds
-            position: 'top-right', // Adjust as needed
+            position: 'bottom-right', // Adjust as needed
             // Importantly, we don't define 'style' or 'icon' here,
             // as our custom Alert component will handle the visual aspects.
             ariaProps: {

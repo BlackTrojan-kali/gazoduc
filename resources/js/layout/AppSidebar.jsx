@@ -3,7 +3,7 @@ import { Link, usePage } from "@inertiajs/react"; // <--- IMPORT usePage HERE
 
 import { useSidebar } from "../context/SidebarContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCalendar, faChevronDown, faCube, faDashboard, faDotCircle, faFile, faFileWord, faPieChart, faPlug, faTable, faUserCircle } from "@fortawesome/free-solid-svg-icons";
+import { faChevronDown, faCube, faDashboard, faDotCircle, faDriversLicense, faFile, faFileWord, faGlobe, faPieChart, faPlug, faSign, faSync, faTable, faUserCircle } from "@fortawesome/free-solid-svg-icons";
 
 
 const navItems = [
@@ -13,14 +13,20 @@ const navItems = [
     subItems: [{ name: "Entreprises", path: "/", pro: false }],
   },
   {
-    icon:  <FontAwesomeIcon icon={faCalendar} />,
-    name: "Calendar",
-    path: "/calendar",
+    icon:  <FontAwesomeIcon icon={faGlobe} />,
+    name: "Regions",
+      subItems: [
+      { name: "regions", path: "/regions", pro: false },
+      { name: "villes", path: "/cities", pro: false },
+    ],
   },
   {
-    icon:  <FontAwesomeIcon icon={faUserCircle} />,
-    name: "User Profile",
-    path: "/profile",
+    icon:  <FontAwesomeIcon icon={faDriversLicense} />,
+    name: "Licences",
+    subItems: [
+      { name: "licences", path: "/licences", pro: false },
+      { name: "Souscriptions", path: "/cities", pro: false },
+    ],
   },
   {
     name: "Forms",
