@@ -16,7 +16,7 @@ return new class extends Migration
             $table->unsignedBigInteger("entreprise_id");
             $table->unsignedBigInteger("licence_id");
             $table->decimal("price");
-            $table->unsignedInteger("nombre_agence");
+            $table->unsignedInteger("nombre_agence")->nullable();
             $table->date("date_souscription");
             $table->date("date_expiration");
             $table->boolean("is_active");

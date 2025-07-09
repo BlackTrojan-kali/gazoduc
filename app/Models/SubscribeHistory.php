@@ -7,7 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 class SubscribeHistory extends Model
 {
     //
-    public function subs(){
-        return $this->belongsTo(Subscription::class,"subs_id");
+    public function entreprise(){
+        return $this->belongsTo(Entreprise::class,"entreprise_id");
+    }
+    public function licence(){
+        return $this->belongsTo(Licence::class,"licence_id");
     }
 }

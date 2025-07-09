@@ -139,7 +139,7 @@ const Dashboard = ({ entreprises }) => {
                     </div>
                   </TableCell>
                   <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                    {entreprise.agencies_count !== undefined ? entreprise.agencies_count : 0}
+                    {entreprise.agency !== undefined ? entreprise.agency.length : 0}
                   </TableCell>
                   <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
                     {entreprise.license_status || 'N/A'} {/* Exemple pour la licence */}

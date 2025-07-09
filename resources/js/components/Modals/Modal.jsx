@@ -7,9 +7,9 @@ const Modal = ({ isOpen, onClose, children, title }) => {
   if (!isOpen) return null;
 
   return createPortal(
-    <div  className="fixed inset-0   **z-[999999]** flex items-center justify-center overflow-x-hidden overflow-y-auto outline-none focus:outline-none bg-gray-900/20 dark:bg-white/10 bg-opacity-70 ">
+    <div  className="fixed inset-0    z-[999999] flex items-center justify-center overflow-x-hidden overflow-y-auto outline-none focus:outline-none bg-gray-900/20 dark:bg-white/10 bg-opacity-70 ">
       {/* ... reste du code ... */}
-      <div className="relative mt-[20%] md:ml-[45%] w-[400px] max-w-lg mx-auto my-6">
+      <div className="relative mt-[13%]  md:ml-[45%] w-[400px] max-w-lg mx-auto my-6">
         {/* Contenu de la modale */}
         <div className="relative flex flex-col w-full bg-white border-0 rounded-lg shadow-lg outline-none focus:outline-none dark:bg-gray-800">
           {/* En-tête de la modale */}

@@ -27,7 +27,7 @@ const navItems = [
     name: "Licences",
     subItems: [
       { name: "licences", path: "/licences", pro: false },
-      { name: "Souscriptions", path: "/cities", pro: false },
+      { name: "Souscriptions", path: "/subs", pro: false },
     ],
   },
  

@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Licence;
 use Illuminate\Http\Request;
 
-class licenceController extends Controller
+class LicenceController extends Controller
 {
     //
     public function index(){
