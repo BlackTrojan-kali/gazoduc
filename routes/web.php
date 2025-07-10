@@ -1,8 +1,11 @@
 <?php
 
 use App\Http\Controllers\AgencyController;
+use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CiterneController;
 use App\Http\Controllers\CityController;
+use App\Http\Controllers\DirectionController;
 use App\Http\Controllers\SuperAdminController;
 use App\Http\Middleware\SuperAdminMiddleWare;
 use Illuminate\Support\Facades\Route;
@@ -10,10 +13,11 @@ use Inertia\Inertia;
 use App\Http\Controllers\EntrepriseController;
 use App\Http\Controllers\LicenceController;
 use App\Http\Controllers\RegionController;
+use App\Http\Controllers\StockController;
 use App\Http\Controllers\SubController;
 use App\Http\Controllers\UserController;
-use App\Models\Agency;
-
+use App\Http\Middleware\DirectionMiddleware;
+use App\Http\Middleware\IsAdminMiddleware;
 //auth routes
 Route::get('/login',[AuthController::class,"loginPage"] )->name("login");
 Route::post('/login',[AuthController::class,"login"] )->name("login");
@@ -51,7 +55,32 @@ Route::middleware(SuperAdminMiddleWare::class)->group(function(){
     Route::post("/store-direction",[UserController::class,"store_direction"])->name("direction.store");
     Route::put("/update-direction/{idceo}",[UserController::class,"update_direction"])->name("direction.update");
     Route::put("/archived-direction/{idceo}",[UserController::class,"archive_direction"])->name("direction.archive");
-    //regional routes
+   //subscriptions
+
+Route::get('/subscriptions/{subscription}/invoice', [SubController::class, 'downloadInvoice'])->name('subs.downloadInvoice');
+    Route::get("/subs",[SubController::class,"index"])->name("subs");
+    Route::post("/subs",[SubController::class,"store"])->name("subs.store");
+    Route::get("/subs/{idSub}",[SubController::class,"renew"])->name("subs.renew");
+});
+
+Route::middleware(DirectionMiddleware::class)->group(function(){
+    //direction routes
+    Route::get("/director/index",[DirectionController::class,"index"])->name("director.index");
+    //articles routes
+    Route::get("/director/articles",[ArticleController::class,"index"])->name("articles.index");
+    Route::post("/director/articles-store",[ArticleController::class,"store"])->name("articles.store");
+    Route::put("/director/articles-update/{idAr}",[ArticleController::class,"update"])->name("articles.update");
+    Route::delete("/director/articles-delete/{idAr}",[ArticleController::class,"delete"])->name("articles.delete");
+    //stock routes
+    Route::post('/stocks/create-for-article/{idAr}', [StockController::class, 'createForArticle'])->name('stocks.createForArticle');
+    //citernes routes
+    Route::get('/citernes/index', [CiterneController::class, 'index'])->name('citernes.index');
+
+    
+});
+
+Route::middleware(IsAdminMiddleware::class)->group(function(){
+   //regional routes
     Route::get("/regional",[UserController::class,"index_regional"])->name("regional");
     Route::post("/store-regional",[UserController::class,"store_regional"])->name("regional.store");
     Route::put("/update-regional/{idceo}",[UserController::class,"update_regional"])->name("regional.update");
@@ -69,13 +98,8 @@ Route::middleware(SuperAdminMiddleWare::class)->group(function(){
     Route::put("/archived-production/{idceo}",[UserController::class,"archive_production"])->name("production.archive");
         //commercial routes
     Route::get("/commercial",[UserController::class,"index_commercial"])->name("commercial");
-    Route::post("/store-commercial",[UserController::class,"store_commercial"])->name("production.commercial");
-    Route::put("/update-production/{idceo}",[UserController::class,"update_commercial"])->name("production.commercial");
-    Route::put("/archived-commercial/{idceo}",[UserController::class,"archive_commercial"])->name("production.commercial");
-    //subscriptions
-
-Route::get('/subscriptions/{subscription}/invoice', [SubController::class, 'downloadInvoice'])->name('subs.downloadInvoice');
-    Route::get("/subs",[SubController::class,"index"])->name("subs");
-    Route::post("/subs",[SubController::class,"store"])->name("subs.store");
-    Route::get("/subs/{idSub}",[SubController::class,"renew"])->name("subs.renew");
+    Route::post("/store-commercial",[UserController::class,"store_commercial"])->name("commercial.store");
+    Route::put("/update-production/{idceo}",[UserController::class,"update_commercial"])->name("commercial.update");
+    Route::put("/archived-commercial/{idceo}",[UserController::class,"archive_commercial"])->name("commercial.archive");
+  
 });

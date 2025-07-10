@@ -22,7 +22,7 @@ export default function SignInForm() {
     post(route("login"))
   }
   return (
-    <div className="flex flex-col flex-1 px-10">
+    <div className="flex flex-col flex-1 px-10 dark:bg-gray-900 h-full">
       <div className="w-full max-w-md pt-10 mx-auto">
         <center>
         <img src="/images/logo-erp.png" className="w-20" alt="" />
@@ -31,7 +31,7 @@ export default function SignInForm() {
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
         <div>
           <div className="mb-5 sm:mb-8">
-            <h1 className="mb-2 font-semibold text-gray-800 text-center text-title-sm dark:text-white/90 sm:text-title-md">
+            <h1 className="mb-2 font-semibold text-gray-800 text-center text-title-sm dark:text-white/90  sm:text-title-md">
               Connexion
             </h1>
             <p className="text-sm text-center text-gray-500 dark:text-gray-400">
@@ -101,7 +101,7 @@ export default function SignInForm() {
                 </div>
               </div>
             </form>
-
+ <br /><br /><br /><br /><br /><br /> <br /> <br />
           </div>
         </div>
       </div>

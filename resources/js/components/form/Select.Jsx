@@ -1,15 +1,14 @@
-import { useState } from "react";
-
+import { useState } from "react"; // <--- Il manque 'useEffect' ici
 
 const Select = ({
   options,
   placeholder = "Select an option",
   onChange,
   className = "",
-  defaultValue = "",
+  defaultValue = "", // Cette valeur est utilisée une seule fois à l'initialisation
 }) => {
   // Manage the selected value
-  const [selectedValue, setSelectedValue] = useState<string>(defaultValue);
+  const [selectedValue, setSelectedValue] = useState<string>(defaultValue); // <--- Initialisé une seule fois
 
   const handleChange = (e) => {
     const value = e.target.value;
@@ -39,7 +38,7 @@ const Select = ({
       {options.map((option) => (
         <option
           key={option.value}
-          value={option.value}
+          value={option.value} // Assurez-vous que c'est une chaîne
           className="text-gray-700 dark:bg-gray-900 dark:text-gray-400"
         >
           {option.label}

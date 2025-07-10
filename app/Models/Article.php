@@ -8,6 +8,9 @@ class Article extends Model
 {
     //
     public function stock(){
-        return $this->hasOne(Stock::class);
+        return $this->hasMany(Stock::class);
+    }
+    public function entreprise(){
+        return $this->belongsTo(Entreprise::class,"entreprise_id");
     }
 }

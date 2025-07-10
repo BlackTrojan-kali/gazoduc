@@ -16,7 +16,8 @@ return new class extends Migration
             $table->unsignedBigInteger("article_id");
             $table->unsignedBigInteger("agency_id");
             $table->string("storage_type");
-            $table->decimal("quatity");
+            $table->decimal("quantity");
+            $table->decimal("theorical_quantity")->nullable();
             $table->foreign("article_id")->on("articles")->references("id")->onDelete("cascade");
             $table->foreign("agency_id")->on("agencies")->references("id")->onDelete("cascade");
             $table->timestamps();

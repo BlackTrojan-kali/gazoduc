@@ -8,6 +8,8 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use App\Models\Entreprise;
+use Illuminate\Support\Facades\Auth;
+
 class UserController extends Controller
 {
     //coes controllers
@@ -135,11 +137,27 @@ class UserController extends Controller
     }
       //Regional controllers
     public function index_regional(){
+        
         $role = Role::where("name","controleur")->first();
+        if(Auth::user()->role->name === "super_administrateur"){
+
         $ceos = User::where("role_id",$role->id)->with("entreprise","agency","role")->orderBy("created_at","desc")->paginate(15);
-        $roles = Role::where("name","controleur")->get();
-       $agencies = Agency::with("entreprise")->get();
+        $agencies = Agency::with("entreprise")->get();
         $entreprises = Entreprise::all();
+        }else if(Auth::user()->role->name ==="direction"){
+
+        $ceos = User::where("role_id",$role->id)->where("entreprise_id",Auth::user()->entreprise_id)->with("entreprise","agency","role")->orderBy("created_at","desc")->paginate(15);
+        $agencies = Agency::where("entreprise_id",Auth::user()->entreprise_id)->with("entreprise")->get();
+        $entreprises = Entreprise::where("id",Auth::user()->entreprise_id)->get();
+
+        }else if(Auth::user()->role->name === "regional"){
+
+        $ceos = User::where("role_id",$role->id)->where("entreprise_id",Auth::user()->entreprise_id)->where("agency_id",Auth::user()->agency_id)->with("entreprise","agency","role")->orderBy("created_at","desc")->paginate(15);
+        $agencies = Agency::where("id",Auth::user()->agency_id)->where("entreprise_id",Auth::user()->entreprise_id)->with("entreprise")->get();
+        $entreprises = Entreprise::where("id",Auth::user()->entreprise_id)->get();
+
+        }
+        $roles = Role::where("name","controleur")->get();
         return Inertia("Regional",compact("roles","ceos","entreprises","agencies"));
     }
     
@@ -203,10 +221,24 @@ class UserController extends Controller
        //Magasin controllers
     public function index_magasin(){
         $role = Role::where("name","magasin")->first();
+         if(Auth::user()->role->name === "super_administrateur"){
+
         $ceos = User::where("role_id",$role->id)->with("entreprise","agency","role")->orderBy("created_at","desc")->paginate(15);
-        $roles = Role::where("name","magasin")->get();
-       $agencies = Agency::with("entreprise")->get();
+        $agencies = Agency::with("entreprise")->get();
         $entreprises = Entreprise::all();
+        }else if(Auth::user()->role->name ==="direction"){
+
+        $ceos = User::where("role_id",$role->id)->where("entreprise_id",Auth::user()->entreprise_id)->with("entreprise","agency","role")->orderBy("created_at","desc")->paginate(15);
+        $agencies = Agency::where("entreprise_id",Auth::user()->entreprise_id)->with("entreprise")->get();
+        $entreprises = Entreprise::where("id",Auth::user()->entreprise_id)->get();
+
+        }else if(Auth::user()->role->name === "regional"){
+
+        $ceos = User::where("role_id",$role->id)->where("entreprise_id",Auth::user()->entreprise_id)->where("agency_id",Auth::user()->agency_id)->with("entreprise","agency","role")->orderBy("created_at","desc")->paginate(15);
+        $agencies = Agency::where("id",Auth::user()->agency_id)->where("entreprise_id",Auth::user()->entreprise_id)->with("entreprise")->get();
+        $entreprises = Entreprise::where("id",Auth::user()->entreprise_id)->get();
+
+        } $roles = Role::where("name","magasin")->get();
         return Inertia("Magasin",compact("roles","ceos","entreprises","agencies"));
     }
     
@@ -270,10 +302,25 @@ class UserController extends Controller
            //Production controllers
     public function index_production(){
         $role = Role::where("name","production")->first();
+         if(Auth::user()->role->name === "super_administrateur"){
+
         $ceos = User::where("role_id",$role->id)->with("entreprise","agency","role")->orderBy("created_at","desc")->paginate(15);
-        $roles = Role::where("name","production")->get();
-       $agencies = Agency::with("entreprise")->get();
+        $agencies = Agency::with("entreprise")->get();
         $entreprises = Entreprise::all();
+        }else if(Auth::user()->role->name ==="direction"){
+
+        $ceos = User::where("role_id",$role->id)->where("entreprise_id",Auth::user()->entreprise_id)->with("entreprise","agency","role")->orderBy("created_at","desc")->paginate(15);
+        $agencies = Agency::where("entreprise_id",Auth::user()->entreprise_id)->with("entreprise")->get();
+        $entreprises = Entreprise::where("id",Auth::user()->entreprise_id)->get();
+
+        }else if(Auth::user()->role->name === "regional"){
+
+        $ceos = User::where("role_id",$role->id)->where("entreprise_id",Auth::user()->entreprise_id)->where("agency_id",Auth::user()->agency_id)->with("entreprise","agency","role")->orderBy("created_at","desc")->paginate(15);
+        $agencies = Agency::where("id",Auth::user()->agency_id)->where("entreprise_id",Auth::user()->entreprise_id)->with("entreprise")->get();
+        $entreprises = Entreprise::where("id",Auth::user()->entreprise_id)->get();
+
+        }
+        $roles = Role::where("name","production")->get();
         return Inertia("Production",compact("roles","ceos","entreprises","agencies"));
     }
     
@@ -338,10 +385,25 @@ class UserController extends Controller
         //Commercial controllers
     public function index_commercial(){
         $role = Role::where("name","commercial")->first();
+        if(Auth::user()->role->name === "super_administrateur"){
+
         $ceos = User::where("role_id",$role->id)->with("entreprise","agency","role")->orderBy("created_at","desc")->paginate(15);
-        $roles = Role::where("name","commercial")->get();
-       $agencies = Agency::with("entreprise")->get();
+        $agencies = Agency::with("entreprise")->get();
         $entreprises = Entreprise::all();
+        }else if(Auth::user()->role->name ==="direction"){
+
+        $ceos = User::where("role_id",$role->id)->where("entreprise_id",Auth::user()->entreprise_id)->with("entreprise","agency","role")->orderBy("created_at","desc")->paginate(15);
+        $agencies = Agency::where("entreprise_id",Auth::user()->entreprise_id)->with("entreprise")->get();
+        $entreprises = Entreprise::where("id",Auth::user()->entreprise_id)->get();
+
+        }else if(Auth::user()->role->name === "regional"){
+
+        $ceos = User::where("role_id",$role->id)->where("entreprise_id",Auth::user()->entreprise_id)->where("agency_id",Auth::user()->agency_id)->with("entreprise","agency","role")->orderBy("created_at","desc")->paginate(15);
+        $agencies = Agency::where("id",Auth::user()->agency_id)->where("entreprise_id",Auth::user()->entreprise_id)->with("entreprise")->get();
+        $entreprises = Entreprise::where("id",Auth::user()->entreprise_id)->get();
+
+        }
+         $roles = Role::where("name","commercial")->get();
         return Inertia("Commercial",compact("roles","ceos","entreprises","agencies"));
     }
     

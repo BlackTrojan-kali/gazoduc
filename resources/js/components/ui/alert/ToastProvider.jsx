@@ -26,7 +26,7 @@ export default function ToastProvider() {
                     // You might need to adjust these or remove them if they conflict with Alert's styles
                     className={`${
                         t.visible ? 'animate-enter' : 'animate-leave'
-                    } max-w-sm w-1/2 bg-white shadow-lg rounded-lg pointer-events-auto flex  ring-opacity-5`}
+                    } max-w-sm w-1/2  shadow-lg rounded-lg pointer-events-auto flex  ring-opacity-5`}
                     style={{
                         // Apply specific margin or other positioning adjustments if needed
                         // For instance, a margin-bottom to stack toasts

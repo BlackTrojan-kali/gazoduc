@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
-class SuperAdminMiddleWare
+class IsAdminMiddleware
 {
     /**
      * Handle an incoming request.
@@ -17,12 +17,13 @@ class SuperAdminMiddleWare
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if(!Auth::user()){
+          if(!Auth::user()){
             return redirect("/login");
         }else{
             $roleId = Auth::user()->role_id;
             $role = Role::where("id",$roleId)->first();
-            if($role->name !== "super_administrateur"){
+          
+            if($role->name !== "direction" && $role->name !== "super_administrateur"){
                
             return redirect()->route("login")->with("warning","vous n'etes pas authorize a acceder a cette ");
             }

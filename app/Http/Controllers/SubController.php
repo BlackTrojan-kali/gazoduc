@@ -58,10 +58,7 @@ public function store(Request $request)
 
 
     // À LA PLACE, RETOURNEZ SIMPLEMENT UNE RÉPONSE JSON AVEC L'ID DE LA SOUSCRIPTION
-    return response()->json([
-        'message' => 'Souscription créée avec succès!',
-        'subscription_id' => $subs->id, // C'EST CET ID QUE REACT RÉCUPÉRERA
-    ]);
+    return back()->with("success","souscription reussiee");
 }
 public function downloadInvoice(Subscription $subscription)
 {
@@ -86,7 +83,7 @@ public function downloadInvoice(Subscription $subscription)
     public function renew(Request $request,$idsub){
       
         $currentDate = Carbon::now();
-    
+        $start = Carbon::now();
         $newExpirationDate = $currentDate->addDays(30);
         $subscription =Subscription::where("id",$idsub)->first();
         $subscription->date_souscription =$currentDate->toDateString(); 
@@ -99,7 +96,7 @@ public function downloadInvoice(Subscription $subscription)
             $licence = $subscription->licence;
               //$total = $price * $nbre_agence;
          $agencies = Agency::where("entreprise_id", $subscription->entreprise_id)->get();
-    $pdf = Pdf::loadView('factures.licencePDFView', compact('agencies', "price", "subscription","currentDate",'newExpirationDate', "entreprise", "licence"));
+    $pdf = Pdf::loadView('factures.licencePDFView', compact('agencies', "price", "subscription","start",'newExpirationDate', "entreprise", "licence"));
 
     // Retourner le PDF pour le téléchargement
     return $pdf->download('facture-' . $subscription->id . '.pdf');

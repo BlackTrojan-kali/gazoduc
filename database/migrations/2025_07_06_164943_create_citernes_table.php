@@ -22,6 +22,8 @@ return new class extends Migration
             $table->foreign("current_product_id")->on("articles")->references("id");
             $table->unsignedBigInteger("agency_id")->nullable();
             $table->foreign("agency_id")->on("agencies")->references("id");
+            $table->unsignedBigInteger("entreprise_id")->nullable();
+            $table->foreign("entreprise_id")->on("entreprises")->references("id");
             $table->boolean("archived")->default(false);
             $table->timestamps();
         });

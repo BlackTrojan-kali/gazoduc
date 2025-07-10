@@ -7,6 +7,14 @@ use Illuminate\Database\Eloquent\Model;
 class Agency extends Model
 {
     //
+    protected $fillable=[
+        "code",
+        "name",
+        "type",
+        "unit",
+        "entreprise_id",
+        "weight_per_unit"
+    ];
     public function entreprise(){
         return $this->belongsTo(Entreprise::class,"entreprise_id");
     }

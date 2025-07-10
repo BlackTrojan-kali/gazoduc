@@ -30,9 +30,18 @@ class AuthController extends Controller
             "notification_type"=>"admin_auth",
             "message"=>"a super admin logged in",
             "is_read"=>false,
+            
         ]);
         return redirect()->route("dashboard")->with("success","authentification reussie");
         break;
+            case "direction":
+                   Notification::create([
+            "user_id"=>Auth::user()->id,
+            "notification_type"=>"Director_auth",
+            "message"=>"director logged in",
+            "is_read"=>false,
+        ]);
+        return redirect()->route("director.index")->with("success","authentification reussie");
         default:
         return back()->with("error","role invalide");
     }
@@ -42,7 +51,7 @@ class AuthController extends Controller
         Notification::create([
             "user_id"=>Auth::user()->id,
             "notification_type"=>"admin_auth",
-            "message"=>"a super admin logged out",
+            "message"=>Auth::user()->first_name." logged out",
             "is_read"=>false,
         ]);
         Auth::logout();

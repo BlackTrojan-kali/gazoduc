@@ -11,8 +11,9 @@ import CreateUserModal from "../components/Modals/UserModal";
 import EditUserModal from "../components/Modals/EditUserModal";
 import Badge from '../components/ui/badge/Badge';
 import Switch from '../components/form/switch/Switch';
+import DirLayout from '../layout/DirLayout/DirLayout';
 
-const Regional = ({ ceos, roles,entreprises,agencies }) => {
+const PageContent = ({ ceos, roles,entreprises,agencies }) => {
   // --- États pour contrôler l'ouverture des modales ---
   const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
   const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
@@ -40,11 +41,11 @@ console.log(ceos)
   const handleArchive = (idceo) => {
     // Note: Assurez-vous que la route 'company.archive' est bien définie dans votre web.php
     // et qu'elle gère le basculement de l'état 'archived' de l'entreprise.
-    put(route("direction.archive", idceo), {
+    put(route("regional.archive", idceo), {
       preserveScroll: true,
       onSuccess: () => {
         // Optionnel: feedback visuel ou rechargement partiel si nécessaire
-      }
+      } 
     });
   };
   return (
@@ -222,5 +223,27 @@ console.log(ceos)
   );
 };
 
-Regional.layout = page => <AppLayout children={page} />;
+const Regional = ({ ceos, roles,entreprises,agencies })=>{
+  const {auth} = usePage().props
+  console.log(auth);
+  if(auth.user.role === "super_administrateur"){
+    return (
+      <AppLayout>
+ <PageContent ceos={ceos} roles={roles} entreprises={entreprises} agencies={agencies}>
+
+         </PageContent>
+      </AppLayout>
+    )
+  }else{
+    return(
+      <DirLayout >
+         <PageContent ceos={ceos} roles={roles} entreprises={entreprises} agencies={agencies}>
+
+         </PageContent>
+      </DirLayout>
+    )
+  }
+  
+
+}
 export default Regional;

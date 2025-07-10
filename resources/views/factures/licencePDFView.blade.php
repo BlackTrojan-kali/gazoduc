@@ -29,8 +29,8 @@
     </div>
 
     <div class="invoice-details">
-        <strong>Facture #:</strong> {{ $subscription->id }}<br>
-        <strong>Date:</strong> {{ $currentDate  }} exp:{{$newExpirationDate}}<br>
+        <strong>Facture #:</strong><?php echo rand(0,999999999999);?><br>
+        <strong>Date:</strong> {{ $start  }} <br> <strong>exp:</strong>{{$newExpirationDate}}<br>
         <strong>Client:</strong> {{ $entreprise->name }}
     </div>
     <div style="clear: both;"></div>
@@ -56,7 +56,7 @@
     </table>
 
     <div class="total">
-        Total : {{ $total }}
+        Total : {{ $total }} XAF
     </div>
 </body>
 </html>
