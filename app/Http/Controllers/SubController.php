@@ -7,6 +7,7 @@ use App\Models\Entreprise;
 use App\Models\Licence;
 use App\Models\Subscription;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -83,18 +84,26 @@ public function downloadInvoice(Subscription $subscription)
     return $pdf->download('facture-' . $subscription->id . '.pdf');
 }
     public function renew(Request $request,$idsub){
-        $request->validate([
-            "date_souscription"=>"date| required",
-            "date_expiration"=>"date | required",
-            "is_active"=>"required",
-        ]);
+      
+        $currentDate = Carbon::now();
+    
+        $newExpirationDate = $currentDate->addDays(30);
+        $subscription =Subscription::where("id",$idsub)->first();
+        $subscription->date_souscription =$currentDate->toDateString(); 
+        $subscription->date_expiration = $newExpirationDate->toDateString();
+        $subscription->is_active = true;
+        $subscription->save();
+       
+        $entreprise = $subscription->entreprise;
+    $price = $subscription->price;
+            $licence = $subscription->licence;
+              //$total = $price * $nbre_agence;
+         $agencies = Agency::where("entreprise_id", $subscription->entreprise_id)->get();
+    $pdf = Pdf::loadView('factures.licencePDFView', compact('agencies', "price", "subscription","currentDate",'newExpirationDate', "entreprise", "licence"));
 
-        $sub =Subscription::where("id",$idsub)->first();
-        $sub->date_souscription = $request->date_souscription;
-        $sub->date_expiration = $request->date_expiration;
-        $sub->is_active = $request->is_active;
+    // Retourner le PDF pour le téléchargement
+    return $pdf->download('facture-' . $subscription->id . '.pdf');
 
-        return back()->with("success","vous avez souscris avec success");
     }
     
 }

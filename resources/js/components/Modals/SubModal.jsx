@@ -74,12 +74,13 @@ const CreateSubscriptionModal = ({ isOpen, onClose, entreprises, licences }) => 
         // renvoie l'ID de la nouvelle souscription dans sa réponse JSON.
         // Exemple: return response()->json(['subscription_id' => $subscription->id]);
         // Ou via une session flash: return redirect()->back()->with('subscription_id', $subscription->id);
-        
+          const renewUrl = route('subs.renew', subscription.id);
+      window.open(renewUrl);
         // Supposons que l'ID soit retourné comme une prop Inertia (le plus simple pour `onSuccess` d'Inertia).
         // Vous devrez vérifier la structure exacte de votre réponse Inertia.
         const newSubscriptionId = page.props.subscription_id || page.props.flash?.subscription_id; 
         // Si l'ID n'est pas directement dans props, vérifiez dans `flash` messages si vous utilisez `with()`
-
+console.log(newSubscriptionId)
         // Appeler la fonction `onClose` du parent, en lui passant l'ID.
         // C'est `onClose` (qui est `handleSubscriptionCreated` du parent)
         // qui gérera la fermeture du modal, le rechargement de la liste

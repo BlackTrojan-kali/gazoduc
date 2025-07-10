@@ -62,8 +62,8 @@ const Souscription = ({ subs, entreprises, licences }) => {
         // --- MÉTHODE RECOMMANDÉE POUR LE TÉLÉCHARGEMENT DE PDF VIA LE NAVIGATEUR ---
         // Ouvrez l'URL de renouvellement dans un nouvel onglet.
         // Laravel doit retourner le PDF directement, et le navigateur le téléchargera.
-        const renewUrl = route('subscriptions.renew', subscription.id);
-        window.open(renewUrl, '_blank');
+       
+        window.location.href =`/subs/${subscription.id}`;
 
         // Affichez un message de succès et rafraîchissez la liste des souscriptions.
         // On suppose que le renouvellement en base de données a été effectué par Laravel
@@ -73,8 +73,7 @@ const Souscription = ({ subs, entreprises, licences }) => {
           'La souscription a été renouvelée et la facture est en cours de téléchargement.',
           'success'
         );
-        inertia.reload({ only: ['subs'] }); // Rafraîchit les données `subs` de la page
-      }
+       }
     });
   };
 

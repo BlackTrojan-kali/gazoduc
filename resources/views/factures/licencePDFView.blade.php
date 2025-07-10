@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Facture #{{ $subs->id }}</title>
+    <title>Facture #{{ $subscription->id }}</title>
     <style>
         body { font-family: sans-serif; }
         .header { text-align: center; margin-bottom: 30px; }
@@ -29,8 +29,8 @@
     </div>
 
     <div class="invoice-details">
-        <strong>Facture #:</strong> {{ $subs->id }}<br>
-        <strong>Date:</strong> {{ $subs->date_souscription }}<br>
+        <strong>Facture #:</strong> {{ $subscription->id }}<br>
+        <strong>Date:</strong> {{ $currentDate  }} exp:{{$newExpirationDate}}<br>
         <strong>Client:</strong> {{ $entreprise->name }}
     </div>
     <div style="clear: both;"></div>
@@ -49,6 +49,7 @@
                 <td>{{ $licence->name }}</td>
                 <td>{{ count($agencies) }}</td>
                 <td>{{ $price }}</td>
+                <?php $total =  count($agencies) * $price;?>
                 <td>{{ $total }}</td> {{-- Utilisation de la variable $total passée depuis le contrôleur --}}
             </tr>
         </tbody>

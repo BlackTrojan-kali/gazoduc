@@ -77,5 +77,5 @@ Route::middleware(SuperAdminMiddleWare::class)->group(function(){
 Route::get('/subscriptions/{subscription}/invoice', [SubController::class, 'downloadInvoice'])->name('subs.downloadInvoice');
     Route::get("/subs",[SubController::class,"index"])->name("subs");
     Route::post("/subs",[SubController::class,"store"])->name("subs.store");
-    Route::put("/subs/{idSub}",[SubController::class,"renew"])->name("subs.renew");
+    Route::get("/subs/{idSub}",[SubController::class,"renew"])->name("subs.renew");
 });
