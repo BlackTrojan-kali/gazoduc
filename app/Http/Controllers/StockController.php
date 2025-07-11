@@ -41,6 +41,8 @@ class StockController extends Controller
             if ($article->type === 'produit') {
                 // Si c'est un produit, ajouter les types spécifiques
                 $storageTypes = ['magasin', 'commercial', 'production'];
+            }else {
+                return back()->with("error","impossible de creer se stock verifier si il sagit d'un produit ou d'une citerne");
             }
 
             foreach ($agencies as $agency) {
@@ -73,7 +75,7 @@ class StockController extends Controller
             DB::rollBack(); // Annule la transaction en cas d'erreur
             // Log l'erreur pour le débogage
             dd($e);
-           return back()->with('error' , $e.'Erreur lors de l\'initialisation des stocks. Veuillez contacter l\'administrateur.');
+           return back()->with('error' , 'Erreur lors de l\'initialisation des stocks. Veuillez contacter l\'equipe technique.');
         }
     }
     

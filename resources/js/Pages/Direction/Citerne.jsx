@@ -2,34 +2,40 @@ import React, { useState } from 'react';
 import DirLayout from '../../layout/DirLayout/DirLayout';
 import { Head, useForm, usePage, Link } from '@inertiajs/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEdit, faPlus, faTrash, faBoxesStacked, faOilCan } from '@fortawesome/free-solid-svg-icons'; // Ajout de faOilCan pour les citernes
+import { faEdit, faPlus, faTrash, faBoxesStacked, faOilCan } from '@fortawesome/free-solid-svg-icons';
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '../../components/ui/table';
 
-// Importez la nouvelle modal pour les citernes
-import CreateCiterneModal from '../../components/Modals/Direction/CiternModal';
+// Importez maintenant la modal unique pour la création/modification
+import CiterneFormModal from '../../components/Modals/Direction/CiternModal'; // Assurez-vous que le chemin est correct et le nom est à jour
 
 import Swal from 'sweetalert2';
 
-const Citernes = ({ citernes, entreprises, products }) => { // Ajoutez 'products' aux props
-  // Renommez les états pour qu'ils soient spécifiques aux citernes
-  const [isCiterneModalOpen, setIsCiterneModalOpen] = useState(false);
-  const [selectedCiterne, setSelectedCiterne] = useState(null); // Pour l'édition si vous l'ajoutez plus tard
+const Citernes = ({ citernes, entreprises, products, agencies }) => {
+  // Un seul état pour contrôler l'ouverture de la modal
+  const [isCiterneFormModalOpen, setIsCiterneFormModalOpen] = useState(false);
+  // Un état pour stocker la citerne sélectionnée (null pour la création)
+  const [selectedCiterne, setSelectedCiterne] = useState(null);
 
-  // useForm d'Inertia
   const { delete: inertiaDelete, post: inertiaPost } = useForm();
-  const { props: { auth } } = usePage(); // Accédez aux données de l'utilisateur connecté via 'auth'
+  const { props: { auth } } = usePage();
 
-  // Fonctions pour ouvrir/fermer la modal de citerne
+  // Fonction pour ouvrir la modal en mode CRÉATION
   const openCreateCiterneModal = () => {
-    setSelectedCiterne(null); // S'assurer que c'est un mode création
-    setIsCiterneModalOpen(true);
+    setSelectedCiterne(null); // Important : définir selectedCiterne à null pour le mode création
+    setIsCiterneFormModalOpen(true);
   };
 
-  const closeCiterneModal = () => {
-    setIsCiterneModalOpen(false);
-    setSelectedCiterne(null);
-    // Rechargez la page après une opération pour rafraîchir la liste des citernes
-    window.location.reload();
+  // Fonction pour ouvrir la modal en mode MODIFICATION
+  const openEditCiterneModal = (citerne) => {
+    setSelectedCiterne(citerne); // Définit la citerne à modifier
+    setIsCiterneFormModalOpen(true);
+  };
+
+  // Fonction pour fermer la modal (commune aux deux modes)
+  const closeCiterneFormModal = () => {
+    setIsCiterneFormModalOpen(false);
+    setSelectedCiterne(null); // Réinitialiser selectedCiterne après la fermeture
+    // Recharger la page après une opé
   };
 
   // --- Fonction pour gérer la suppression d'une citerne avec SweetAlert2 ---
@@ -45,7 +51,7 @@ const Citernes = ({ citernes, entreprises, products }) => { // Ajoutez 'products
       cancelButtonText: 'Annuler'
     }).then((result) => {
       if (result.isConfirmed) {
-        inertiaDelete(route('citernes.destroy', citerneId), { // Route pour supprimer une citerne
+        inertiaDelete(route('citernes.destroy', citerneId), {
           preserveScroll: true,
           onSuccess: () => {
             Swal.fire(
@@ -53,7 +59,7 @@ const Citernes = ({ citernes, entreprises, products }) => { // Ajoutez 'products
               'La citerne a été supprimée avec succès.',
               'success'
             );
-            closeCiterneModal(); // Appelle la fonction de fermeture qui recharge la page
+            window.location.reload(); // Recharger après suppression
           },
           onError: (errors) => {
             console.error('Erreur de suppression:', errors);
@@ -68,14 +74,9 @@ const Citernes = ({ citernes, entreprises, products }) => { // Ajoutez 'products
     });
   };
 
-  // --- NOUVELLE FONCTION : Gérer la création de stocks pour une citerne ---
-  // Note : La logique pour les stocks de citerne peut être différente de celle des articles.
-  // Si c'est juste un stock "lié" à la citerne, l'ID de la citerne est la clé.
-  // S'il s'agit d'un stock "pour un produit spécifique DANS cette citerne", alors article_id est aussi nécessaire.
-  // Pour l'instant, je vais créer une version générique qui utilise l'ID de la citerne.
+  // --- Fonction pour gérer la création de stocks pour une citerne ---
   const handleCreateCiterneStock = (citerneId, citerneName, currentProductId = null) => {
-    const userEntrepriseId = auth.user.entreprise_id; // Assurez-vous que c'est bien 'entreprise_id' et non 'entreprice.id'
-                                                       // selon la structure de `auth.user`
+    const userEntrepriseId = auth.user.entreprise_id;
     if (!userEntrepriseId) {
       Swal.fire('Erreur', 'Impossible de déterminer l\'entreprise de l\'utilisateur connecté, monsieur.', 'error');
       return;
@@ -92,12 +93,10 @@ const Citernes = ({ citernes, entreprises, products }) => { // Ajoutez 'products
       cancelButtonText: 'Annuler'
     }).then((result) => {
       if (result.isConfirmed) {
-        // Nouvelle route spécifique pour les stocks de citernes
-        inertiaPost(route('citerne_stocks.create'), { // Assurez-vous que cette route existe
+        inertiaPost(route('citerne_stocks.create'), {
           citerne_id: citerneId,
-          article_id: currentProductId, // Peut être null si le stock de citerne n'est pas lié à un produit spécifique ici
+          article_id: currentProductId,
           entreprise_id: userEntrepriseId,
-          // Vous pourriez ajouter d'autres champs de stock spécifiques aux citernes ici
         }, {
           preserveScroll: true,
           onSuccess: () => {
@@ -106,7 +105,7 @@ const Citernes = ({ citernes, entreprises, products }) => { // Ajoutez 'products
               `Le stock pour la citerne "${citerneName}" a été initialisé.`,
               'success'
             );
-            closeCiterneModal();
+            window.location.reload(); // Recharger après initialisation du stock
           },
           onError: (errors) => {
             console.error('Erreur de création de stock de citerne:', errors);
@@ -143,7 +142,7 @@ const Citernes = ({ citernes, entreprises, products }) => { // Ajoutez 'products
 
             <div className="flex items-center gap-3">
               <button
-                onClick={openCreateCiterneModal} // Appelle la fonction pour ouvrir la modal de citerne
+                onClick={openCreateCiterneModal} // Ouvre la modal en mode création
                 className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
               >
                 <FontAwesomeIcon icon={faPlus} />
@@ -169,7 +168,7 @@ const Citernes = ({ citernes, entreprises, products }) => { // Ajoutez 'products
 
               <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
                 {citernes.data && citernes.data.length > 0 ? (
-                  citernes.data.map((citerne) => ( // Itérer sur 'citerne' et non 'article'
+                  citernes.data.map((citerne) => (
                     <TableRow key={citerne.id}>
                       <TableCell>{citerne.name}</TableCell>
                       <TableCell>{citerne.type}</TableCell>
@@ -180,26 +179,12 @@ const Citernes = ({ citernes, entreprises, products }) => { // Ajoutez 'products
                       <TableCell>{citerne.agency ? citerne.agency.name : 'N/A'}</TableCell>
                       <TableCell>{citerne.entreprise ? citerne.entreprise.name : 'N/A'}</TableCell>
                       <TableCell className="py-3 text-gray-500 text-theme-sm gap-2 flex dark:text-gray-400">
-                        {/* Bouton Modifier (pourrait ouvrir une modal d'édition de citerne) */}
+                        {/* Bouton Modifier qui ouvre la modal en mode édition */}
                         <button
-                          // onClick={() => openEditCiterneModal(citerne)} // Implémenter openEditCiterneModal si nécessaire
+                          onClick={() => openEditCiterneModal(citerne)}
                           className="inline-flex items-center gap-2 rounded-lg border border-yellow-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-yellow-700 shadow-theme-xs hover:bg-yellow-50 hover:text-yellow-800 dark:border-yellow-700 dark:bg-yellow-800 dark:text-yellow-400 dark:hover:bg-white/[0.03] dark:hover:text-yellow-200"
                         >
                           <FontAwesomeIcon icon={faEdit} /> Modifier
-                        </button>
-                        {/* Bouton Supprimer une citerne */}
-                        <button
-                          onClick={() => handleDeleteCiterne(citerne.id, citerne.name)}
-                          className="inline-flex items-center gap-2 rounded-lg border border-red-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-red-700 shadow-theme-xs hover:bg-red-50 hover:text-red-800 dark:border-red-700 dark:bg-red-800 dark:text-red-400 dark:hover:bg-white/[0.03] dark:hover:text-red-200"
-                        >
-                          <FontAwesomeIcon icon={faTrash} /> Supprimer
-                        </button>
-                        {/* Bouton pour créer les stocks de cette citerne */}
-                        <button
-                          onClick={() => handleCreateCiterneStock(citerne.id, citerne.name, citerne.current_product_id)}
-                          className="inline-flex items-center gap-2 rounded-lg border border-blue-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-blue-700 shadow-theme-xs hover:bg-blue-50 hover:text-blue-800 dark:border-blue-700 dark:bg-blue-800 dark:text-blue-400 dark:hover:bg-white/[0.03] dark:hover:text-blue-200"
-                        >
-                          <FontAwesomeIcon icon={faOilCan} /> Initialiser Stock
                         </button>
                       </TableCell>
                     </TableRow>
@@ -215,7 +200,7 @@ const Citernes = ({ citernes, entreprises, products }) => { // Ajoutez 'products
             </Table>
 
             {/* Pagination */}
-            {citernes.links && citernes.links.length > 3 && (
+            {(
               <nav className="flex justify-end mt-4">
                 <div className="flex gap-2">
                   {citernes.links.map((link, index) => (
@@ -245,13 +230,14 @@ const Citernes = ({ citernes, entreprises, products }) => { // Ajoutez 'products
         </div>
       </div>
 
-      {/* La nouvelle modal de création de citerne */}
-      <CreateCiterneModal
-        isOpen={isCiterneModalOpen}
-        onClose={closeCiterneModal}
-        entreprises={[]}//entreprises}
-        products={products} // Passez la liste des produits à la modal
-        title="Créer une Nouvelle Citerne"
+      {/* Une seule modal de formulaire pour la création et la modification */}
+      <CiterneFormModal
+        isOpen={isCiterneFormModalOpen}
+        onClose={closeCiterneFormModal}
+        entreprises={entreprises}
+        agencies={agencies}
+        products={products}
+        selectedCiterne={selectedCiterne} // Passe la citerne sélectionnée (sera null pour la création)
       />
     </>
   );

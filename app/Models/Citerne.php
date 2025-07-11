@@ -11,4 +11,10 @@ class Citerne extends Model
     public function agency(){
         return $this->belongsTo(Agency::class,"agency_id");
     }
+    public function entreprise(){
+        return $this->belongsTo(Entreprise::class,"entreprise_id");
+    }
+    public function article(){
+        return $this->belongsTo(Article::class,"current_product_id");
+    }
 }

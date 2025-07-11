@@ -75,6 +75,8 @@ Route::middleware(DirectionMiddleware::class)->group(function(){
     Route::post('/stocks/create-for-article/{idAr}', [StockController::class, 'createForArticle'])->name('stocks.createForArticle');
     //citernes routes
     Route::get('/citernes/index', [CiterneController::class, 'index'])->name('citernes.index');
+    Route::post('/citernes/store', [CiterneController::class, 'store'])->name('citernes.store');
+    Route::put('/citernes/uptate/{idCit}', [CiterneController::class, 'update'])->name('citernes.update');
 
     
 });
