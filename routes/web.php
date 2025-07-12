@@ -12,12 +12,15 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\EntrepriseController;
 use App\Http\Controllers\LicenceController;
+use App\Http\Controllers\MagasinController;
 use App\Http\Controllers\RegionController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\SubController;
 use App\Http\Controllers\UserController;
 use App\Http\Middleware\DirectionMiddleware;
 use App\Http\Middleware\IsAdminMiddleware;
+use App\Http\Middleware\MagasinMiddleware;
+
 //auth routes
 Route::get('/login',[AuthController::class,"loginPage"] )->name("login");
 Route::post('/login',[AuthController::class,"login"] )->name("login");
@@ -80,7 +83,11 @@ Route::middleware(DirectionMiddleware::class)->group(function(){
 
     
 });
-
+//magasinier middleware
+Route::middleware(MagasinMiddleware::class)->group(function(){
+   Route::get("/magasin-index",[MagasinController::class,"index"])->name("magasin.index"); 
+   Route::get("/magasin-citernes",[MagasinController::class,"citerne_index"])->name("magasin.citerne_index"); 
+});
 Route::middleware(IsAdminMiddleware::class)->group(function(){
    //regional routes
     Route::get("/regional",[UserController::class,"index_regional"])->name("regional");

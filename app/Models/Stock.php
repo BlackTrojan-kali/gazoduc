@@ -20,11 +20,14 @@ class Stock extends Model
     // Relations (facultatif mais recommandé)
     public function article()
     {
-        return $this->belongsTo(Article::class);
+        return $this->belongsTo(Article::class,"article_id");
     }
 
     public function agency()
     {
-        return $this->belongsTo(Agency::class);
+        return $this->belongsTo(Agency::class,"agency_id");
+    }
+    public function citerne(){
+        return $this->belongsTo(Citerne::class,"citerne_id");
     }
 }
