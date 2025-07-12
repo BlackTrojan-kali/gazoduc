@@ -141,7 +141,7 @@ const Entree = ({ movements, articles, agencies, services }) => { // Ajoutez art
                         {movement.destination_location || 'N/A'}
                       </TableCell>
                       <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                        {movement.recorded_by_user ? movement.recorded_by_user.name : 'N/A'}
+                        {movement.user ? movement.user.first_name : 'N/A'}
                       </TableCell>
                       <TableCell className="py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
                         {new Date(movement.created_at).toLocaleDateString('fr-FR', {

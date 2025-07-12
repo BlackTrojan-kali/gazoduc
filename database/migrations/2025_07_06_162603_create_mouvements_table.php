@@ -19,6 +19,7 @@ return new class extends Migration
             $table->unsignedBigInteger("recorded_by_user_id");
             $table->string("movement_type");
             $table->decimal("quantity");
+            $table->decimal("stock")->nullable();
             $table->string("qualification")->nullable();
             $table->string("source_location")->nullable();
             $table->string("destination_location")->nullable();

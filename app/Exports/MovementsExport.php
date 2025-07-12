@@ -2,23 +2,43 @@
 
 namespace App\Exports;
 
+use App\Models\Mouvement;
+use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize; // Pour ajuster la taille des colonnes automatiquement
-use Maatwebsite\Excel\Concerns\WithTitle; // Pour nommer l'onglet
-use Maatwebsite\Excel\Concerns\WithStyles; // Pour styliser
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet; // Pour WithStyles
+// Retire WithMapping, car le mapping est fait directement dans collection()
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
+use Maatwebsite\Excel\Concerns\WithTitle;
+use Carbon\Carbon;
 
-class MovementsExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize, WithTitle, WithStyles
+// La classe n'implémente plus WithMapping
+class MovementsExport implements FromCollection, WithHeadings, ShouldAutoSize, WithStrictNullComparison, WithTitle
 {
     protected $movements;
-    protected $filters;
+    protected $startDate;
+    protected $endDate;
+    protected $agencyName;
+    protected $serviceName;
+    protected $movementType;
+    protected $articleName;
 
-    public function __construct($movements, $filters)
-    {
+    public function __construct(
+        Collection $movements,
+        string $startDate,
+        string $endDate,
+        ?string $agencyName,
+        ?string $serviceName,
+        string $movementType,
+        ?string $articleName
+    ) {
         $this->movements = $movements;
-        $this->filters = $filters;
+        $this->startDate = $startDate;
+        $this->endDate = $endDate;
+        $this->agencyName = $agencyName ?? 'Tous';
+        $this->serviceName = $serviceName ?? 'Tous';
+        $this->movementType = $movementType === 'global' ? 'Entrée / Sortie' : ucfirst($movementType);
+        $this->articleName = $articleName ?? 'Tous les articles';
     }
 
     /**
@@ -26,72 +46,176 @@ class MovementsExport implements FromCollection, WithHeadings, WithMapping, Shou
     */
     public function collection()
     {
-        return $this->movements;
+        $dataRows = collect();
+
+        // On crée les lignes de données en mappant chaque mouvement
+        foreach ($this->movements as $movement) {
+            if ($this->movementType === 'Entrée / Sortie') {
+                $entree = 0;
+                $sortie = 0;
+                $perte = 0;
+                $achat = 0;
+                $repreuve = 0;
+                $consigne = 0;
+
+                if ($movement->movement_type === 'entree') {
+                    $entree = $movement->quantity;
+                } elseif ($movement->movement_type === 'sortie') {
+                    $sortie = $movement->quantity;
+                }
+
+                switch ($movement->qualification) {
+                    case 'perte':
+                        $perte = $movement->quantity;
+                        break;
+                    case 'achat':
+                        $achat = $movement->quantity;
+                        break;
+                    case 'repreuve':
+                        $repreuve = $movement->quantity;
+                        break;
+                    case 'consigne':
+                        $consigne = $movement->quantity;
+                        break;
+                }
+
+                $dataRows->push([
+                    Carbon::parse($movement->created_at)->format('d/m/Y H:i'),
+                    $movement->article->name ?? 'N/A',
+                    $movement->agency->name ?? 'N/A',
+                    $entree,
+                    $sortie,
+                    $perte,
+                    $achat,
+                    $repreuve,
+                    $consigne,
+                    $movement->stock ?? 'N/A',
+                    $movement->description ?? 'Aucune',
+                    $movement->recordedByUser->name ?? 'N/A',
+                ]);
+            } else {
+                $dataRows->push([
+                    Carbon::parse($movement->created_at)->format('d/m/Y H:i'),
+                    $movement->article->name ?? 'N/A',
+                    $movement->agency->name ?? 'N/A',
+                    $movement->quantity,
+                    $movement->stock ?? 'N/A',
+                    $movement->description ?? 'Aucune',
+                    $movement->recordedByUser->name ?? 'N/A',
+                ]);
+            }
+        }
+
+        // Calculer et ajouter la ligne de total à la collection
+        if ($this->movementType === 'Entrée / Sortie') {
+            $totalEntree = 0;
+            $totalSortie = 0;
+            $totalPerte = 0;
+            $totalAchat = 0;
+            $totalRepreuve = 0;
+            $totalConsigne = 0;
+
+            foreach ($this->movements as $movement) {
+                if ($movement->movement_type === 'entree') {
+                    $totalEntree += $movement->quantity;
+                } elseif ($movement->movement_type === 'sortie') {
+                    $totalSortie += $movement->quantity;
+                }
+                switch ($movement->qualification) {
+                    case 'perte': $totalPerte += $movement->quantity; break;
+                    case 'achat': $totalAchat += $movement->quantity; break;
+                    case 'repreuve': $totalRepreuve += $movement->quantity; break;
+                    case 'consigne': $totalConsigne += $movement->quantity; break;
+                }
+            }
+
+            $dataRows->push([
+                'Total :', // Libellé
+                '', '', // Colonnes vides pour alignement du libellé
+                $totalEntree,
+                $totalSortie,
+                $totalPerte,
+                $totalAchat,
+                $totalRepreuve,
+                $totalConsigne,
+                '', // Stock Actuel (vide)
+                '', // Description (vide)
+                ''  // Enregistré par (vide)
+            ]);
+        } else {
+            $totalQuantiteSimple = $this->movements->sum('quantity');
+            $dataRows->push([
+                'Total :',
+                '', '', // Colonnes vides pour alignement du libellé
+                $totalQuantiteSimple,
+                '', // Stock Actuel (vide)
+                '', // Description (vide)
+                ''  // Enregistré par (vide)
+            ]);
+        }
+
+        return $dataRows;
     }
 
     /**
-     * Retourne les en-têtes des colonnes pour Excel
+     * Définir les en-têtes de colonnes et les informations de rapport.
      * @return array
      */
     public function headings(): array
     {
-        return [
-            'ID',
-            'Date du Mouvement',
-            'Type',
-            'Qualification',
-            'Quantité',
-            'Article',
-            'Agence',
-            'Service',
-            'Localisation Source',
-            'Localisation Destination',
-            'Description',
-            'Enregistré par',
+        $header = [
+            ['Rapport d\'Historique des Mouvements'],
+            ['Généré le: ' . now()->format('d/m/Y à H:i:s')],
+            [],
+
+            ['Filtres Appliqués:'],
+            ['Période: Du ' . $this->startDate . ' au ' . $this->endDate],
+            ['Agence: ' . $this->agencyName],
+            ['Service: ' . $this->serviceName],
+            ['Type de mouvement: ' . $this->movementType],
+            ['Article: ' . $this->articleName],
+            [],
         ];
+
+        if ($this->movementType === 'Entrée / Sortie') {
+            $tableHeaders = [
+                'Date',
+                'Article',
+                'Agence',
+                'Entrée (Qté)',
+                'Sortie (Qté)',
+                'Perte',
+                'Achat',
+                'Repreuve',
+                'Consigne',
+                'Stock Actuel',
+                'Description',
+                'Enregistré par',
+            ];
+        } else {
+            $tableHeaders = [
+                'Date',
+                'Article',
+                'Agence',
+                'Quantité',
+                'Stock Actuel',
+                'Description',
+                'Enregistré par',
+            ];
+        }
+
+        return array_merge(array_map(fn($row) => $row, $header), [$tableHeaders]);
     }
 
-    /**
-     * Mappe chaque mouvement à une ligne du fichier Excel
-     * @param mixed $movement
-     * @return array
-     */
-    public function map($movement): array
-    {
-        return [
-            $movement->id,
-            \Carbon\Carbon::parse($movement->recorded_at)->format('d/m/Y H:i'),
-            ucfirst($movement->movement_type),
-            ucfirst($movement->qualification),
-            $movement->quantity,
-            $movement->article->name ?? 'N/A',
-            $movement->agency->name ?? 'N/A',
-            $movement->source_location ?? 'N/A',
-            $movement->destination_location ?? 'N/A',
-            $movement->description ?? 'Aucune',
-            $movement->recordedByUser->name ?? 'N/A',
-        ];
-    }
+    // La méthode map() n'est plus nécessaire ici puisque le mapping est fait dans collection()
+    // public function map($movement): array { ... }
 
     /**
-     * Retourne le titre de l'onglet Excel
+     * Pour définir le nom de la feuille.
      * @return string
      */
     public function title(): string
     {
-        return 'Mouvements Historique';
-    }
-
-    /**
-     * Applique des styles à la feuille de calcul
-     * @param Worksheet $sheet
-     * @return array
-     */
-    public function styles(Worksheet $sheet)
-    {
-        return [
-            // Style la première ligne (les en-têtes)
-            1    => ['font' => ['bold' => true, 'size' => 12], 'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['argb' => 'FFE0E0E0']]],
-        ];
+        return 'Historique des Mouvements';
     }
 }

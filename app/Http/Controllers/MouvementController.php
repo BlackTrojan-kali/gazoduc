@@ -10,6 +10,7 @@ use App\Models\Mouvement;
 use App\Models\Role;
 use App\Models\Stock;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -67,11 +68,12 @@ class MouvementController extends Controller
                 $movement = new Mouvement();
                 $movement->article_id = $request->article_id;
                 $movement->agency_id = $request->agency_id;
-                $movement->entreprise_id = $request->entreprise_id;
+                $movement->entreprise_id = Auth::user()->entreprise_id;
                 $movement->recorded_by_user_id = $request->recorded_by_user_id;
                 $movement->movement_type = $movementType;
                 $movement->qualification = $request->qualification;
                 $movement->quantity = $quantity;
+                $movement->stock = $stock->quantity;
                 $movement->source_location = Auth::user()->role->name;
                 $movement->destination_location = $request->destination_location;
                 $movement->description = $request->description;
@@ -164,6 +166,99 @@ class MouvementController extends Controller
             DB::rollBack();
             return back()->with("error","le mouvement n'a pas ete supprime veillez reesayer");
         }
+    }
+  public function generateReport(Request $request)
+    {
+        // 1. Récupération et préparation des paramètres
+        $startDate = Carbon::parse($request->start_date)->startOfDay();
+        $endDate = Carbon::parse($request->end_date)->endOfDay();
+        $agencyId = $request->get("agency_id");
+        $serviceId = $request->get("service_id");
+        $movementType = $request->get("movement_type");
+        $articleId = $request->get("article_id");
+        $fileType = $request->get("file_type");
+
+        $roleName = null;
+        $agencyName = null;
+        $articleName = null;
+        $serviceName = null; // Pour les filtres Excel
+
+        if ($serviceId) {
+            $role = Role::find($serviceId);
+            if ($role) {
+                $roleName = $role->name;
+                $serviceName = $role->name; // Utilise le nom du rôle pour le filtre de service
+            }
+        }
+
+        if ($agencyId) {
+            $agency = Agency::find($agencyId);
+            if ($agency) {
+                $agencyName = $agency->name;
+            }
+        }
+
+        if ($articleId) {
+            $article = Article::find($articleId);
+            if ($article) {
+                $articleName = $article->name;
+            }
+        }
+
+        // 2. Construction de la requête de base pour les mouvements
+        $query = Mouvement::where("agency_id", $agencyId)
+                          ->where("article_id", $articleId)
+                          ->whereDate("created_at", ">=", $startDate)
+                          ->whereDate("created_at", "<=", $endDate)
+                          ->orderBy('created_at', 'asc')
+                          ->with("article", "agency", "user",); // 'service' pour la relation dans le contrôleur
+
+        if ($roleName) {
+            $query->where("source_location", $roleName);
+        }
+
+        $fileName = 'historique_mouvements_' . now()->format('Ymd_His');
+
+        if ($movementType !== "global") {
+            $query->where("movement_type", $movementType);
+            $movements = $query->get();
+
+            if ($fileType == "pdf") {
+                $pdf = Pdf::loadView("PDF.MovesPDFView", compact("movements", "role"));
+                return $pdf->download($fileName . '.pdf');
+            } elseif ($fileType == "excel") {
+                // Passez toutes les variables nécessaires à l'exportateur
+                return Excel::download(new MovementsExport(
+                    $movements,
+                    $startDate->format('d/m/Y'),
+                    $endDate->format('d/m/Y'),
+                    $agencyName,
+                    $serviceName, // Ou $roleName
+                    $movementType,
+                    $articleName
+                ), $fileName . '.xlsx');
+            }
+
+        } else { // C'est un mouvement global
+            $movements = $query->get();
+
+            if ($fileType == "pdf") {
+                $pdf = Pdf::loadView("PDF.MovesGlobalPDFView", compact("movements", "role"));
+                return $pdf->download($fileName . '.pdf');
+            } elseif ($fileType == "excel") {
+                // Passez toutes les variables nécessaires à l'exportateur
+                return Excel::download(new MovementsExport(
+                    $movements,
+                    $startDate->format('d/m/Y'),
+                    $endDate->format('d/m/Y'),
+                    $agencyName,
+                    $serviceName, // Ou $roleName
+                    $movementType, // 'global' sera passé ici
+                    $articleName
+                ), $fileName . '.xlsx');
+            }
+        }
+        return back()->with('error', 'Type de fichier non supporté ou données manquantes.')->withInput();
     }
 }
 
