@@ -175,7 +175,7 @@ const Citernes = ({ citernes, entreprises, products, agencies }) => {
                       <TableCell>{citerne.product_type}</TableCell>
                       <TableCell>{citerne.capacity_liter} L</TableCell>
                       <TableCell>{citerne.capacity_kg} kg</TableCell>
-                      <TableCell>{citerne.current_product ? citerne.current_product.name : 'N/A'}</TableCell>
+                      <TableCell>{citerne.article? citerne.article.name : 'N/A'}</TableCell>
                       <TableCell>{citerne.agency ? citerne.agency.name : 'N/A'}</TableCell>
                       <TableCell>{citerne.entreprise ? citerne.entreprise.name : 'N/A'}</TableCell>
                       <TableCell className="py-3 text-gray-500 text-theme-sm gap-2 flex dark:text-gray-400">

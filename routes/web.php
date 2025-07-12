@@ -85,8 +85,12 @@ Route::middleware(DirectionMiddleware::class)->group(function(){
 });
 //magasinier middleware
 Route::middleware(MagasinMiddleware::class)->group(function(){
-   Route::get("/magasin-index",[MagasinController::class,"index"])->name("magasin.index"); 
+   //magasinier citernes routes
+    Route::get("/magasin-index",[MagasinController::class,"index"])->name("magasin.index"); 
    Route::get("/magasin-citernes",[MagasinController::class,"citerne_index"])->name("magasin.citerne_index"); 
+   Route::post("/magasin-citernes-reception",[CiterneController::class,"reception"])->name("magasin.reception");
+   Route::post("/magasin-citernes-depotage",[CiterneController::class,"depotage"])->name("magasin.depotage");
+   Route::post("/magasin-citerne-releve/{stock}",[CiterneController::class,"releve"])->name("magasin.releve");
 });
 Route::middleware(IsAdminMiddleware::class)->group(function(){
    //regional routes
