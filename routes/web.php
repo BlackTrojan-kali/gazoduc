@@ -13,6 +13,7 @@ use Inertia\Inertia;
 use App\Http\Controllers\EntrepriseController;
 use App\Http\Controllers\LicenceController;
 use App\Http\Controllers\MagasinController;
+use App\Http\Controllers\MouvementController;
 use App\Http\Controllers\RegionController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\SubController;
@@ -20,6 +21,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Middleware\DirectionMiddleware;
 use App\Http\Middleware\IsAdminMiddleware;
 use App\Http\Middleware\MagasinMiddleware;
+use App\Models\Mouvement;
 
 //auth routes
 Route::get('/login',[AuthController::class,"loginPage"] )->name("login");
@@ -91,6 +93,11 @@ Route::middleware(MagasinMiddleware::class)->group(function(){
    Route::post("/magasin-citernes-reception",[CiterneController::class,"reception"])->name("magasin.reception");
    Route::post("/magasin-citernes-depotage",[CiterneController::class,"depotage"])->name("magasin.depotage");
    Route::post("/magasin-citerne-releve/{stock}",[CiterneController::class,"releve"])->name("magasin.releve");
+   //mouvement
+   Route::post("/magasin-move",[MouvementController::class,"store"])->name("magasin.move.store");
+   Route::get("/magasin-moves/{type}",[MouvementController::class,"moves"])->name("magasin.moves");
+   Route::delete("/magasin-move-delete/{idmov}",[MouvementController::class,"delete"])->name("magasin.move.delete");
+    Route::get('/movements/generate-report', [MouvementController::class, 'generateReport'])->name('movements.generateReport');
 });
 Route::middleware(IsAdminMiddleware::class)->group(function(){
    //regional routes

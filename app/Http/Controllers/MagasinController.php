@@ -17,8 +17,11 @@ class MagasinController extends Controller
         $stocks = Stock::where("agency_id",Auth::user()->agency_id)
         ->where("storage_type",Auth::user()->role->name)
         ->with("article")
-        ->get();
-        return Inertia("Magasin/MagIndex",compact("stocks"));
+        ->get();  
+         $articles = Article::where("entreprise_id",Auth::user()->entreprise_id)->where("type","produit")->get();
+        $agencies = Agency::where("id",Auth::user()->agency_id)->where("entreprise_id",Auth::user()->entreprise_id)->get();
+       
+        return Inertia("Magasin/MagIndex",compact("stocks","articles","agencies"));
     }
 
     //

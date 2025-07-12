@@ -12,6 +12,7 @@ const Input= ({
   min,
   max,
   step,
+  label,
   disabled = false,
   success = false,
   error = false,
@@ -31,6 +32,9 @@ const Input= ({
 
   return (
     <div className="relative">
+      <label htmlFor="" className="dark:text-white">
+        {label}
+      </label>
       <input
         type={type}
         id={id}

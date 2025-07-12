@@ -19,8 +19,11 @@ const navItems = [
     icon:  <FontAwesomeIcon icon={faRepeat} />,
     name: "Mouvements",
       subItems: [
-      { name: "entrees", path: "/magasin-entrees", pro: false },
+      { name: "entrees", path: "/magasin-moves/entree", pro: false },
       { name: "sorties", path: "/magasin-sorties", pro: false },
+      { name: "releves", path: "/magasin-releves", pro: false },
+      { name: "depotages", path: "/magasin-depotages", pro: false },
+      { name: "reception", path: "/magasin-receptions", pro: false },
     ],
   },
   {
