@@ -1,43 +1,68 @@
 // resources/js/Components/Modals/DepotageFormModal.jsx
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react'; // Ajout de useMemo pour les options d'article
 import { useForm, usePage } from '@inertiajs/react';
-import Modal from '../Modal'; // Assurez-vous d'avoir un composant Modal générique
+import Modal from '../Modal';
 
 import Swal from 'sweetalert2';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner } from '@fortawesome/free-solid-svg-icons';
 import Input from '../../form/input/InputField';
 import Button from '../../ui/button/Button';
+import Select from 'react-select'; // Import de react-select
 
 const DepotageFormModal = ({ isOpen, onClose, citernesMobiles, citernesFixes, articles, agencies }) => {
-  const { props: { auth } } = usePage(); // Pour obtenir l'ID de l'utilisateur authentifié
+  const { props: { auth } } = usePage();
   const { data, setData, post, processing, errors, reset } = useForm({
     citerne_mobile_id: '',
     citerne_fixe_id: '',
-    article_id: '',
+    article_id: null, // MODIFIÉ : Initialiser à null pour react-select
     agency_id: '',
-    recorded_by_user_id: auth.user ? auth.user.id : '', // Pré-rempli avec l'ID de l'utilisateur
+    recorded_by_user_id: auth.user ? auth.user.id : '',
     quantity: '',
   });
 
-  // Réinitialiser les données du formulaire à l'ouverture ou à la fermeture de la modal
+  // Prépare les options pour react-select (uniquement pour les articles)
+  const articleOptions = useMemo(() => articles.map(article => ({
+    value: String(article.id), // react-select préfère les strings pour value
+    label: article.name
+  })), [articles]);
+
   useEffect(() => {
     if (isOpen) {
-      reset();
-      setData('recorded_by_user_id', auth.user ? auth.user.id : ''); // S'assurer que l'ID utilisateur est toujours défini
+      reset({
+        citerne_mobile_id: '',
+        citerne_fixe_id: '',
+        article_id: null, // MODIFIÉ : Réinitialiser à null pour react-select
+        agency_id: '',
+        recorded_by_user_id: auth.user ? auth.user.id : '',
+        quantity: '',
+      });
     }
-  }, [isOpen, reset, setData, auth.user]);
+  }, [isOpen, reset, auth.user]); // Ajout de auth.user comme dépendance
 
   const handleChange = (e) => {
     const { id, value } = e.target;
     setData(id, value);
   };
 
+  // AJOUTÉ : Fonction spécifique pour gérer le changement de react-select pour l'article
+  const handleArticleSelectChange = (selectedOption) => {
+    // selectedOption sera null si l'utilisateur efface la sélection
+    setData('article_id', selectedOption ? selectedOption.value : null);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-console.log(data);
-    post(route('magasin.depotage'), { // Assumant une route 'depotages.store' pour les nouveaux dépotages
+
+    // MODIFIÉ : Mappe l'objet react-select en sa valeur simple pour l'envoi au backend
+    const formData = {
+      ...data,
+      article_id: data.article_id || '', // Utilise la valeur brute de l'ID ou une chaîne vide
+    };
+
+    post(route('magasin.depotage'), {
+      data: formData, // AJOUTÉ : Envoyer les données mappées
       onSuccess: () => {
         Swal.fire({
           icon: 'success',
@@ -45,7 +70,10 @@ console.log(data);
           text: 'Dépotage enregistré avec succès !',
           showConfirmButton: false,
           timer: 1500
-        })
+        });
+        reset(); // Réinitialise tout le formulaire après succès
+        setData('recorded_by_user_id', auth.user ? auth.user.id : ''); // Ré-initialise l'ID utilisateur
+        reset('errors'); // Réinitialiser spécifiquement les erreurs
       },
       onError: (validationErrors) => {
         Swal.fire({
@@ -58,6 +86,16 @@ console.log(data);
       },
     });
   };
+
+  // AJOUTÉ : Styles simplifiés pour gérer la bordure d'erreur et le menuPortal
+  const getSimpleSelectStyles = (hasError) => ({
+    control: (provided) => ({
+      ...provided,
+      borderColor: hasError ? 'rgb(239 68 68 / 1)' : provided.borderColor,
+      boxShadow: hasError ? '0 0 0 1px rgb(239 68 68 / 1)' : provided.boxShadow,
+    }),
+    menuPortal: (base) => ({ ...base, zIndex: 9999 }), // Crucial pour l'affichage au-dessus des modales
+  });
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Enregistrer un Nouveau Dépotage">
@@ -112,28 +150,33 @@ console.log(data);
           {errors.citerne_fixe_id && <p className="text-sm text-red-600 mt-1">{errors.citerne_fixe_id}</p>}
         </div>
 
-        {/* Article Dépoté */}
+        {/* Article Dépoté avec react-select */}
         <div className="mb-4">
           <label htmlFor="article_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Article Dépoté
           </label>
-          <select
-            id="article_id"
-            className={`h-11 w-full appearance-none rounded-lg border px-4 py-2.5 pr-11 text-sm shadow-theme-xs
-              ${errors.article_id ? 'border-red-500' : 'border-gray-300 dark:border-gray-700'}
-              bg-transparent placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10
-              dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800`}
-            value={data.article_id}
-            onChange={handleChange}
-            required
-          >
-            <option value="">Sélectionnez un article</option>
-            {articles && articles.map(article => (
-              <option key={article.id} value={String(article.id)}>
-                {article.name}
-              </option>
-            ))}
-          </select>
+            <Select
+            inputId="article_id"
+            classNamePrefix="react-select"
+            options={articles.map(article => ({
+              value: article.id,
+              label: article.name
+            }))}
+            value={
+              articles.find(a => a.id === Number(data.article_id))
+                ? {
+                    value: data.article_id,
+                    label: articles.find(a => a.id === Number(data.article_id)).name
+                  }
+                : null
+            }
+            onChange={(selectedOption) => {
+              setData('article_id', selectedOption ? selectedOption.value : '');
+            }}
+            placeholder="Sélectionnez un article"
+                        isClearable
+            // AJOUTÉ : Indispensable pour l'affichage au-dessus de la modale et les styles
+        />
           {errors.article_id && <p className="text-sm text-red-600 mt-1">{errors.article_id}</p>}
         </div>
 

@@ -5,22 +5,22 @@ namespace App\Exports;
 use App\Models\Mouvement;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-// Retire WithMapping, car le mapping est fait directement dans collection()
+// WithHeadings est retiré car les en-têtes sont construits manuellement dans collection()
+// use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Carbon\Carbon;
 
-// La classe n'implémente plus WithMapping
-class MovementsExport implements FromCollection, WithHeadings, ShouldAutoSize, WithStrictNullComparison, WithTitle
+// La classe n'implémente plus WithHeadings pour permettre les en-têtes multi-lignes
+class MovementsExport implements FromCollection, ShouldAutoSize, WithStrictNullComparison, WithTitle
 {
     protected $movements;
     protected $startDate;
     protected $endDate;
     protected $agencyName;
     protected $serviceName;
-    protected $movementType;
+    protected $movementType; // Utilisé pour déterminer si c'est un rapport 'global' ou 'simple'
     protected $articleName;
 
     public function __construct(
@@ -37,7 +37,8 @@ class MovementsExport implements FromCollection, WithHeadings, ShouldAutoSize, W
         $this->endDate = $endDate;
         $this->agencyName = $agencyName ?? 'Tous';
         $this->serviceName = $serviceName ?? 'Tous';
-        $this->movementType = $movementType === 'global' ? 'Entrée / Sortie' : ucfirst($movementType);
+        // movementType sera 'global' ou un type spécifique (ex: 'entree', 'sortie')
+        $this->movementType = $movementType;
         $this->articleName = $articleName ?? 'Tous les articles';
     }
 
@@ -48,38 +49,64 @@ class MovementsExport implements FromCollection, WithHeadings, ShouldAutoSize, W
     {
         $dataRows = collect();
 
-        // On crée les lignes de données en mappant chaque mouvement
+        // --- 1. En-têtes du rapport (titre, date de génération, filtres) ---
+        // Ces lignes simulent l'en-tête du rapport comme dans le PDF
+        $dataRows->push(['Rapport d\'Historique des Mouvements']);
+        $dataRows->push(['Généré le: ' . now()->format('d/m/Y à H:i:s')]);
+        $dataRows->push([]); // Ligne vide pour espacement
+
+        $dataRows->push(['Filtres Appliqués:']);
+        $dataRows->push(['Période: Du ' . $this->startDate . ' au ' . $this->endDate]);
+        $dataRows->push(['Agence: ' . $this->agencyName]);
+        $dataRows->push(['Service: ' . $this->serviceName]);
+        $dataRows->push(['Type de mouvement: ' . ($this->movementType === 'global' ? 'Entrée / Sortie' : ucfirst($this->movementType))]);
+        $dataRows->push(['Article: ' . $this->articleName]);
+        $dataRows->push([]); // Ligne vide pour espacement
+
+        // --- 2. En-têtes du tableau (avec gestion des colspan/rowspan via des lignes multiples) ---
+        // La structure des en-têtes dépend du type de rapport (global ou simple)
+        if ($this->movementType === 'global') {
+            // En-têtes pour le rapport global (comme PDF.MovesGlobalPDFView)
+            $dataRows->push([
+                'Date', 'Article', 'Agence', 'Flux', '', 'Qualification', '', '', '', 'Stock Actuel', 'Infos.'
+            ]);
+            $dataRows->push([
+                '', '', '', 'Entrée', 'Sortie', 'Perte', 'Achat', 'Repreuve', 'Consigne', '', ''
+            ]);
+        } else {
+            // En-têtes pour le rapport simple (comme PDF.MovesPDFView)
+            $dataRows->push([
+                'Date', 'Description', 'MVT du Stock Total', '', '', '', 'MVT de l\'Article : ' . $this->articleName, '', '', 'Enregistré par'
+            ]);
+            $dataRows->push([
+                '', '', 'Achat', 'Consigne', 'Perte', 'Repreuve', 'Entrée', 'Sortie', 'Stock', ''
+            ]);
+        }
+
+        // --- 3. Initialisation des totaux ---
+        $totalEntree = 0;
+        $totalSortie = 0;
+        $totalPerte = 0;
+        $totalAchat = 0;
+        $totalRepreuve = 0;
+        $totalConsigne = 0;
+        $totalEntreeArticle = 0; // Spécifique au rapport simple
+        $totalSortieArticle = 0; // Spécifique au rapport simple
+        $lastStock = 0; // Spécifique au rapport simple
+
+        // --- 4. Lignes de données des mouvements ---
         foreach ($this->movements as $movement) {
-            if ($this->movementType === 'Entrée / Sortie') {
-                $entree = 0;
-                $sortie = 0;
-                $perte = 0;
-                $achat = 0;
-                $repreuve = 0;
-                $consigne = 0;
+            $row = [];
+            if ($this->movementType === 'global') {
+                // Logique des données pour le rapport global
+                $entree = ($movement->movement_type === 'entree') ? $movement->quantity : 0;
+                $sortie = ($movement->movement_type === 'sortie') ? $movement->quantity : 0;
+                $perte = ($movement->qualification === 'perte') ? $movement->quantity : 0;
+                $achat = ($movement->qualification === 'achat') ? $movement->quantity : 0;
+                $repreuve = ($movement->qualification === 'repreuve') ? $movement->quantity : 0;
+                $consigne = ($movement->qualification === 'consigne') ? $movement->quantity : 0;
 
-                if ($movement->movement_type === 'entree') {
-                    $entree = $movement->quantity;
-                } elseif ($movement->movement_type === 'sortie') {
-                    $sortie = $movement->quantity;
-                }
-
-                switch ($movement->qualification) {
-                    case 'perte':
-                        $perte = $movement->quantity;
-                        break;
-                    case 'achat':
-                        $achat = $movement->quantity;
-                        break;
-                    case 'repreuve':
-                        $repreuve = $movement->quantity;
-                        break;
-                    case 'consigne':
-                        $consigne = $movement->quantity;
-                        break;
-                }
-
-                $dataRows->push([
+                $row = [
                     Carbon::parse($movement->created_at)->format('d/m/Y H:i'),
                     $movement->article->name ?? 'N/A',
                     $movement->agency->name ?? 'N/A',
@@ -90,125 +117,82 @@ class MovementsExport implements FromCollection, WithHeadings, ShouldAutoSize, W
                     $repreuve,
                     $consigne,
                     $movement->stock ?? 'N/A',
-                    $movement->description ?? 'Aucune',
-                    $movement->recordedByUser->name ?? 'N/A',
-                ]);
+                    ($movement->description ?? 'Aucune') . "\n(" . ($movement->user->first_name ?? 'N/A') . ")",
+                ];
+
+                // Accumulation des totaux pour le rapport global
+                $totalEntree += $entree;
+                $totalSortie += $sortie;
+                $totalPerte += $perte;
+                $totalAchat += $achat;
+                $totalRepreuve += $repreuve;
+                $totalConsigne += $consigne;
+
             } else {
-                $dataRows->push([
+                // Logique des données pour le rapport simple
+                $achat = ($movement->qualification === 'achat') ? $movement->quantity : 0;
+                $consigne = ($movement->qualification === 'consigne') ? $movement->quantity : 0;
+                $perte = ($movement->qualification === 'perte') ? $movement->quantity : 0;
+                $repreuve = ($movement->qualification === 'repreuve') ? $movement->quantity : 0;
+                $entreeArticle = ($movement->movement_type === 'entree') ? $movement->quantity : 0;
+                $sortieArticle = ($movement->movement_type === 'sortie') ? $movement->quantity : 0;
+
+                $row = [
                     Carbon::parse($movement->created_at)->format('d/m/Y H:i'),
-                    $movement->article->name ?? 'N/A',
-                    $movement->agency->name ?? 'N/A',
-                    $movement->quantity,
-                    $movement->stock ?? 'N/A',
                     $movement->description ?? 'Aucune',
-                    $movement->recordedByUser->name ?? 'N/A',
-                ]);
+                    $achat,
+                    $consigne,
+                    $perte,
+                    $repreuve,
+                    $entreeArticle,
+                    $sortieArticle,
+                    $movement->stock ?? 'N/A',
+                    $movement->user->first_name ?? 'N/A',
+                ];
+
+                // Accumulation des totaux pour le rapport simple
+                $totalAchat += $achat;
+                $totalConsigne += $consigne;
+                $totalPerte += $perte;
+                $totalRepreuve += $repreuve;
+                $totalEntreeArticle += $entreeArticle;
+                $totalSortieArticle += $sortieArticle;
+                $lastStock = $movement->stock ?? $lastStock; // Met à jour le dernier stock vu
             }
+            $dataRows->push($row);
         }
 
-        // Calculer et ajouter la ligne de total à la collection
-        if ($this->movementType === 'Entrée / Sortie') {
-            $totalEntree = 0;
-            $totalSortie = 0;
-            $totalPerte = 0;
-            $totalAchat = 0;
-            $totalRepreuve = 0;
-            $totalConsigne = 0;
-
-            foreach ($this->movements as $movement) {
-                if ($movement->movement_type === 'entree') {
-                    $totalEntree += $movement->quantity;
-                } elseif ($movement->movement_type === 'sortie') {
-                    $totalSortie += $movement->quantity;
-                }
-                switch ($movement->qualification) {
-                    case 'perte': $totalPerte += $movement->quantity; break;
-                    case 'achat': $totalAchat += $movement->quantity; break;
-                    case 'repreuve': $totalRepreuve += $movement->quantity; break;
-                    case 'consigne': $totalConsigne += $movement->quantity; break;
-                }
-            }
-
+        // --- 5. Ligne de total ---
+        if ($this->movementType === 'global') {
+            // Ligne de total pour le rapport global
             $dataRows->push([
-                'Total :', // Libellé
-                '', '', // Colonnes vides pour alignement du libellé
+                'Total :', '', '', // Simule colspan 3 pour Date, Article, Agence
                 $totalEntree,
                 $totalSortie,
                 $totalPerte,
                 $totalAchat,
                 $totalRepreuve,
                 $totalConsigne,
-                '', // Stock Actuel (vide)
-                '', // Description (vide)
-                ''  // Enregistré par (vide)
+                '', // Colonne Stock Actuel vide
+                ''  // Colonne Infos. vide
             ]);
         } else {
-            $totalQuantiteSimple = $this->movements->sum('quantity');
+            // Ligne de total pour le rapport simple
             $dataRows->push([
-                'Total :',
-                '', '', // Colonnes vides pour alignement du libellé
-                $totalQuantiteSimple,
-                '', // Stock Actuel (vide)
-                '', // Description (vide)
-                ''  // Enregistré par (vide)
+                'Total :', '', // Simule colspan 2 pour Date, Description
+                $totalAchat,
+                $totalConsigne,
+                $totalPerte,
+                $totalRepreuve,
+                $totalEntreeArticle,
+                $totalSortieArticle,
+                $lastStock, // Affiche le dernier stock
+                '' // Colonne Enregistré par vide
             ]);
         }
 
         return $dataRows;
     }
-
-    /**
-     * Définir les en-têtes de colonnes et les informations de rapport.
-     * @return array
-     */
-    public function headings(): array
-    {
-        $header = [
-            ['Rapport d\'Historique des Mouvements'],
-            ['Généré le: ' . now()->format('d/m/Y à H:i:s')],
-            [],
-
-            ['Filtres Appliqués:'],
-            ['Période: Du ' . $this->startDate . ' au ' . $this->endDate],
-            ['Agence: ' . $this->agencyName],
-            ['Service: ' . $this->serviceName],
-            ['Type de mouvement: ' . $this->movementType],
-            ['Article: ' . $this->articleName],
-            [],
-        ];
-
-        if ($this->movementType === 'Entrée / Sortie') {
-            $tableHeaders = [
-                'Date',
-                'Article',
-                'Agence',
-                'Entrée (Qté)',
-                'Sortie (Qté)',
-                'Perte',
-                'Achat',
-                'Repreuve',
-                'Consigne',
-                'Stock Actuel',
-                'Description',
-                'Enregistré par',
-            ];
-        } else {
-            $tableHeaders = [
-                'Date',
-                'Article',
-                'Agence',
-                'Quantité',
-                'Stock Actuel',
-                'Description',
-                'Enregistré par',
-            ];
-        }
-
-        return array_merge(array_map(fn($row) => $row, $header), [$tableHeaders]);
-    }
-
-    // La méthode map() n'est plus nécessaire ici puisque le mapping est fait dans collection()
-    // public function map($movement): array { ... }
 
     /**
      * Pour définir le nom de la feuille.
@@ -218,4 +202,7 @@ class MovementsExport implements FromCollection, WithHeadings, ShouldAutoSize, W
     {
         return 'Historique des Mouvements';
     }
+
+    // La méthode headings() est supprimée car les en-têtes sont générés dans collection()
+    // public function headings(): array { ... }
 }

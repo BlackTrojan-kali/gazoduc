@@ -1,88 +1,95 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Rapport d'Historique des Mouvements</title>
-    <meta charset="utf-8">
     <style>
         /* Styles généraux du corps du document */
         body {
             font-family: 'DejaVu Sans', sans-serif;
-            /* Réduit la taille de police globale */
-            font-size: 9px; /* Réduit à 9px */
-            margin: 15px; /* Réduit les marges globales */
+            font-size: 8.5px; /* Taille de police globale ajustée */
+            margin: 10px; /* Marges réduites */
             color: #333;
-            line-height: 1.3; /* Légèrement plus serré */
+            line-height: 1.2; /* Espacement plus serré */
         }
 
         /* En-tête du rapport */
         .header {
             text-align: center;
-            margin-bottom: 20px; /* Moins d'espace */
+            margin-bottom: 15px; /* Moins d'espace */
             border-bottom: 2px solid #1a237e;
-            padding-bottom: 8px; /* Moins de padding */
+            padding-bottom: 6px; /* Moins de padding */
         }
         .header h1 {
-            font-size: 22px; /* Réduit la taille du titre */
+            font-size: 20px; /* Réduit la taille du titre */
             color: #1a237e;
-            margin: 0 0 4px 0;
+            margin: 0 0 3px 0;
             font-weight: bold;
         }
         .header p {
-            font-size: 10px; /* Réduit la taille du paragraphe */
+            font-size: 9px; /* Réduit la taille du paragraphe */
             color: #555;
             margin: 0;
         }
 
         /* Tableau des mouvements */
         .movements-table {
-            width: 100%; /* S'assure que le tableau prend toute la largeur */
-            table-layout: fixed; /* Très important : permet aux colonnes de respecter les largeurs fixées */
+            width: 100%;
+            table-layout: fixed; /* Essentiel pour les largeurs fixes */
             border-collapse: collapse;
-            margin-bottom: 25px; /* Moins d'espace */
+            margin-bottom: 20px; /* Moins d'espace */
         }
         .movements-table th,
         .movements-table td {
             border: 1px solid #e0e0e0;
-            /* Réduit les paddings des cellules pour gagner de l'espace */
-            padding: 6px 8px; /* Réduit à 6px vertical, 8px horizontal */
+            padding: 4px 6px; /* Paddings très réduits */
             text-align: left;
             vertical-align: top;
-            word-wrap: break-word; /* Permet aux mots longs de se casser pour éviter le débordement */
+            word-wrap: break-word; /* Permet aux mots longs de se casser */
         }
         .movements-table th {
-            background-color: #3f51b5;
+            background-color: #3f51b5; /* Couleur des en-têtes */
             color: #ffffff;
             font-weight: bold;
-            font-size: 9px; /* Taille de police pour les en-têtes */
+            font-size: 8px; /* Taille de police pour les en-têtes */
             text-transform: uppercase;
-            letter-spacing: 0.3px; /* Espacement réduit */
+            letter-spacing: 0.2px;
+            text-align: center; /* Centrer les textes d'en-tête */
         }
         .movements-table tbody tr:nth-child(even) {
             background-color: #f5f5f5;
         }
         .movements-table td {
-            font-size: 8px; /* Taille de police pour les données des cellules */
+            font-size: 7.5px; /* Taille de police pour les données des cellules */
+        }
+        .movements-table td.qty-cell {
+            text-align: right; /* Aligne les quantités à droite */
         }
 
-        /* Largeurs spécifiques pour les colonnes pour mieux contrôler l'espace */
+        /* Largeurs spécifiques pour les colonnes (ajustées à la nouvelle structure) */
+        /* Total de 100% */
         .movements-table th:nth-child(1), .movements-table td:nth-child(1) { width: 12%; } /* Date */
-        .movements-table th:nth-child(2), .movements-table td:nth-child(2) { width: 7%; }  /* Type */
-        .movements-table th:nth-child(3), .movements-table td:nth-child(3) { width: 10%; } /* Qualification */
-        .movements-table th:nth-child(4), .movements-table td:nth-child(4) { width: 7%; }  /* Quantité */
-        .movements-table th:nth-child(5), .movements-table td:nth-child(5) { width: 12%; } /* Stock Actuel */
-        .movements-table th:nth-child(6), .movements-table td:nth-child(6) { width: 15%; } /* Article */
-        .movements-table th:nth-child(7), .movements-table td:nth-child(7) { width: 10%; } /* Agence */
-        /* REMARQUE: La colonne "Service" a été retirée de l'en-tête, donc nous l'ignorons ici */
-        .movements-table th:nth-child(8), .movements-table td:nth-child(8) { width: 10%; } /* Source */
-        .movements-table th:nth-child(9), .movements-table td:nth-child(9) { width: 15%; } /* Description */
-        .movements-table th:nth-child(10), .movements-table td:nth-child(10) { width: 12%; } /* Enregistré par */
+        .movements-table th:nth-child(2), .movements-table td:nth-child(2) { width: 18%; } /* Description */
+        /* MVT du Stock Total (4 sous-colonnes) */
+        .movements-table th:nth-child(3), .movements-table td:nth-child(3) { width: 7%; }  /* Achat */
+        .movements-table th:nth-child(4), .movements-table td:nth-child(4) { width: 7%; }  /* Consigne */
+        .movements-table th:nth-child(5), .movements-table td:nth-child(5) { width: 7%; }  /* Perte */
+        .movements-table th:nth-child(6), .movements-table td:nth-child(6) { width: 7%; }  /* Repreuve */
+        /* MVT de l'Article (3 sous-colonnes) */
+        .movements-table th:nth-child(7), .movements-table td:nth-child(7) { width: 8%; }  /* Entrée */
+        .movements-table th:nth-child(8), .movements-table td:nth-child(8) { width: 8%; }  /* Sortie */
+        .movements-table th:nth-child(9), .movements-table td:nth-child(9) { width: 8%; }  /* Stock */
+        .movements-table th:nth-child(10), .movements-table td:nth-child(10) { width: 18%; } /* Enregistré par */
+        /* Total: 12+18+7+7+7+7+8+8+8+18 = 100% */
 
 
         /* Styles pour la ligne de total */
         .total-row {
             background-color: #e3f2fd;
             font-weight: bold;
-            font-size: 10px; /* Taille de police pour le total */
+            font-size: 8.5px; /* Taille de police pour le total */
             color: #1a237e;
         }
         .total-row td {
@@ -90,10 +97,10 @@
         }
         .total-row .total-label {
             text-align: right;
-            padding-right: 10px; /* Moins de padding */
+            padding-right: 8px; /* Moins de padding */
         }
-        .total-row .total-quantity {
-            text-align: left;
+        .total-row .total-qty-cell {
+            text-align: right; /* Aligne les totaux de quantité à droite */
             font-weight: bold;
         }
 
@@ -101,8 +108,8 @@
         .no-data {
             text-align: center;
             color: #888;
-            font-size: 12px; /* Réduit la taille */
-            padding: 15px; /* Réduit le padding */
+            font-size: 11px;
+            padding: 12px;
             background-color: #fff3cd;
             border: 1px solid #ffeeba;
             border-radius: 5px;
@@ -112,17 +119,24 @@
         /* Pied de page */
         .footer {
             text-align: right;
-            font-size: 7px; /* Réduit encore la taille */
+            font-size: 6px;
             color: #777;
-            margin-top: 30px; /* Moins d'espace */
+            margin-top: 20px;
             border-top: 1px solid #ccc;
-            padding-top: 8px; /* Moins de padding */
+            padding-top: 6px;
         }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>Rapport d'Historique des Mouvements</h1>
+        {{-- Les variables $startDate et $endDate sont attendues ici pour le rapport simple --}}
+        <p>
+            @if(isset($role) && $role->name)
+                Service: {{ $role->name }} |
+            @endif
+            Période: du {{ $startDate->format('d/m/Y') }} au {{ $endDate->format('d/m/Y') }}
+        </p>
         <p>Généré le {{ now()->format('d/m/Y à H:i:s') }}</p>
     </div>
 
@@ -134,38 +148,109 @@
         <table class="movements-table">
             <thead>
                 <tr>
-                    <th>Date</th>
-                    <th>Type</th>
-                    <th>Qualification</th>
-                    <th>Qté</th> {{-- Raccourci pour 'Quantité' --}}
-                    <th>Stock Actuel</th> {{-- Raccourci pour 'Stock Actuel de l'Article' --}}
-                    <th>Article</th>
-                    <th>Agence</th>
-                    <th>Source</th>
-                    <th>Description</th>
-                    <th>Enregistré par</th>
+                    <th rowspan="2">Date</th>
+                    <th rowspan="2">Description</th>
+                    <th colspan="4">MVT du Stock Total</th> {{-- Colspan pour les qualifications --}}
+                    <th colspan="3">MVT de l'Article : {{ $articleName ?? 'N/A' }}</th> {{-- Colspan pour Entrée/Sortie/Stock --}}
+                    <th rowspan="2">Enregistré par</th>
+                </tr>
+                <tr>
+                    <th>Achat</th>
+                    <th>Consigne</th>
+                    <th>Perte</th>
+                    <th>Repreuve</th>
+                    <th>Entrée</th>
+                    <th>Sortie</th>
+                    <th>Stock</th>
                 </tr>
             </thead>
             <tbody>
+                @php
+                    $totalAchat = 0;
+                    $totalConsigne = 0;
+                    $totalPerte = 0;
+                    $totalRepreuve = 0;
+                    $totalEntreeArticle = 0;
+                    $totalSortieArticle = 0;
+                    // Note: Le total du stock n'a pas de sens d'être sommé verticalement.
+                    // Il représente un état à un instant T. On peut afficher le dernier stock.
+                    $lastStock = 0;
+                @endphp
                 @foreach($movements as $movement)
                 <tr>
                     <td>{{ \Carbon\Carbon::parse($movement->created_at)->format('d/m/Y H:i') }}</td>
-                    <td>{{ ucfirst($movement->movement_type) }}</td>
-                    <td>{{ ucfirst($movement->qualification) }}</td>
-                    <td>{{ $movement->quantity }}</td>
-                    <td>{{ $movement->stock ?? 'N/A' }}</td>
-                    <td>{{ $movement->article->name ?? 'N/A' }}</td>
-                    <td>{{ $movement->agency->name ?? 'N/A' }}</td>
-                    <td>{{ $movement->source_location ?? 'N/A' }}</td>
                     <td>{{ $movement->description ?? 'Aucune' }}</td>
-                    <td>{{ $movement->recordedByUser->name ?? 'N/A' }}</td>
+
+                    {{-- MVT du Stock Total (Qualifications) --}}
+                    <td class="qty-cell">
+                        @if($movement->qualification === 'achat')
+                            {{ $movement->quantity }}
+                            @php $totalAchat += $movement->quantity; @endphp
+                        @else
+                            0
+                        @endif
+                    </td>
+                    <td class="qty-cell">
+                        @if($movement->qualification === 'consigne')
+                            {{ $movement->quantity }}
+                            @php $totalConsigne += $movement->quantity; @endphp
+                        @else
+                            0
+                        @endif
+                    </td>
+                    <td class="qty-cell">
+                        @if($movement->qualification === 'perte')
+                            {{ $movement->quantity }}
+                            @php $totalPerte += $movement->quantity; @endphp
+                        @else
+                            0
+                        @endif
+                    </td>
+                    <td class="qty-cell">
+                        @if($movement->qualification === 'repreuve')
+                            {{ $movement->quantity }}
+                            @php $totalRepreuve += $movement->quantity; @endphp
+                        @else
+                            0
+                        @endif
+                    </td>
+
+                    {{-- MVT de l'Article --}}
+                    <td class="qty-cell">
+                        @if($movement->movement_type === 'entree')
+                            {{ $movement->quantity }}
+                            @php $totalEntreeArticle += $movement->quantity; @endphp
+                        @else
+                            0
+                        @endif
+                    </td>
+                    <td class="qty-cell">
+                        @if($movement->movement_type === 'sortie')
+                            {{ $movement->quantity }}
+                            @php $totalSortieArticle += $movement->quantity; @endphp
+                        @else
+                            0
+                        @endif
+                    </td>
+                    <td class="qty-cell">
+                        {{ $movement->stock ?? 'N/A' }}
+                        @php $lastStock = $movement->stock ?? $lastStock; @endphp {{-- Met à jour le dernier stock vu --}}
+                    </td>
+
+                    <td>{{ $movement->user->first_name ?? 'N/A' }}</td>
                 </tr>
                 @endforeach
-                {{-- Nouvelle ligne pour le total des quantités --}}
+                {{-- Ligne de Total --}}
                 <tr class="total-row">
-                    <td colspan="3" class="total-label">Total quantités:</td> {{-- Fusionne 3 colonnes et raccourcit le libellé --}}
-                    <td class="total-quantity">{{ $movements->sum('quantity') }}</td>
-                    <td colspan="6"></td> {{-- Ajusté le colspan à 6 car il y a maintenant 10 colonnes au total (3+1+6=10) --}}
+                    <td colspan="2" class="total-label">Totaux :</td> {{-- Couvre Date et Description --}}
+                    <td class="total-qty-cell">{{ $totalAchat }}</td>
+                    <td class="total-qty-cell">{{ $totalConsigne }}</td>
+                    <td class="total-qty-cell">{{ $totalPerte }}</td>
+                    <td class="total-qty-cell">{{ $totalRepreuve }}</td>
+                    <td class="total-qty-cell">{{ $totalEntreeArticle }}</td>
+                    <td class="total-qty-cell">{{ $totalSortieArticle }}</td>
+                    <td class="total-qty-cell">{{ $lastStock }}</td> {{-- Affiche le dernier stock --}}
+                    <td></td> {{-- Vide pour Enregistré par --}}
                 </tr>
             </tbody>
         </table>

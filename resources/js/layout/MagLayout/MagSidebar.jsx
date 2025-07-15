@@ -20,10 +20,10 @@ const navItems = [
     name: "Mouvements",
       subItems: [
       { name: "entrees", path: "/magasin-moves/entree", pro: false },
-      { name: "sorties", path: "/magasin-sorties", pro: false },
-      { name: "releves", path: "/magasin-releves", pro: false },
-      { name: "depotages", path: "/magasin-depotages", pro: false },
-      { name: "reception", path: "/magasin-receptions", pro: false },
+      { name: "sorties", path: "/magasin-moves/sortie", pro: false },
+      { name: "releves", path: "/releves", pro: false },
+      { name: "depotages", path: "/depotages", pro: false },
+      { name: "reception", path: "/receptions", pro: false },
     ],
   },
   {

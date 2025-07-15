@@ -17,4 +17,7 @@ class Citerne extends Model
     public function article(){
         return $this->belongsTo(Article::class,"current_product_id");
     }
+    public function stock(){
+        return $this->hasOne(Stock::class);
+    }
 }

@@ -5,6 +5,7 @@ use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CiterneController;
 use App\Http\Controllers\CityController;
+use App\Http\Controllers\DepotageController;
 use App\Http\Controllers\DirectionController;
 use App\Http\Controllers\SuperAdminController;
 use App\Http\Middleware\SuperAdminMiddleWare;
@@ -14,12 +15,15 @@ use App\Http\Controllers\EntrepriseController;
 use App\Http\Controllers\LicenceController;
 use App\Http\Controllers\MagasinController;
 use App\Http\Controllers\MouvementController;
+use App\Http\Controllers\receptionController;
 use App\Http\Controllers\RegionController;
+use App\Http\Controllers\ReleveController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\SubController;
 use App\Http\Controllers\UserController;
 use App\Http\Middleware\DirectionMiddleware;
 use App\Http\Middleware\IsAdminMiddleware;
+use App\Http\Middleware\isAuthenticatedMiddleware;
 use App\Http\Middleware\MagasinMiddleware;
 use App\Models\Mouvement;
 
@@ -99,6 +103,21 @@ Route::middleware(MagasinMiddleware::class)->group(function(){
    Route::delete("/magasin-move-delete/{idmov}",[MouvementController::class,"delete"])->name("magasin.move.delete");
     Route::get('/movements/generate-report', [MouvementController::class, 'generateReport'])->name('movements.generateReport');
 });
+
+//common routes to all users
+Route::middleware(isAuthenticatedMiddleware::class)->group(function(){
+        Route::get("/releves",[ReleveController::class,"index"])->name("releves.index");
+        Route::get("/releves-export",[ReleveController::class,"export"])->name("releves.export");
+        //Depotage routes
+        Route::get("/depotages",[DepotageController::class,"index"])->name("depotages.index");
+        Route::get("/depotages-export",[DepotageController::class,"export"])->name("depotages.export");
+        Route::delete("/depotages/{idDep}",[DepotageController::class,"delete"])->name("depotages.delete");
+        //receptions routes
+        Route::get("/receptions",[receptionController::class,"index"])->name("receptions.index");
+        Route::delete("/receptions/{idRec}",[receptionController::class,"delete"])->name("receptions.delete");
+        Route::get("/receptions-pdf",[receptionController::class,"export"])->name("receptions.export");
+});
+
 Route::middleware(IsAdminMiddleware::class)->group(function(){
    //regional routes
     Route::get("/regional",[UserController::class,"index_regional"])->name("regional");

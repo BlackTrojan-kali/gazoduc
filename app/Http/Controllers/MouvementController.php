@@ -93,55 +93,78 @@ class MouvementController extends Controller
         }
     }
 
+public function moves(Request $request, $type)
+{
+    // Récupérer l'utilisateur authentifié et ses informations
+    $user = Auth::user();
+    $userRoleName = $user->role->name;
 
+    // --- Récupérer les paramètres de filtre de la requête ---
+    $filterArticleName = $request->query('article_name');
+    $filterQualification = $request->query('qualification');
+    $filterAgencyId = $request->query('agency_id');
+    // --------------------------------------------------------
 
-    public function moves($type)
-    {
-        // Récupérer l'utilisateur authentifié et son rôle
-        $user = Auth::user();
-        $userRoleName = $user->role->name; // Supposons que le rôle est accessible via une relation 'role'
-
-        // 1. Récupération des mouvements (logique existante)
-        if ($type == "entree") {
-            $movements = Mouvement::where("agency_id", $user->agency_id)
-                ->where("source_location", $userRoleName) // La source est le rôle de l'utilisateur
-                ->where("movement_type", $type)
-                ->with("agency", "article", "user") // Renommé 'user' en 'recordedByUser' pour plus de clarté si c'est l'utilisateur qui a enregistré
-                ->paginate(15);
-        } else {
-            // Gérer d'autres types de mouvements si nécessaire
-            // Pour l'exemple, nous allons juste retourner les mouvements d'entrée pour le moment
-            // ou une gestion des erreurs si le type n'est pas 'entree'.
-            // Si cette fonction est censée gérer tous les types, adaptez la requête.
-            $movements = collect(); // Retourne une collection vide par défaut pour les autres types
-        }
-
-        // 2. Récupération des articles
-        // Tous les articles sont généralement visibles, ou vous pouvez les filtrer par agence si nécessaire
-        $articles = Article::where("entreprise_id",Auth::user()->entreprise_id)->where("type","produit")->orWhere("type","produit_fini")->orderBy('name')->get();
-
-        // 3. Récupération des agences
-        // Un utilisateur ne peut voir que l'agence à laquelle il est assigné
-        if(Auth::user()->role->name ==="magasin"|| Auth::user()->role->name ==="production" || Auth::user()->name ==="commercial"){
-        $agencies = Agency::where('id', $user->agency_id)->get();
-    
-        $services = Role::where('name', $userRoleName)->get();
-
-}else{
-    $agencies = Agency::where("entreprise_id",Auth::user()->entreprise_id)->get();
-    $services = Role::all();
-}
-        // 4. Récupération des services
-        // Un utilisateur ne peut voir que le service correspondant à 
-
-        // Retourner la vue Inertia avec toutes les données nécessaires
-        return Inertia("Entree", [
-            "movements" => $movements,
-            "articles" => $articles,
-            "agencies" => $agencies,
-            "services" => $services,
-        ]);
+    // Construire la requête de base pour les mouvements
+    $movementsQuery = Mouvement::with('agency', 'article', 'user')
+        ->where('movement_type',$type)
+        ->where('source_location', $userRoleName);
+    // Limiter à l'agence de l'utilisateur selon son rôle
+    $restrictedRoles = ['magasin', 'production', 'commercial'];
+    if (in_array($userRoleName, $restrictedRoles)) {
+        $movementsQuery->where('agency_id', $user->agency_id);
+    } elseif ($filterAgencyId) {
+        $movementsQuery->where('agency_id', $filterAgencyId);
     }
+
+    // --- Appliquer les filtres ---
+    if ($filterArticleName) {
+        $movementsQuery->whereHas('article', function ($query) use ($filterArticleName) {
+            $query->where('name', 'like', '%' . $filterArticleName . '%');
+        });
+    }
+
+    if ($filterQualification) {
+        $movementsQuery->where('qualification', $filterQualification);
+    }
+    // -----------------------------
+
+    // Récupération des mouvements paginés
+    $movements = $movementsQuery->latest()->paginate(15);
+    // Récupération des articles pour les filtres
+    $articles = Article::where('entreprise_id', $user->entreprise_id)
+        ->where('type', '!=', 'matiere_premiere')
+        ->orderBy('name')
+        ->get();
+
+    // Récupération des agences selon le rôle
+    if (in_array($userRoleName, $restrictedRoles)) {
+        $agencies = Agency::where('id', $user->agency_id)->get();
+    } else {
+        $agencies = Agency::where('entreprise_id', $user->entreprise_id)->get();
+    }
+
+    // Récupération des services selon le rôle
+    if (in_array($userRoleName, $restrictedRoles)) {
+        $services = Role::where('name', $userRoleName)->get();
+    } else {
+        $services = Role::all();
+    }
+
+    // Retour de la vue avec Inertia
+    return Inertia::render('Entree', [
+        'movements' => $movements,
+        'articles' => $articles,
+        'agencies' => $agencies,
+        'services' => $services,
+        'filters' => [
+            'article_name' => $filterArticleName,
+            'qualification' => $filterQualification,
+            'agency_id' => $filterAgencyId,
+        ],
+    ]);
+}
+
     public function delete($idmov){
         $move = Mouvement::where("id",$idmov)->first();
         $stock =  Stock::where("agency_id",Auth::user()->agency_id)
@@ -188,6 +211,7 @@ class MouvementController extends Controller
             if ($role) {
                 $roleName = $role->name;
                 $serviceName = $role->name; // Utilise le nom du rôle pour le filtre de service
+                
             }
         }
 
@@ -202,9 +226,9 @@ class MouvementController extends Controller
             $article = Article::find($articleId);
             if ($article) {
                 $articleName = $article->name;
+                
             }
         }
-
         // 2. Construction de la requête de base pour les mouvements
         $query = Mouvement::where("agency_id", $agencyId)
                           ->where("article_id", $articleId)
@@ -224,7 +248,7 @@ class MouvementController extends Controller
             $movements = $query->get();
 
             if ($fileType == "pdf") {
-                $pdf = Pdf::loadView("PDF.MovesPDFView", compact("movements", "role"));
+                $pdf = Pdf::loadView("PDF.MovesPDFView", compact("movements", "role","startDate","endDate","articleName"));
                 return $pdf->download($fileName . '.pdf');
             } elseif ($fileType == "excel") {
                 // Passez toutes les variables nécessaires à l'exportateur
@@ -243,7 +267,7 @@ class MouvementController extends Controller
             $movements = $query->get();
 
             if ($fileType == "pdf") {
-                $pdf = Pdf::loadView("PDF.MovesGlobalPDFView", compact("movements", "role"));
+                $pdf = Pdf::loadView("PDF.MovesGlobalPDFView", compact("movements", "role","articleName"));
                 return $pdf->download($fileName . '.pdf');
             } elseif ($fileType == "excel") {
                 // Passez toutes les variables nécessaires à l'exportateur

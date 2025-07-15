@@ -1,0 +1,127 @@
+// resources/js/components/Modals/ReceptionHistoryPDFExcelModal.jsx
+import React from 'react';
+import { useForm } from '@inertiajs/react';
+import Modal from './Modal'; // Assurez-vous d'avoir un composant Modal générique
+import Button from '../ui/button/Button'; // Votre composant Button
+import Input from '../form/input/InputField'; // Votre composant InputField
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faFileExport } from '@fortawesome/free-solid-svg-icons'; // Utilisez une icône générique d'exportation
+
+const ReceptionHistoryPDFExcelModal = ({ isOpen, onClose, agencies, currentFilters }) => {
+  const { data, setData, post, processing, errors } = useForm({
+    agency_id: currentFilters?.agency_id || '',
+    start_date: currentFilters?.start_date || '',
+    end_date: currentFilters?.end_date || '',
+    export_format: 'pdf', // Ajout du champ pour le type d'exportation, par défaut PDF
+  });
+
+  const handleChange = (e) => {
+    setData(e.target.id, e.target.value);
+  };
+
+  const handleDownload = () => {
+    const params = new URLSearchParams();
+    if (data.agency_id) {
+      params.append('agency_id', data.agency_id);
+    }
+    if (data.start_date) {
+      params.append('start_date', data.start_date);
+    }
+    if (data.end_date) {
+      params.append('end_date', data.end_date);
+    }
+
+    // --- CORRECTION CLÉ ICI : Ajoutez le format d'exportation aux paramètres ---
+    // C'est ce paramètre que votre fonction Laravel 'exportReceptions' lira.
+    params.append('export_format', data.export_format);
+
+    // La route 'receptions.export' est celle qui gère les deux types d'exportation.
+    // L'URL est construite en ajoutant les paramètres de recherche.
+    const exportUrl = route('receptions.export') + '?' + params.toString();
+
+    // Ouvre le téléchargement dans un nouvel onglet, ce qui permet au navigateur
+    // de gérer le téléchargement du fichier (PDF ou Excel) et garde la modal ouverte ou la ferme.
+    window.open(exportUrl, '_blank');
+    onClose(); // Ferme la modal après avoir déclenché le téléchargement
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Exporter l'Historique des Réceptions">
+      <div className="p-4">
+        <p className="mb-4 text-gray-700 dark:text-gray-300">
+          Sélectionnez les critères d'exportation pour l'historique des réceptions.
+        </p>
+
+        {/* Champs de filtre Agence */}
+        <div className="mb-4">
+          <label htmlFor="agency_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Agence
+          </label>
+          <select
+            id="agency_id"
+            className="h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+            value={data.agency_id}
+            onChange={handleChange}
+          >
+            <option value="">Toutes les agences</option>
+            {agencies.map(agency => (
+              <option key={agency.id} value={String(agency.id)}>
+                {agency.name}
+              </option>
+            ))}
+          </select>
+          {errors.agency_id && <div className="text-red-500 text-sm mt-1">{errors.agency_id}</div>}
+        </div>
+
+        {/* Filtres de Date */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <Input
+                id="start_date"
+                type="date"
+                label="Date de début"
+                value={data.start_date}
+                onChange={handleChange}
+                error={errors.start_date}
+            />
+            <Input
+                id="end_date"
+                type="date"
+                label="Date de fin"
+                value={data.end_date}
+                onChange={handleChange}
+                error={errors.end_date}
+            />
+        </div>
+
+        {/* Nouveau champ pour le type de fichier à exporter */}
+        <div className="mb-6">
+          <label htmlFor="export_format" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Type de fichier
+          </label>
+          <select
+            id="export_format"
+            className="h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+            value={data.export_format}
+            onChange={handleChange}
+          >
+            <option value="pdf">PDF</option>
+            <option value="excel">Excel (XLSX)</option> {/* Maintenez XLSX pour Maatwebsite/Excel */}
+          </select>
+          {errors.export_format && <div className="text-red-500 text-sm mt-1">{errors.export_format}</div>}
+        </div>
+
+        <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
+          <Button onClick={onClose} variant="secondary" className="mr-2">
+            Annuler
+          </Button>
+          <Button onClick={handleDownload} disabled={processing}>
+            <FontAwesomeIcon icon={faFileExport} className="mr-2" />
+            Générer
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
+export default ReceptionHistoryPDFExcelModal;

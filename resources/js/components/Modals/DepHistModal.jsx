@@ -1,4 +1,4 @@
-// resources/js/Components/Modals/ReleveHistoryPDFExcelModal.jsx
+// resources/js/Components/Modals/DepotageHistoryPDFExcelModal.jsx
 
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal'; // Votre composant de modale générique
@@ -7,10 +7,9 @@ import Button from '../ui/button/Button'; // Votre composant Button
 import { useForm } from '@inertiajs/react'; // Pour gérer l'état du formulaire
 import Swal from 'sweetalert2'; // Pour les notifications
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSpinner } from '@fortawesome/free-solid-svg-icons'; // Icône de chargement
-// Pas besoin de react-select pour les relevés, car pas de sélection d'article complexe
+import { faSpinner, faFilePdf, faFileExcel } from '@fortawesome/free-solid-svg-icons'; // Icônes
 
-const ReleveHistoryPDFExcelModal = ({ isOpen, onClose, agencies }) => {
+const DepotageHistoryPDFExcelModal = ({ isOpen, onClose, agencies }) => {
   // Initialisation de l'état du formulaire avec useForm d'Inertia
   const { data, setData, processing, errors, reset } = useForm({
     start_date: '',
@@ -62,9 +61,16 @@ const ReleveHistoryPDFExcelModal = ({ isOpen, onClose, agencies }) => {
       return;
     }
 
+    // S'assurer que agency_id est une chaîne vide si null ou undefined pour la queryString
+    const formDataForQuery = {
+      ...data,
+      agency_id: data.agency_id || '',
+    };
+
     // Construction de la chaîne de requête pour l'URL de génération de rapport
-    const queryString = new URLSearchParams(data).toString();
-    const generateRoute = route('releves.export') + '?' + queryString; // Utilise la route 'releves.export'
+    const queryString = new URLSearchParams(formDataForQuery).toString();
+    // Assurez-vous que cette route existe dans votre fichier routes/web.php (ou routes/magasin.php)
+    const generateRoute = route('depotages.export') + '?' + queryString;
 
     // Ouverture du rapport dans une nouvelle fenêtre/onglet
     if (data.file_type === 'pdf' || data.file_type === 'excel') {
@@ -82,7 +88,7 @@ const ReleveHistoryPDFExcelModal = ({ isOpen, onClose, agencies }) => {
     Swal.fire({
       icon: 'info',
       title: 'Génération en cours',
-      text: `Le rapport d'historique des relevés au format ${data.file_type.toUpperCase()} est en cours de génération.`,
+      text: `Le rapport d'historique des dépotages au format ${data.file_type.toUpperCase()} est en cours de génération.`,
       showConfirmButton: false,
       timer: 2000 // La notification disparaît après 2 secondes
     });
@@ -91,7 +97,7 @@ const ReleveHistoryPDFExcelModal = ({ isOpen, onClose, agencies }) => {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Générer l'historique des relevés (PDF/Excel)">
+    <Modal isOpen={isOpen} onClose={onClose} title="Générer l'historique des dépotages (PDF/Excel)">
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Période */}
         <div className="flex gap-4">
@@ -115,9 +121,8 @@ const ReleveHistoryPDFExcelModal = ({ isOpen, onClose, agencies }) => {
           />
         </div>
 
-        {/* Agence */}
-        {/* Afficher le sélecteur d'agence seulement s'il y a des agences à choisir */}
-        {agencies && agencies.length > 0 && ( // Correction ici pour vérifier agencies.length
+        {/* Agence - Affiché si des agences sont disponibles et > 1 pour un vrai choix */}
+        {agencies && agencies.length > 0 && (
           <div className="mb-4">
             <label htmlFor="agency_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Agence
@@ -163,7 +168,6 @@ const ReleveHistoryPDFExcelModal = ({ isOpen, onClose, agencies }) => {
           {errors.file_type && <p className="text-sm text-red-600 mt-1">{errors.file_type}</p>}
         </div>
 
-        {/* Boutons d'action */}
         <div className="flex justify-end mt-6">
           <Button
             type="button"
@@ -185,7 +189,10 @@ const ReleveHistoryPDFExcelModal = ({ isOpen, onClose, agencies }) => {
                 Génération...
               </>
             ) : (
-              'Générer le Rapport'
+              <>
+                <FontAwesomeIcon icon={data.file_type === 'pdf' ? faFilePdf : faFileExcel} className="mr-2" />
+                Générer le Rapport
+              </>
             )}
           </Button>
         </div>
@@ -194,4 +201,4 @@ const ReleveHistoryPDFExcelModal = ({ isOpen, onClose, agencies }) => {
   );
 };
 
-export default ReleveHistoryPDFExcelModal;
+export default DepotageHistoryPDFExcelModal;

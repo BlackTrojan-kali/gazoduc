@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Agency;
 use App\Models\Article;
 use App\Models\Citerne;
+use App\Models\CiterneReading;
 use App\Models\Depotage;
 use App\Models\Entreprise;
 use App\Models\Stock;
@@ -177,7 +178,7 @@ public function depotage(Request $request)
         }
 
         $stockFixe->quantity += $request->quantity;
-        $stockFixe->theorical_quantity += $request->quantity; // Incrémente également la quantité théorique
+        $stockFixe->theorical_quantity = $stockFixe->quantity; // stock fixe deviens le nouveau stock initial
         $stockFixe->save();
 
         // 3. Mise à jour du stock de la citerne mobile source
@@ -216,12 +217,14 @@ public function releve(Request $request, Stock $stock)
             'theorical_quantity' => $validatedData['theorical_quantity'],
             'quantity' => $validatedData['quantity'],
         ]);
-        $releve = new Releve();
+        $releve = new CiterneReading();
         $releve->citerne_id = $stock->citerne_id;
         $releve->stock_id = $stock->id;
+        $releve->agency_id = Auth::user()->agency_id;
         $releve->user_id = Auth::user()->id;
         $releve->theorical_quantity = $request->theorical_quantity;
-        $releve->quantity = $request->quantity;
+        $releve->measured_quantity = $request->quantity;
+        $releve->difference = $releve->measured_quantity - $request->theorical_quantity;
         $releve->save();
         DB::commit();
         return back()->with('success', 'Stock de citerne mis à jour avec succès.');

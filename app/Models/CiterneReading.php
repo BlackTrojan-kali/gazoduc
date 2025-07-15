@@ -15,4 +15,7 @@ class CiterneReading extends Model
     public function citerne(){
         return $this->belongsTo(Citerne::class,"agency_id");
     }
+    public function user(){
+        return $this->belongsTo(User::class,"user_id");
+    }
 }

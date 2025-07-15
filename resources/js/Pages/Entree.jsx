@@ -1,22 +1,50 @@
-import React, { useState } from 'react'; // Importez useState
+import React, { useState, useMemo } from 'react';
 import MagLayout from '../layout/MagLayout/MagLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCube, faTrash, faFileExport } from '@fortawesome/free-solid-svg-icons'; // Importez faFileExport
+import { faCube, faTrash, faFileExport, faFilter } from '@fortawesome/free-solid-svg-icons';
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '../components/ui/table';
 import Swal from 'sweetalert2';
-import Button from '../components/ui/button/Button'; // Assurez-vous d'avoir ce composant Button
-import MovementHistoryPDFExcelModal from '../components/Modals/MovHistModal'; // Importez la modale
+import Button from '../components/ui/button/Button';
+import Input from '../components/form/input/InputField';
+import MovementHistoryPDFExcelModal from '../components/Modals/MovHistModal';
 
-const Entree = ({ movements, articles, agencies, services }) => { // Ajoutez articles, agencies, services aux props
-  console.log(movements);
-  const entreeMovementsData = movements.data.filter(movement => movement.movement_type === 'entree');
-
+const Entree = ({ movements, articles, agencies, services }) => {
   // --- États pour la modale d'exportation ---
   const [isPDFExcelModalOpen, setIsPDFExcelModalOpen] = useState(false);
-
   const openPDFExcelModal = () => setIsPDFExcelModalOpen(true);
   const closePDFExcelModal = () => setIsPDFExcelModalOpen(false);
+
+  // --- États pour les filtres frontend ---
+  // Initialisez filterMovementType avec une chaîne vide pour "Tous"
+  const [filterMovementType, setFilterMovementType] = useState('');
+  const [filterArticleName, setFilterArticleName] = useState('');
+  const [filterQualification, setFilterQualification] = useState('');
+  const [filterAgencyId, setFilterAgencyId] = useState('');
+
+  // --- Filtrage des mouvements selon les filtres (optimisé avec useMemo) ---
+  const filteredMovements = useMemo(() => {
+    // La source de données pour le filtrage est movements.data (la page actuelle de mouvements reçue de Laravel)
+    return movements.data.filter(movement => {
+      // 1. Filtrer par type de mouvement
+      const matchesType = filterMovementType === '' || movement.movement_type === filterMovementType;
+
+      // 2. Filtrer par nom d'article
+      const matchesArticleName = filterArticleName === '' ||
+        (movement.article && movement.article.name.toLowerCase().includes(filterArticleName.toLowerCase()));
+
+      // 3. Filtrer par qualification
+      // Assurez-vous que movement.qualification existe avant d'appeler .toLowerCase()
+      const matchesQualification = filterQualification === '' ||
+        (movement.qualification && movement.qualification.toLowerCase() === filterQualification.toLowerCase());
+
+      // 4. Filtrer par agence
+      // Convertir agency_id en chaîne pour une comparaison stricte
+      const matchesAgency = filterAgencyId === '' || String(movement.agency_id) === String(filterAgencyId);
+
+      return matchesType && matchesArticleName && matchesQualification && matchesAgency;
+    });
+  }, [movements.data, filterMovementType, filterArticleName, filterQualification, filterAgencyId]); // Dépendances pour useMemo
 
   // --- useForm d'Inertia pour la suppression ---
   const { delete: inertiaDelete, processing } = useForm();
@@ -42,12 +70,14 @@ const Entree = ({ movements, articles, agencies, services }) => { // Ajoutez art
               'Le mouvement a été supprimé avec succès et le stock ajusté.',
               'success'
             );
+            // Inertia rafraîchira automatiquement les props 'movements' après une suppression réussie,
+            // ce qui re-déclenchera le filtrage si nécessaire.
           },
           onError: (errors) => {
             console.error('Erreur de suppression:', errors);
             Swal.fire(
               'Erreur !',
-              'Une erreur est survenue lors de la suppression du mouvement. ' + (errors.message || ''),
+              'Une erreur est survenue lors de la suppression du mouvement. ' + (errors.message || 'Veuillez réessayer.'),
               'error'
             );
           },
@@ -58,21 +88,20 @@ const Entree = ({ movements, articles, agencies, services }) => { // Ajoutez art
 
   return (
     <>
-      <Head title="Mouvements d'Entrée" />
+      <Head title="Mouvements" />
       <div className="p-6">
         <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
           <div className="flex flex-col gap-2 mb-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
                 <FontAwesomeIcon icon={faCube} className="mr-3 text-brand-600" />
-                Liste des Mouvements d'Entrée
+                Liste des Mouvements
               </h3>
             </div>
-            {/* Nouveau bouton pour ouvrir la modale d'exportation */}
             <div className="flex items-center gap-3">
               <Button
                 onClick={openPDFExcelModal}
-                variant="secondary" // Utilisez la variante de bouton appropriée
+                variant="secondary"
                 className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
               >
                 <FontAwesomeIcon icon={faFileExport} />
@@ -81,102 +110,135 @@ const Entree = ({ movements, articles, agencies, services }) => { // Ajoutez art
             </div>
           </div>
 
+          {/* --- Zone de filtrage --- */}
+          <div className="mb-6 p-4 border border-gray-200 rounded-lg dark:border-gray-700 dark:bg-white/[0.02]">
+            <h4 className="text-md font-semibold text-gray-700 dark:text-white/80 mb-3">
+              <FontAwesomeIcon icon={faFilter} className="mr-2 text-blue-500" />
+              Filtres
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* Filtre par type de mouvement */}
+              <div>
+                <label htmlFor="filterMovementType" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Type de Mouvement
+                </label>
+                <select
+                  id="filterMovementType"
+                  className="h-11 w-full rounded-lg border px-4 py-2.5 text-sm shadow-theme-xs border-gray-300 dark:border-gray-700 bg-transparent placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                  value={filterMovementType}
+                  onChange={(e) => setFilterMovementType(e.target.value)}
+                >
+                  <option value="">Tous les types</option> {/* Texte mis à jour pour plus de clarté */}
+                  <option value="entree">Entrée</option>
+                  <option value="sortie">Sortie</option>
+                </select>
+              </div>
+
+              {/* Filtre par nom d'article */}
+              <Input
+                id="filterArticleName"
+                type="text"
+                label="Nom de l'Article"
+                value={filterArticleName}
+                onChange={(e) => setFilterArticleName(e.target.value)}
+                placeholder="Rechercher par article..."
+              />
+
+              {/* Filtre par qualification */}
+              <div>
+                <label htmlFor="filterQualification" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Qualification
+                </label>
+                <select
+                  id="filterQualification"
+                  className="h-11 w-full rounded-lg border px-4 py-2.5 text-sm shadow-theme-xs border-gray-300 dark:border-gray-700 bg-transparent placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                  value={filterQualification}
+                  onChange={(e) => setFilterQualification(e.target.value)}
+                >
+                  <option value="">Toutes les qualifications</option>
+                  <option value="reepreuve">Réépreuve</option>
+                  <option value="achat">Achat</option>
+                  <option value="perte">Perte</option>
+                  <option value="transfert">Transfert</option>
+                </select>
+              </div>
+
+              {/* Filtre par agence */}
+              <div>
+                <label htmlFor="filterAgencyId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Agence
+                </label>
+                <select
+                  id="filterAgencyId"
+                  className="h-11 w-full rounded-lg border px-4 py-2.5 text-sm shadow-theme-xs border-gray-300 dark:border-gray-700 bg-transparent placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                  value={filterAgencyId}
+                  onChange={(e) => setFilterAgencyId(e.target.value)}
+                >
+                  <option value="">Toutes les agences</option>
+                  {agencies && agencies.map(agency => (
+                    <option key={agency.id} value={String(agency.id)}>
+                      {agency.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+          {/* --- Fin zone de filtrage --- */}
+
           <div className="max-w-full overflow-x-auto">
             <Table>
               <TableHeader className="border-gray-100 dark:border-gray-800 border-y">
                 <TableRow>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                    Article
-                  </TableCell>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                    Agence
-                  </TableCell>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                    Quantité
-                  </TableCell>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                    Qualification
-                  </TableCell>
-                   <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                    Destination
-                  </TableCell>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                    Enregistré par
-                  </TableCell>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                    Date
-                  </TableCell>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                    Description
-                  </TableCell>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                    Action
-                  </TableCell>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Article</TableCell>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Agence</TableCell>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Quantité</TableCell>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Date</TableCell>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Type Mouvement</TableCell>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Qualification</TableCell>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Actions</TableCell>
                 </TableRow>
               </TableHeader>
-
-              <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {entreeMovementsData && entreeMovementsData.length > 0 ? (
-                  entreeMovementsData.map((movement) => (
-                    <TableRow key={movement.id} className="">
-                      <TableCell className="py-3">
-                        <div className="flex items-center gap-3">
-                          <div>
-                            <p className="font-medium text-gray-800 text-theme-sm dark:text-white/90">
-                              {movement.article ? movement.article.name : 'N/A'}
-                            </p>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                        {movement.agency ? movement.agency.name : 'N/A'}
-                      </TableCell>
-                      <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                        {movement.quantity}
-                      </TableCell>
-                      <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                        {movement.qualification}
-                      </TableCell>
-                      <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                        {movement.destination_location || 'N/A'}
-                      </TableCell>
-                      <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                        {movement.user ? movement.user.first_name : 'N/A'}
-                      </TableCell>
-                      <TableCell className="py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
-                        {new Date(movement.created_at).toLocaleDateString('fr-FR', {
+              <TableBody>
+                {filteredMovements.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="py-6 text-center text-gray-400">Aucun mouvement trouvé pour les filtres appliqués, monsieur.</TableCell>
+                  </TableRow>
+                ) : (
+                  filteredMovements.map(movement => (
+                    <TableRow key={movement.id}>
+                      <TableCell>{movement.article ? movement.article.name : '—'}</TableCell>
+                      <TableCell>{movement.agency ? movement.agency.name : '—'}</TableCell>
+                      <TableCell>{movement.quantity}</TableCell>
+                      <TableCell>{new Date(movement.created_at).toLocaleDateString('fr-FR', {
                           year: 'numeric',
                           month: 'long',
                           day: 'numeric',
                           hour: '2-digit',
                           minute: '2-digit',
-                        })}
+                        })}</TableCell>
+                      <TableCell className={`font-semibold capitalize ${movement.movement_type === 'entree' ? 'text-green-600' : 'text-red-600'}`}>
+                        {movement.movement_type}
                       </TableCell>
-                      <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                        {movement.description || 'Aucune'}
-                      </TableCell>
-                      <TableCell className="py-3 text-gray-500 text-theme-sm gap-2 flex dark:text-gray-400">
+                      <TableCell>{movement.qualification || '—'}</TableCell>
+                      <TableCell>
                         <button
-                          onClick={() => handleDelete(movement.id)}
-                          className="inline-flex items-center gap-2 rounded-lg border border-red-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-red-700 shadow-theme-xs hover:bg-red-50 hover:text-red-800 dark:border-red-700 dark:bg-red-800 dark:text-red-400 dark:hover:bg-white/[0.03] dark:hover:text-red-200"
                           disabled={processing}
+                          onClick={() => handleDelete(movement.id)}
+                          title="Supprimer ce mouvement"
+                          className="text-red-600 hover:text-red-800 transition-colors"
+                          type="button"
                         >
-                          <FontAwesomeIcon icon={faTrash} /> Supprimer
+                          <FontAwesomeIcon icon={faTrash} />
                         </button>
                       </TableCell>
                     </TableRow>
                   ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={9} className="py-3 text-center text-gray-500 dark:text-gray-400">
-                      Aucun mouvement d'entrée n'a été enregistré pour le moment, monsieur.
-                    </TableCell>
-                  </TableRow>
                 )}
               </TableBody>
             </Table>
 
-            {/* --- CONTRÔLES DE PAGINATION --- */}
+            {/* --- CONTRÔLES DE PAGINATION D'INERTIA (s'appliquent aux données brutes de la page) --- */}
             {movements.links && movements.links.length > 3 && (
               <nav className="flex justify-end mt-4">
                 <div className="flex gap-2">
@@ -191,9 +253,10 @@ const Entree = ({ movements, articles, agencies, services }) => { // Ajoutez art
                             ? 'bg-white border-gray-300 text-gray-700 disabled:opacity-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 cursor-not-allowed'
                             : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-800 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 dark:hover:bg-white/[0.03] dark:hover:text-gray-200'
                         }`}
-                      preserveState
+                      preserveState // Garde l'état des filtres frontend quand vous changez de page
                       preserveScroll
-                      only={['movements']}
+                      // 'only' pour re-requérir seulement les props pertinentes du backend
+                      only={['movements', 'articles', 'agencies', 'services']}
                       onClick={(e) => {
                         if (!link.url) e.preventDefault();
                       }}
@@ -203,12 +266,12 @@ const Entree = ({ movements, articles, agencies, services }) => { // Ajoutez art
                 </div>
               </nav>
             )}
-            {/* -------------------------------------------------------- */}
+            {/* --------------------------------------------------------------------------------- */}
           </div>
         </div>
       </div>
 
-      {/* La modale de génération de PDF/Excel */}
+           {/* La modale de génération de PDF/Excel */}
       <MovementHistoryPDFExcelModal
         isOpen={isPDFExcelModalOpen}
         onClose={closePDFExcelModal}
@@ -220,5 +283,6 @@ const Entree = ({ movements, articles, agencies, services }) => { // Ajoutez art
   );
 };
 
-Entree.layout = page => <MagLayout children={page} />;
+Entree.layout = page => <MagLayout children={page} title="Mouvements" />;
+
 export default Entree;
