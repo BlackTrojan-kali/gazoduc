@@ -135,7 +135,7 @@
             @if(isset($role) && $role->name)
                 Service: {{ $role->name }} |
             @endif
-            Période: du {{ $startDate->format('d/m/Y') }} au {{ $endDate->format('d/m/Y') }}
+            Période: du {{ $startDate}} au {{ $endDate}}
         </p>
         <p>Généré le {{ now()->format('d/m/Y à H:i:s') }}</p>
     </div>

@@ -10,7 +10,7 @@ import ArticleModal from '../../components/Modals/Direction/ArticleModal';
 
 import Swal from 'sweetalert2';
 
-const Articles = ({ articles, entreprises }) => {
+const Articles = ({ articles, entreprises,simpleArticles }) => {
   const [isArticleModalOpen, setIsArticleModalOpen] = useState(false);
   const [selectedArticle, setSelectedArticle] = useState(null);
 
@@ -244,6 +244,7 @@ const Articles = ({ articles, entreprises }) => {
         onClose={closeArticleModal}
         entreprises={entreprises}
         article={selectedArticle}
+        simpleArticles={simpleArticles || []}
         title={selectedArticle ? 'Modifier l\'Article' : 'Créer un Nouvel Article'}
       />
     </>

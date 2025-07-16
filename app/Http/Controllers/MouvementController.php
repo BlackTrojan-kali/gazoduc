@@ -190,99 +190,116 @@ public function moves(Request $request, $type)
             return back()->with("error","le mouvement n'a pas ete supprime veillez reesayer");
         }
     }
-  public function generateReport(Request $request)
+ public function generateReport(Request $request)
     {
-        // 1. Récupération et préparation des paramètres
-        $startDate = Carbon::parse($request->start_date)->startOfDay();
-        $endDate = Carbon::parse($request->end_date)->endOfDay();
-        $agencyId = $request->get("agency_id");
-        $serviceId = $request->get("service_id");
-        $movementType = $request->get("movement_type");
-        $articleId = $request->get("article_id");
-        $fileType = $request->get("file_type");
+        // dd($request->all()); // Gardez ceci pour débugger si nécessaire, puis supprimez-le en production
 
-        $roleName = null;
-        $agencyName = null;
-        $articleName = null;
-        $serviceName = null; // Pour les filtres Excel
+        // 1. Validation des paramètres de la requête
+        $request->validate([
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'agency_id' => 'nullable|exists:agencies,id',
+            'service_id' => 'nullable|exists:roles,id', // Assurez-vous que 'roles' est la bonne table et 'id' la colonne
+            'type_mouvement' => 'nullable|in:entree,sortie,global',
+            'article_id' => 'nullable|exists:articles,id',
+            'file_type' => 'required|in:pdf,excel',
+        ]);
 
-        if ($serviceId) {
-            $role = Role::find($serviceId);
-            if ($role) {
-                $roleName = $role->name;
-                $serviceName = $role->name; // Utilise le nom du rôle pour le filtre de service
-                
-            }
+        // 2. Récupération et préparation des paramètres
+        $startDate = Carbon::parse($request->input('start_date'))->startOfDay();
+        $endDate = Carbon::parse($request->input('end_date'))->endOfDay();
+        $agencyId = $request->input('agency_id');
+        // MODIFICATION ICI : Récupère serviceId depuis la requête, si non fourni, peut-être laisser vide ou par défaut
+        // Si l'utilisateur a un rôle spécifique pour générer un rapport le concernant,
+        // vous pouvez ajouter une logique conditionnelle.
+        // Pour l'instant, nous privilégions le filtre utilisateur.
+        $serviceId = $request->input('service_id');
+        $movementType = $request->input('type_mouvement');
+        $articleId = $request->input('article_id');
+        $fileType = $request->input('file_type');
+
+        // 3. Récupération des noms pour les rapports (pour affichage dans le PDF/Excel)
+        $agencyName = $agencyId ? Agency::find($agencyId)?->name : 'Toutes les agences';
+        $articleName = $articleId ? Article::find($articleId)?->name : 'Tous les articles';
+        $serviceName = $serviceId ? Role::find($serviceId)?->name : 'Tous les services';
+        
+        $movementTypeName = '';
+        if ($movementType === 'entree') {
+            $movementTypeName = 'Entrée';
+        } elseif ($movementType === 'sortie') {
+            $movementTypeName = 'Sortie';
+        } else { // 'global' ou vide
+            $movementTypeName = 'Global (Entrées & Sorties)';
         }
 
-        if ($agencyId) {
-            $agency = Agency::find($agencyId);
-            if ($agency) {
-                $agencyName = $agency->name;
-            }
-        }
-
-        if ($articleId) {
-            $article = Article::find($articleId);
-            if ($article) {
-                $articleName = $article->name;
-                
-            }
-        }
-        // 2. Construction de la requête de base pour les mouvements
-        $query = Mouvement::where("agency_id", $agencyId)
-                          ->where("article_id", $articleId)
-                          ->whereDate("created_at", ">=", $startDate)
-                          ->whereDate("created_at", "<=", $endDate)
+        // 4. Construction de la requête de base pour les mouvements
+        $query = Mouvement::query()
+                          ->whereBetween("created_at", [$startDate, $endDate])
                           ->orderBy('created_at', 'asc')
-                          ->with("article", "agency", "user",); // 'service' pour la relation dans le contrôleur
+                          ->with("article", "agency", "user"); // Assurez-vous que 'sourceService' est la relation correcte dans votre modèle Mouvement vers le modèle Role/Service
 
-        if ($roleName) {
-            $query->where("source_location", $roleName);
+        // 5. Application des filtres conditionnels
+        $query->when($agencyId, function ($q) use ($agencyId) {
+            $q->where('agency_id', $agencyId);
+        });
+
+        $query->when($articleId, function ($q) use ($articleId) {
+            $q->where('article_id', $articleId);
+        });
+
+        // Filtrer par le type de mouvement si ce n'est pas 'global'
+        $query->when($movementType && $movementType !== 'global', function ($q) use ($movementType) {
+            $q->where('movement_type', $movementType); // Assurez-vous que le champ est 'type' dans votre table de mouvements
+        });
+
+        // Filtrer par service (rôle) si serviceId est fourni.
+        // IMPORTANT : Vérifiez la colonne que vous utilisez pour stocker l'ID ou le nom du service/rôle.
+        // Si 'source_location' stocke le NOM du service/rôle :
+        $query->when($serviceId, function ($q) use ($serviceName) {
+            $q->where('source_location', $serviceName);
+        });
+        // Si 'source_location' stocke l'ID du service/rôle :
+        // $query->when($serviceId, function ($q) use ($serviceId) {
+        //     $q->where('source_location', $serviceId); // Ou la colonne réelle
+        // });
+        // Si vous avez une relation directe dans le modèle Mouvement vers Role:
+        // $query->when($serviceId, function ($q) use ($serviceId) {
+        //     $q->whereHas('sourceService', fn($s) => $s->where('id', $serviceId));
+        // });
+
+
+        $movements = $query->get();
+
+        // 6. Vérifier si des mouvements ont été trouvés
+        if ($movements->isEmpty()) {
+            return back()->with('error', 'Aucun mouvement trouvé pour les critères sélectionnés, monsieur.');
         }
+
+        // 7. Préparation des données pour la vue/l'export
+        $reportData = [
+            'movements' => $movements,
+            'startDate' => $startDate->format('d/m/Y'),
+            'endDate' => $endDate->format('d/m/Y'),
+            'agencyName' => $agencyName,
+            'articleName' => $articleName,
+            'serviceName' => $serviceName,
+            'movementTypeName' => $movementTypeName,
+        ];
 
         $fileName = 'historique_mouvements_' . now()->format('Ymd_His');
 
-        if ($movementType !== "global") {
-            $query->where("movement_type", $movementType);
-            $movements = $query->get();
-
-            if ($fileType == "pdf") {
-                $pdf = Pdf::loadView("PDF.MovesPDFView", compact("movements", "role","startDate","endDate","articleName"));
-                return $pdf->download($fileName . '.pdf');
-            } elseif ($fileType == "excel") {
-                // Passez toutes les variables nécessaires à l'exportateur
-                return Excel::download(new MovementsExport(
-                    $movements,
-                    $startDate->format('d/m/Y'),
-                    $endDate->format('d/m/Y'),
-                    $agencyName,
-                    $serviceName, // Ou $roleName
-                    $movementType,
-                    $articleName
-                ), $fileName . '.xlsx');
-            }
-
-        } else { // C'est un mouvement global
-            $movements = $query->get();
-
-            if ($fileType == "pdf") {
-                $pdf = Pdf::loadView("PDF.MovesGlobalPDFView", compact("movements", "role","articleName"));
-                return $pdf->download($fileName . '.pdf');
-            } elseif ($fileType == "excel") {
-                // Passez toutes les variables nécessaires à l'exportateur
-                return Excel::download(new MovementsExport(
-                    $movements,
-                    $startDate->format('d/m/Y'),
-                    $endDate->format('d/m/Y'),
-                    $agencyName,
-                    $serviceName, // Ou $roleName
-                    $movementType, // 'global' sera passé ici
-                    $articleName
-                ), $fileName . '.xlsx');
-            }
+        // 8. Génération du rapport selon le type de fichier
+        if ($fileType === "pdf") {
+            $pdfView = ($movementType === "global") ? "PDF.MovesGlobalPDFView" : "PDF.MovesPDFView";
+            $pdf = Pdf::loadView($pdfView, $reportData);
+            return $pdf->download($fileName . '.pdf');
+        } elseif ($fileType === "excel") {
+            // APPEL DE L'EXPORT EXCEL ICI
+            return Excel::download(new MovementsExport($reportData), $fileName . '.xlsx');
         }
-        return back()->with('error', 'Type de fichier non supporté ou données manquantes.')->withInput();
+
+        // Cas de fallback (ne devrait normalement pas être atteint grâce à la validation)
+        return back()->with('error', 'Type de fichier non supporté ou une erreur inattendue est survenue.');
     }
 }
 

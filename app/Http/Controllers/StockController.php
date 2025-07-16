@@ -38,7 +38,7 @@ class StockController extends Controller
             // Déterminer les types de stock à créer
             $storageTypes = ['general']; // Type par défaut pour tous les articles
 
-            if ($article->type === 'produit') {
+            if ($article->type !== 'matiere_premiere') {
                 // Si c'est un produit, ajouter les types spécifiques
                 $storageTypes = ['magasin', 'commercial', 'production'];
             }else {

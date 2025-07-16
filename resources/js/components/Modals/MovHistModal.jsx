@@ -1,197 +1,382 @@
-// resources/js/Components/Modals/ReleveHistoryPDFExcelModal.jsx
-
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
+import { useForm } from '@inertiajs/react';
 import Modal from './Modal'; // Votre composant de modale générique
-import Input from '../form/input/InputField'; // Votre composant Input
+import InputField from "../form/input/InputField"; // Votre composant InputField
 import Button from '../ui/button/Button'; // Votre composant Button
-import { useForm } from '@inertiajs/react'; // Pour gérer l'état du formulaire
 import Swal from 'sweetalert2'; // Pour les notifications
+import Select from 'react-select'; // Pour les sélecteurs améliorés
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSpinner } from '@fortawesome/free-solid-svg-icons'; // Icône de chargement
-// Pas besoin de react-select pour les relevés, car pas de sélection d'article complexe
+import { faFileExport, faSpinner } from '@fortawesome/free-solid-svg-icons'; // Utilisez faFileExport pour un export générique
 
-const ReleveHistoryPDFExcelModal = ({ isOpen, onClose, agencies }) => {
-  // Initialisation de l'état du formulaire avec useForm d'Inertia
-  const { data, setData, processing, errors, reset } = useForm({
-    start_date: '',
-    end_date: '',
-    agency_id: '', // Pour filtrer par agence
-    file_type: 'pdf', // Type de fichier par défaut
-  });
+// Props attendues :
+// isOpen: boolean - pour contrôler l'ouverture/fermeture de la modal
+// onClose: function - callback pour fermer la modal
+// title: string - titre de la modal (ex: "Exporter l'Historique des Mouvements")
+// articles: array - liste des articles au format { id: number, name: string } (pour le filtre)
+// agencies: array - liste des agences au format { id: number, name: string } (pour le filtre)
+// services: array - NOUVEAU ! Liste des services/rôles au format { id: number, name: string } (pour le filtre)
+// currentFilters: object - filtres actuels pour pré-remplir le formulaire (optionnel)
 
-  // Effet pour initialiser les dates par défaut (mois précédent à aujourd'hui) lors de l'ouverture de la modale
-  useEffect(() => {
-    if (isOpen) {
-      const today = new Date();
-      const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
-      reset({ // Utiliser reset pour s'assurer que tous les champs sont réinitialisés
-        start_date: lastMonth.toISOString().split('T')[0], // Format YYYY-MM-DD
-        end_date: today.toISOString().split('T')[0], // Format YYYY-MM-DD
-        agency_id: '', // Réinitialiser l'agence
-        file_type: 'pdf', // Réinitialiser le type de fichier
-      });
-    }
-  }, [isOpen]); // Se déclenche quand 'isOpen' change
-
-  // Gestion des changements dans les champs du formulaire
-  const handleChange = (e) => {
-    const { id, value } = e.target;
-    setData(id, value);
-  };
-
-  // Soumission du formulaire
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    // Validation des dates
-    if (!data.start_date || !data.end_date) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Dates Requises',
-        text: 'Veuillez sélectionner une date de début et une date de fin pour le rapport, monsieur.',
-      });
-      return;
-    }
-
-    if (new Date(data.start_date) > new Date(data.end_date)) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Dates Invalides',
-        text: 'La date de début ne peut pas être postérieure à la date de fin, monsieur.',
-      });
-      return;
-    }
-
-    // Construction de la chaîne de requête pour l'URL de génération de rapport
-    const queryString = new URLSearchParams(data).toString();
-    const generateRoute = route('releves.export') + '?' + queryString; // Utilise la route 'releves.export'
-
-    // Ouverture du rapport dans une nouvelle fenêtre/onglet
-    if (data.file_type === 'pdf' || data.file_type === 'excel') {
-      window.open(generateRoute, '_blank');
-    } else {
-      Swal.fire({
-        icon: 'error',
-        title: 'Erreur de format',
-        text: 'Veuillez sélectionner un type de fichier valide (PDF ou Excel), monsieur.',
-      });
-      return;
-    }
-
-    // Notification à l'utilisateur
-    Swal.fire({
-      icon: 'info',
-      title: 'Génération en cours',
-      text: `Le rapport d'historique des relevés au format ${data.file_type.toUpperCase()} est en cours de génération.`,
-      showConfirmButton: false,
-      timer: 2000 // La notification disparaît après 2 secondes
+const MovementHistoryPDFExcelModal = ({ isOpen, onClose, title, articles, agencies, services, currentFilters }) => {
+    const { data, setData, processing, errors, reset } = useForm({
+        start_date: currentFilters?.start_date || '',
+        end_date: currentFilters?.end_date || '',
+        article_id: currentFilters?.article_id || '',
+        agency_id: currentFilters?.agency_id || '',
+        service_id: currentFilters?.service_id || '', // NOUVEAU : pour le filtre par service
+        type_mouvement: currentFilters?.type_mouvement || 'global', // Défaut à 'global'
+        file_type: 'pdf', // NOUVEAU : Ajout du champ pour le type de fichier, par défaut PDF
     });
 
-    onClose(); // Ferme la modale après la soumission
-  };
+    // Options pour react-select des articles
+    const articleOptions = Array.isArray(articles)
+        ? articles.map(article => ({ value: String(article.id), label: article.name }))
+        : [];
 
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Générer l'historique des relevés (PDF/Excel)">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Période */}
-        <div className="flex gap-4">
-          <Input
-            id="start_date"
-            type="date"
-            label="Date de début"
-            value={data.start_date}
-            onChange={handleChange}
-            error={errors.start_date}
-            required
-          />
-          <Input
-            id="end_date"
-            type="date"
-            label="Date de fin"
-            value={data.end_date}
-            onChange={handleChange}
-            error={errors.end_date}
-            required
-          />
-        </div>
+    // Options pour react-select des agences
+    const agencyOptions = Array.isArray(agencies)
+        ? agencies.map(agency => ({ value: String(agency.id), label: agency.name }))
+        : [];
 
-        {/* Agence */}
-        {/* Afficher le sélecteur d'agence seulement s'il y a des agences à choisir */}
-        {agencies && agencies.length > 0 && ( // Correction ici pour vérifier agencies.length
-          <div className="mb-4">
-            <label htmlFor="agency_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Agence
-            </label>
-            <select
-              id="agency_id"
-              className={`h-11 w-full appearance-none rounded-lg border px-4 py-2.5 pr-11 text-sm shadow-theme-xs
-                ${errors.agency_id ? 'border-red-500' : 'border-gray-300 dark:border-gray-700'}
-                bg-transparent placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10
-                dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800`}
-              value={data.agency_id}
-              onChange={handleChange}
-            >
-              <option value="">Toutes les agences</option>
-              {agencies.map(agency => (
-                <option key={agency.id} value={String(agency.id)}>
-                  {agency.name}
-                </option>
-              ))}
-            </select>
-            {errors.agency_id && <p className="text-sm text-red-600 mt-1">{errors.agency_id}</p>}
-          </div>
-        )}
+    // Options pour react-select des services/rôles (NOUVEAU !)
+    const serviceOptions = Array.isArray(services)
+        ? services.map(service => ({ value: String(service.id), label: service.name }))
+        : [];
 
-        {/* Type de Fichier */}
-        <div className="mb-4">
-          <label htmlFor="file_type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Format de Fichier
-          </label>
-          <select
-            id="file_type"
-            className={`h-11 w-full appearance-none rounded-lg border px-4 py-2.5 pr-11 text-sm shadow-theme-xs
-              ${errors.file_type ? 'border-red-500' : 'border-gray-300 dark:border-gray-700'}
-              bg-transparent placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10
-              dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800`}
-            value={data.file_type}
-            onChange={handleChange}
-            required
-          >
-            <option value="pdf">PDF</option>
-            <option value="excel">Excel</option>
-          </select>
-          {errors.file_type && <p className="text-sm text-red-600 mt-1">{errors.file_type}</p>}
-        </div>
+    // Options pour le type de mouvement
+    const movementTypeOptions = [
+        { value: 'global', label: 'Global (Entrées & Sorties)' },
+        { value: 'entree', label: 'Entrée' },
+        { value: 'sortie', label: 'Sortie' },
+    ];
 
-        {/* Boutons d'action */}
-        <div className="flex justify-end mt-6">
-          <Button
-            type="button"
-            onClick={onClose}
-            variant="destructive"
-            className="mr-2"
-            disabled={processing}
-          >
-            Annuler
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={processing}
-          >
-            {processing ? (
-              <>
-                <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
-                Génération...
-              </>
-            ) : (
-              'Générer le Rapport'
-            )}
-          </Button>
-        </div>
-      </form>
-    </Modal>
-  );
+    // Options pour le type de fichier de sortie
+    const fileTypeOptions = [
+        { value: 'pdf', label: 'PDF' },
+        { value: 'excel', label: 'Excel (XLSX)' },
+    ];
+
+    // Réinitialise le formulaire et définit les dates par défaut lors de l'ouverture de la modal
+    useEffect(() => {
+        if (isOpen) {
+            const today = new Date().toISOString().split('T')[0]; // Date du jour au format YYYY-MM-DD
+            reset({
+                start_date: currentFilters?.start_date || today,
+                end_date: currentFilters?.end_date || today,
+                article_id: currentFilters?.article_id || '',
+                agency_id: currentFilters?.agency_id || '',
+                service_id: currentFilters?.service_id || '', // Réinitialise le service
+                type_mouvement: currentFilters?.type_mouvement || 'global',
+                file_type: 'pdf', // Réinitialise le type de fichier à PDF par défaut
+            });
+        }
+    }, [isOpen, reset, currentFilters]); // Dépend de isOpen, reset et currentFilters
+
+    // Gère les changements pour les champs InputField (date) et Select HTML natifs (file_type)
+    const handleChange = (e) => {
+        const { id, value } = e.target;
+        setData(id, value);
+    };
+
+    // Gère les changements pour les champs Select (react-select)
+    const handleSelectChange = (selectedOption, { name }) => {
+        setData(name, selectedOption ? selectedOption.value : '');
+    };
+
+    // Soumission du formulaire pour générer le rapport
+    const handleSubmit = (e) => {
+        e.preventDefault();
+
+        // Validation des dates
+        if (!data.start_date || !data.end_date) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Dates Requises',
+                text: 'Veuillez sélectionner une date de début et une date de fin pour le rapport, monsieur.',
+            });
+            return;
+        }
+
+        if (new Date(data.start_date) > new Date(data.end_date)) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Dates Invalides',
+                text: 'La date de début ne peut pas être postérieure à la date de fin, monsieur.',
+            });
+            return;
+        }
+
+        // Construire la chaîne de requête pour l'URL
+        const queryString = new URLSearchParams(data).toString();
+        // Cible la route backend 'movements.generateReport' qui gérera l'exportation
+        const generateRoute = route('movements.generateReport') + '?' + queryString;
+
+        // Ouvre le rapport (PDF ou Excel) dans un nouvel onglet
+        window.open(generateRoute, '_blank');
+
+        // Notification et fermeture de la modal
+        Swal.fire({
+            icon: 'info',
+            title: 'Génération en cours',
+            text: `Le rapport des mouvements (${data.file_type.toUpperCase()}) est en cours de génération.`,
+            showConfirmButton: false,
+            timer: 2000
+        }).then(() => {
+            onClose(); // Ferme la modale
+        });
+    };
+
+    // Déterminer les valeurs sélectionnées pour react-select pour l'affichage
+    const selectedArticleOption = articleOptions.find(option => option.value === data.article_id);
+    const selectedAgencyOption = agencyOptions.find(option => option.value === data.agency_id);
+    const selectedServiceOption = serviceOptions.find(option => option.value === data.service_id); // NOUVEAU !
+    const selectedMovementTypeOption = movementTypeOptions.find(option => option.value === data.type_mouvement);
+    const selectedFileTypeOption = fileTypeOptions.find(option => option.value === data.file_type); // NOUVEAU !
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title={title}>
+            <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Champs de Date */}
+                <InputField
+                    id="start_date"
+                    type="date"
+                    label="Date de Début"
+                    value={data.start_date}
+                    onChange={handleChange}
+                    error={errors.start_date}
+                    required
+                />
+
+                <InputField
+                    id="end_date"
+                    type="date"
+                    label="Date de Fin"
+                    value={data.end_date}
+                    onChange={handleChange}
+                    error={errors.end_date}
+                    required
+                />
+
+                {/* Sélecteur d'Article avec react-select */}
+                <div className="mb-4">
+                    <label htmlFor="article_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Article
+                    </label>
+                    <Select
+                        id="article_id"
+                        name="article_id"
+                        options={[{ value: '', label: 'Tous les articles' }, ...articleOptions]}
+                        value={selectedArticleOption || { value: '', label: 'Tous les articles' }}
+                        onChange={handleSelectChange}
+                        placeholder="Sélectionner un article ou laisser vide pour tous"
+                        isClearable={true}
+                        isSearchable={true}
+                        classNamePrefix="react-select"
+                        // Styles Tailwind pour react-select (vos styles existants)
+                        styles={{
+                            control: (baseStyles, state) => ({
+                                ...baseStyles,
+                                height: '44px',
+                                minHeight: '44px',
+                                borderColor: errors.article_id ? '#EF4444' : (state.isFocused ? '#3B82F6' : '#D1D5DB'),
+                                backgroundColor: 'transparent',
+                                boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
+                                '&:hover': {
+                                    borderColor: state.isFocused ? '#3B82F6' : '#9CA3AF',
+                                },
+                            }),
+                            singleValue: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
+                            placeholder: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.3)' }),
+                            input: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
+                            menu: (baseStyles) => ({ ...baseStyles, backgroundColor: '#1F2937', zIndex: 9999 }),
+                            option: (baseStyles, state) => ({
+                                ...baseStyles,
+                                backgroundColor: state.isSelected ? '#2563EB' : state.isFocused ? '#374151' : '#1F2937',
+                                color: state.isSelected ? 'white' : 'rgb(249 250 251 / 0.9)',
+                                '&:hover': { backgroundColor: '#374151', color: 'rgb(249 250 251 / 0.9)' },
+                            }),
+                        }}
+                    />
+                    {errors.article_id && <p className="text-sm text-red-600 mt-1">{errors.article_id}</p>}
+                </div>
+
+                {/* Sélecteur d'Agence avec react-select */}
+                <div className="mb-4">
+                    <label htmlFor="agency_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Agence
+                    </label>
+                    <Select
+                        id="agency_id"
+                        name="agency_id"
+                        options={[{ value: '', label: 'Toutes les agences' }, ...agencyOptions]}
+                        value={selectedAgencyOption || { value: '', label: 'Toutes les agences' }}
+                        onChange={handleSelectChange}
+                        placeholder="Sélectionner une agence ou laisser vide pour toutes"
+                        isClearable={true}
+                        isSearchable={true}
+                        classNamePrefix="react-select"
+                        // Styles Tailwind pour react-select (vos styles existants)
+                        styles={{
+                            control: (baseStyles, state) => ({
+                                ...baseStyles,
+                                height: '44px',
+                                minHeight: '44px',
+                                borderColor: errors.agency_id ? '#EF4444' : (state.isFocused ? '#3B82F6' : '#D1D5DB'),
+                                backgroundColor: 'transparent',
+                                boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
+                                '&:hover': {
+                                    borderColor: state.isFocused ? '#3B82F6' : '#9CA3AF',
+                                },
+                            }),
+                            singleValue: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
+                            placeholder: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.3)' }),
+                            input: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
+                            menu: (baseStyles) => ({ ...baseStyles, backgroundColor: '#1F2937', zIndex: 9999 }),
+                            option: (baseStyles, state) => ({
+                                ...baseStyles,
+                                backgroundColor: state.isSelected ? '#2563EB' : state.isFocused ? '#374151' : '#1F2937',
+                                color: state.isSelected ? 'white' : 'rgb(249 250 251 / 0.9)',
+                                '&:hover': { backgroundColor: '#374151', color: 'rgb(249 250 251 / 0.9)' },
+                            }),
+                        }}
+                    />
+                    {errors.agency_id && <p className="text-sm text-red-600 mt-1">{errors.agency_id}</p>}
+                </div>
+
+                {/* Sélecteur de Service/Rôle (NOUVEAU !) */}
+                <div className="mb-4">
+                    <label htmlFor="service_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Service
+                    </label>
+                    <Select
+                        id="service_id"
+                        name="service_id"
+                        options={[{ value: '', label: 'Tous les services' }, ...serviceOptions]}
+                        value={selectedServiceOption || { value: '', label: 'Tous les services' }}
+                        onChange={handleSelectChange}
+                        placeholder="Sélectionner un service ou laisser vide pour tous"
+                        isClearable={true}
+                        isSearchable={true}
+                        classNamePrefix="react-select"
+                        // Styles Tailwind pour react-select (vos styles existants)
+                        styles={{
+                            control: (baseStyles, state) => ({
+                                ...baseStyles,
+                                height: '44px',
+                                minHeight: '44px',
+                                borderColor: errors.service_id ? '#EF4444' : (state.isFocused ? '#3B82F6' : '#D1D5DB'),
+                                backgroundColor: 'transparent',
+                                boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
+                                '&:hover': {
+                                    borderColor: state.isFocused ? '#3B82F6' : '#9CA3AF',
+                                },
+                            }),
+                            singleValue: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
+                            placeholder: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.3)' }),
+                            input: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
+                            menu: (baseStyles) => ({ ...baseStyles, backgroundColor: '#1F2937', zIndex: 9999 }),
+                            option: (baseStyles, state) => ({
+                                ...baseStyles,
+                                backgroundColor: state.isSelected ? '#2563EB' : state.isFocused ? '#374151' : '#1F2937',
+                                color: state.isSelected ? 'white' : 'rgb(249 250 251 / 0.9)',
+                                '&:hover': { backgroundColor: '#374151', color: 'rgb(249 250 251 / 0.9)' },
+                            }),
+                        }}
+                    />
+                    {errors.service_id && <p className="text-sm text-red-600 mt-1">{errors.service_id}</p>}
+                </div>
+
+                {/* Sélecteur de Type de Mouvement */}
+                <div className="mb-4">
+                    <label htmlFor="type_mouvement" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Type de Mouvement
+                    </label>
+                    <Select
+                        id="type_mouvement"
+                        name="type_mouvement"
+                        options={movementTypeOptions}
+                        value={selectedMovementTypeOption || movementTypeOptions[0]} // Défaut à 'Global'
+                        onChange={handleSelectChange}
+                        placeholder="Sélectionner un type de mouvement"
+                        isClearable={true}
+                        classNamePrefix="react-select"
+                        // Styles Tailwind pour react-select (vos styles existants)
+                        styles={{
+                            control: (baseStyles, state) => ({
+                                ...baseStyles,
+                                height: '44px',
+                                minHeight: '44px',
+                                borderColor: errors.type_mouvement ? '#EF4444' : (state.isFocused ? '#3B82F6' : '#D1D5DB'),
+                                backgroundColor: 'transparent',
+                                boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
+                                '&:hover': {
+                                    borderColor: state.isFocused ? '#3B82F6' : '#9CA3AF',
+                                },
+                            }),
+                            singleValue: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
+                            placeholder: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.3)' }),
+                            input: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
+                            menu: (baseStyles) => ({ ...baseStyles, backgroundColor: '#1F2937', zIndex: 9999 }),
+                            option: (baseStyles, state) => ({
+                                ...baseStyles,
+                                backgroundColor: state.isSelected ? '#2563EB' : state.isFocused ? '#374151' : '#1F2937',
+                                color: state.isSelected ? 'white' : 'rgb(249 250 251 / 0.9)',
+                                '&:hover': { backgroundColor: '#374151', color: 'rgb(249 250 251 / 0.9)' },
+                            }),
+                        }}
+                    />
+                    {errors.type_mouvement && <p className="text-sm text-red-600 mt-1">{errors.type_mouvement}</p>}
+                </div>
+
+                {/* Champ pour le type de fichier à exporter (NOUVEAU !) */}
+                <div className="mb-4">
+                    <label htmlFor="file_type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Type de fichier
+                    </label>
+                    <select
+                        id="file_type"
+                        className="h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                        value={data.file_type}
+                        onChange={handleChange}
+                    >
+                        {fileTypeOptions.map(option => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                    </select>
+                    {errors.file_type && <p className="text-sm text-red-600 mt-1">{errors.file_type}</p>}
+                </div>
+
+                <div className="flex justify-end mt-6">
+                    <Button
+                        type="button"
+                        onClick={onClose}
+                        variant="destructive"
+                        className="mr-2"
+                        disabled={processing}
+                    >
+                        Annuler
+                    </Button>
+                    <Button
+                        type="submit"
+                        variant="primary"
+                        disabled={processing}
+                    >
+                        {processing ? (
+                            <>
+                                <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
+                                Génération...
+                            </>
+                        ) : (
+                            <>
+                                <FontAwesomeIcon icon={faFileExport} className="mr-2" /> {/* Icône générique d'exportation */}
+                                Générer
+                            </>
+                        )}
+                    </Button>
+                </div>
+            </form>
+        </Modal>
+    );
 };
 
-export default ReleveHistoryPDFExcelModal;
+export default MovementHistoryPDFExcelModal;

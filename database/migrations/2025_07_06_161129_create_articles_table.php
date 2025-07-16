@@ -17,6 +17,8 @@ return new class extends Migration
             $table->string("name");
             $table->string("type");
             $table->string("unit");
+            $table->unsignedBigInteger("article_id")->nullable();
+            $table->foreign("article_id")->on("articles")->references("id");
             $table->unsignedBigInteger("entreprise_id");
             $table->foreign("entreprise_id")->on("entreprises")->references("id")->onDelete("cascade");
             $table->string("weight_per_unit")->nullable();
