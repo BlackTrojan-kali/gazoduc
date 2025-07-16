@@ -15,6 +15,7 @@ use App\Http\Controllers\EntrepriseController;
 use App\Http\Controllers\LicenceController;
 use App\Http\Controllers\MagasinController;
 use App\Http\Controllers\MouvementController;
+use App\Http\Controllers\ProductionController;
 use App\Http\Controllers\receptionController;
 use App\Http\Controllers\RegionController;
 use App\Http\Controllers\ReleveController;
@@ -25,6 +26,7 @@ use App\Http\Middleware\DirectionMiddleware;
 use App\Http\Middleware\IsAdminMiddleware;
 use App\Http\Middleware\isAuthenticatedMiddleware;
 use App\Http\Middleware\MagasinMiddleware;
+use App\Http\Middleware\ProductionMiddleware;
 use App\Models\Mouvement;
 
 //auth routes
@@ -94,18 +96,16 @@ Route::middleware(MagasinMiddleware::class)->group(function(){
    //magasinier citernes routes
     Route::get("/magasin-index",[MagasinController::class,"index"])->name("magasin.index"); 
    Route::get("/magasin-citernes",[MagasinController::class,"citerne_index"])->name("magasin.citerne_index"); 
-   Route::post("/magasin-citernes-reception",[CiterneController::class,"reception"])->name("magasin.reception");
    Route::post("/magasin-citernes-depotage",[CiterneController::class,"depotage"])->name("magasin.depotage");
    Route::post("/magasin-citerne-releve/{stock}",[CiterneController::class,"releve"])->name("magasin.releve");
    //mouvement
-   Route::post("/magasin-move",[MouvementController::class,"store"])->name("magasin.move.store");
-   Route::get("/magasin-moves/{type}",[MouvementController::class,"moves"])->name("magasin.moves");
-   Route::delete("/magasin-move-delete/{idmov}",[MouvementController::class,"delete"])->name("magasin.move.delete");
-    Route::get('/movements/generate-report', [MouvementController::class, 'generateReport'])->name('movements.generateReport');
 });
 
 //common routes to all users
 Route::middleware(isAuthenticatedMiddleware::class)->group(function(){
+
+   Route::post("/magasin-citernes-reception",[CiterneController::class,"reception"])->name("magasin.reception");
+   //releves routes
         Route::get("/releves",[ReleveController::class,"index"])->name("releves.index");
         Route::get("/releves-export",[ReleveController::class,"export"])->name("releves.export");
         //Depotage routes
@@ -116,6 +116,11 @@ Route::middleware(isAuthenticatedMiddleware::class)->group(function(){
         Route::get("/receptions",[receptionController::class,"index"])->name("receptions.index");
         Route::delete("/receptions/{idRec}",[receptionController::class,"delete"])->name("receptions.delete");
         Route::get("/receptions-pdf",[receptionController::class,"export"])->name("receptions.export");
+
+   Route::post("/magasin-move",[MouvementController::class,"store"])->name("magasin.move.store");
+   Route::get("/magasin-moves/{type}",[MouvementController::class,"moves"])->name("magasin.moves");
+   Route::delete("/magasin-move-delete/{idmov}",[MouvementController::class,"delete"])->name("magasin.move.delete");
+    Route::get('/movements/generate-report', [MouvementController::class, 'generateReport'])->name('movements.generateReport');
 });
 
 Route::middleware(IsAdminMiddleware::class)->group(function(){
@@ -141,4 +146,11 @@ Route::middleware(IsAdminMiddleware::class)->group(function(){
     Route::put("/update-production/{idceo}",[UserController::class,"update_commercial"])->name("commercial.update");
     Route::put("/archived-commercial/{idceo}",[UserController::class,"archive_commercial"])->name("commercial.archive");
   
+});
+
+//production middleware
+Route::middleware(ProductionMiddleware::class)->group(function(){
+    //production citernes routes
+    Route::get("/production-dashboard",[ProductionController::class,"index"])->name("prod.index");
+    Route::get("/production-citernes",[ProductionController::class,"citerne_index"])->name("prod.citerne");
 });

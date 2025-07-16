@@ -51,6 +51,15 @@ class AuthController extends Controller
         ]);
         return redirect()->route("magasin.index")->with("success","authentification reussie");
         break;
+         case "production":
+                   Notification::create([
+            "user_id"=>Auth::user()->id,
+            "notification_type"=>"Prod_auth",
+            "message"=>"Production ".Auth::user()->name." logged in",
+            "is_read"=>false,
+        ]);
+        return redirect()->route("prod.index")->with("success","authentification reussie");
+        break;
         default:
         return back()->with("error","role invalide");
     }

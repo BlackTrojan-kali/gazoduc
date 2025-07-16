@@ -1,20 +1,19 @@
-import React, { useState } from 'react'; // Importez useState
-import MagLayout from '../layout/MagLayout/MagLayout'; // Assurez-vous du bon chemin vers votre layout
-import { Head, Link, useForm } from '@inertiajs/react'; // Importez useForm
+import React, { useState, useMemo } from 'react'; // Importez useState et useMemo
+import MagLayout from '../layout/MagLayout/MagLayout';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTrash, faFileExport } from '@fortawesome/free-solid-svg-icons'; // Importez l'icône de la poubelle et faFileExport
-import { Table, TableBody, TableCell, TableHeader, TableRow } from '../components/ui/table'; // Composants de table
-import Swal from 'sweetalert2'; // Importez SweetAlert2
+import { faTrash, faFileExport, faSearch, faTimes } from '@fortawesome/free-solid-svg-icons'; // Ajoutez faSearch et faTimes
+import { Table, TableBody, TableCell, TableHeader, TableRow } from '../components/ui/table';
+import Swal from 'sweetalert2';
 
 // Importez vos composants personnalisés :
-import Button from '../components/ui/button/Button'; // Assurez-vous que le chemin est correct
-// Correction du nom de la modale si elle est nommée DepotageHistoryPDFExcelModal.jsx
-import DepotageHistoryPDFExcelModal from '../components/Modals/RecHistModal'; // Assurez-vous que le chemin est correct et le nom du fichier
+import Button from '../components/ui/button/Button';
+import Input from '../components/form/input/InputField'; // Importez votre composant Input
+// Assurez-vous que le chemin et le nom de la modale sont corrects (ReceptionHistoryPDFExcelModal.jsx)
+import ReceptionHistoryPDFExcelModal from '../components/Modals/RecHistModal';
+import ProdLayout from '../layout/ProdLayout/ProdLayout';
 
-const Reception = ({ receptions, agencies /* Assurez-vous que les agences sont passées par le contrôleur */ }) => {
-  // 'receptions' viendra du contrôleur sous forme d'objet paginé (par exemple, { data: [], links: [] })
-  // 'agencies' est nécessaire pour la modale d'exportation
-
+const PageContent = ({ receptions:initialReceptions, agencies }) => { // 'filters' est retiré des props
   // Initialisation de useForm d'Inertia pour la suppression
   const { delete: inertiaDelete, processing } = useForm();
 
@@ -23,17 +22,95 @@ const Reception = ({ receptions, agencies /* Assurez-vous que les agences sont p
   const openExportModal = () => setIsExportModalOpen(true);
   const closeExportModal = () => setIsExportModalOpen(false);
 
+  // --- Gestion des filtres frontend AVEC useState ---
+  const [filterState, setFilterState] = useState({
+    search: '',
+    start_date: '',
+    end_date: '',
+    agency_id: '',
+  });
+
+  // Gérer le changement des champs de filtre
+  const handleFilterChange = (e) => {
+    const { id, value } = e.target;
+    setFilterState(prev => ({ ...prev, [id]: value }));
+  };
+
+  // Réinitialiser les filtres
+  const resetFilters = () => {
+    setFilterState({
+      search: '',
+      start_date: '',
+      end_date: '',
+      agency_id: '',
+    });
+  };
+
+  // --- Filtrage côté frontend des données de réceptions ---
+  const filteredReceptions = useMemo(() => {
+    let currentReceptions = initialReceptions.data; // Utiliser les données brutes paginées par le backend
+
+    // Filtrer par agence (si sélectionnée)
+    if (filterState.agency_id) {
+        currentReceptions = currentReceptions.filter(reception =>
+            reception.destination_agency && String(reception.destination_agency.id) === filterState.agency_id
+        );
+    }
+
+    // Filtrer par dates (si sélectionnées)
+    if (filterState.start_date && filterState.end_date) {
+      const startDate = new Date(filterState.start_date + 'T00:00:00'); // Début de journée
+      const endDate = new Date(filterState.end_date + 'T23:59:59');     // Fin de journée
+      currentReceptions = currentReceptions.filter(reception => {
+        // Supposons que la date de la réception est dans 'created_at' ou un champ 'reception_date'
+        // Si vous avez un champ 'reception_date' dans votre modèle, utilisez-le. Sinon, 'created_at' est une bonne base.
+        const receptionDate = new Date(reception.created_at);
+        return receptionDate >= startDate && receptionDate <= endDate;
+      });
+    }
+
+    // Filtrer par recherche textuelle/numérique générique
+    if (filterState.search) {
+      const searchTerm = filterState.search.toLowerCase();
+      currentReceptions = currentReceptions.filter(reception => {
+        // Recherche par ID
+        if (String(reception.id).includes(searchTerm)) return true;
+        // Recherche par nom de citerne mobile
+        if (reception.citerne_mobile && reception.citerne_mobile.name.toLowerCase().includes(searchTerm)) return true;
+        // Recherche par nom d'article
+        if (reception.article && reception.article.name.toLowerCase().includes(searchTerm)) return true;
+        // Recherche par quantité reçue
+        if (String(reception.received_quantity).includes(searchTerm)) return true;
+        // Recherche par nom d'agence de destination
+        if (reception.destination_agency && reception.destination_agency.name.toLowerCase().includes(searchTerm)) return true;
+        // Recherche par numéro de BL (si vous l'avez dans votre modèle Reception)
+        if (reception.bl_number && reception.bl_number.toLowerCase().includes(searchTerm)) return true;
+        // Recherche par nom d'utilisateur qui a enregistré
+        if (reception.user && (`${reception.user.first_name} ${reception.user.last_name || ''}`).toLowerCase().includes(searchTerm)) return true;
+        // Recherche par origine
+        if (reception.origin && reception.origin.toLowerCase().includes(searchTerm)) return true;
+        // Recherche par date de création (format YYYY-MM-DD pour la comparaison simple)
+        if (String(reception.created_at).includes(searchTerm)) return true;
+
+        return false;
+      });
+    }
+
+    return currentReceptions;
+  }, [initialReceptions.data, filterState]); // Recalcule quand les données initiales ou les filtres changent
+
   // --- Fonction pour gérer la pagination après une suppression ---
   const applyPaginationAfterDelete = () => {
-    const newPage = receptions.data.length === 1 && receptions.current_page > 1
-      ? receptions.current_page - 1
-      : receptions.current_page;
+    const newPage = initialReceptions.data.length === 1 && initialReceptions.current_page > 1
+      ? initialReceptions.current_page - 1
+      : initialReceptions.current_page;
 
     // Recharge la page 'receptions.index' via Inertia avec les paramètres de pagination
-    inertiaDelete(route('receptions.index', { page: newPage, per_page: receptions.per_page }), {
+    // Les filtres frontend ne sont PAS inclus dans l'URL.
+    Inertia.get(route('receptions.index', { page: newPage, per_page: initialReceptions.per_page }), {
         preserveScroll: true,
         preserveState: true,
-        only: ['receptions'],
+        only: ['receptions'], // Ne demande que la prop 'receptions'
         onSuccess: () => {
             // Le message de succès est géré dans handleDelete
         },
@@ -61,8 +138,7 @@ const Reception = ({ receptions, agencies /* Assurez-vous que les agences sont p
       cancelButtonText: 'Annuler'
     }).then((result) => {
       if (result.isConfirmed) {
-        // CORRECTION: Utilisez route('receptions.destroy', receptionId) pour la suppression RESTful
-        inertiaDelete(route('receptions.destroy', receptionId), {
+        inertiaDelete(route('receptions.destroy', receptionId), { // Utilisez 'destroy'
           preserveScroll: true,
           onSuccess: () => {
             Swal.fire(
@@ -70,8 +146,7 @@ const Reception = ({ receptions, agencies /* Assurez-vous que les agences sont p
               'La réception a été supprimée avec succès.',
               'success'
             );
-            // Recharge la table pour refléter le changement
-            applyPaginationAfterDelete();
+            applyPaginationAfterDelete(); // Recharge la table pour refléter le changement
           },
           onError: (errors) => {
             console.error('Erreur de suppression:', errors);
@@ -100,19 +175,77 @@ const Reception = ({ receptions, agencies /* Assurez-vous que les agences sont p
             <div className="flex items-center gap-3">
               {/* Bouton pour ouvrir la modale d'exportation */}
               <Button
-                onClick={openExportModal} // Appelle la fonction pour ouvrir la modale
+                onClick={openExportModal}
                 variant="secondary"
                 className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
               >
                 <FontAwesomeIcon icon={faFileExport} />
                 Exporter
               </Button>
-              {/* Vous pouvez ajouter d'autres boutons ici, par exemple "Nouvelle Réception" */}
-              {/* <Link href={route('receptions.create')} className="px-4 py-2.5 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700">
-                Nouvelle Réception
-              </Link> */}
             </div>
           </div>
+
+          {/* --- Section de Filtrage Frontend --- */}
+          <div className="mb-4 p-4 border rounded-lg bg-gray-50 dark:bg-gray-900 dark:border-gray-700">
+            <h4 className="font-semibold text-gray-700 dark:text-gray-200 mb-3">Rechercher & Filtrer</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {/* Recherche générique */}
+              <Input
+                id="search"
+                type="text"
+                label="Rechercher par mot-clé"
+                placeholder="Citerne, article, agence, quantité, origine..."
+                value={filterState.search}
+                onChange={handleFilterChange}
+                className="col-span-full md:col-span-1"
+                icon={<FontAwesomeIcon icon={faSearch} className="text-gray-400" />}
+              />
+              {/* Filtre Agence (si disponible et pertinent) */}
+              {agencies && agencies.length > 0 && (
+                <div>
+                  <label htmlFor="agency_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Agence
+                  </label>
+                  <select
+                    id="agency_id"
+                    className="h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                    value={filterState.agency_id}
+                    onChange={handleFilterChange}
+                  >
+                    <option value="">Toutes les agences</option>
+                    {agencies.map(agency => (
+                      <option key={agency.id} value={String(agency.id)}>
+                        {agency.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {/* Date de début */}
+              <Input
+                id="start_date"
+                type="date"
+                label="Date de début"
+                value={filterState.start_date}
+                onChange={handleFilterChange}
+              />
+              {/* Date de fin */}
+              <Input
+                id="end_date"
+                type="date"
+                label="Date de fin"
+                value={filterState.end_date}
+                onChange={handleFilterChange}
+              />
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button onClick={resetFilters} variant="destructive" className="inline-flex items-center gap-2">
+                <FontAwesomeIcon icon={faTimes} />
+                Réinitialiser
+              </Button>
+            </div>
+          </div>
+          {/* --- Fin Section de Filtrage Frontend --- */}
 
           <div className="max-w-full overflow-x-auto">
             <Table>
@@ -121,7 +254,7 @@ const Reception = ({ receptions, agencies /* Assurez-vous que les agences sont p
                   <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">ID</TableCell>
                   <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Citerne Mobile</TableCell>
                   <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Article</TableCell>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-end text-theme-xs dark:text-gray-400">Qté Reçue (L)</TableCell>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Qté Reçue (L)</TableCell>
                   <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Agence Destination</TableCell>
                   <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Enregistré par</TableCell>
                   <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Origine</TableCell>
@@ -130,21 +263,19 @@ const Reception = ({ receptions, agencies /* Assurez-vous que les agences sont p
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {receptions.data.length === 0 ? (
+                {filteredReceptions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="py-6 text-center text-gray-400">Aucune réception trouvée, monsieur.</TableCell>
+                    <TableCell colSpan={10} className="py-6 text-center text-gray-400">Aucune réception trouvée avec ces filtres, monsieur.</TableCell>
                   </TableRow>
                 ) : (
-                  receptions.data.map(reception => (
+                  filteredReceptions.map(reception => (
                     <TableRow key={reception.id}>
                       <TableCell>{reception.id}</TableCell>
-                      {/* Correction des noms de relations pour correspondre à votre modèle et aux props passées */}
                       <TableCell>{reception.citerne ? reception.citerne.name : '—'}</TableCell>
                       <TableCell>{reception.article ? reception.article.name : '—'}</TableCell>
-                      <TableCell>{reception.received_quantity.toLocaleString('fr-FR')}</TableCell>
+                      <TableCell >{reception.received_quantity.toLocaleString('fr-FR')}</TableCell>
                       <TableCell>{reception.agency ? reception.agency.name : '—'}</TableCell>
-                      {/* Correction: Utilisez recorded_by_user si c'est le nom de la relation dans le modèle Reception */}
-                      <TableCell>{reception.user ? `${reception.user.first_name} ${reception.user.last_name || ''}` : '—'}</TableCell>
+                      <TableCell>{reception.user ? `${reception.user.first_name} ` : '—'}</TableCell>
                       <TableCell>{reception.origin || '—'}</TableCell>
                       <TableCell>{new Date(reception.created_at).toLocaleDateString('fr-FR', {
                           year: 'numeric',
@@ -173,10 +304,10 @@ const Reception = ({ receptions, agencies /* Assurez-vous que les agences sont p
             </Table>
 
             {/* --- CONTRÔLES DE PAGINATION D'INERTIA --- */}
-            {receptions.links && receptions.links.length > 3 && (
+            {initialReceptions.links && initialReceptions.links.length > 3 && (
               <nav className="flex justify-end mt-4">
                 <div className="flex gap-2">
-                  {receptions.links.map((link, index) => (
+                  {initialReceptions.links.map((link, index) => (
                     <Link
                       key={index}
                       href={link.url || '#'}
@@ -204,14 +335,32 @@ const Reception = ({ receptions, agencies /* Assurez-vous que les agences sont p
       </div>
 
       {/* --- La modale de génération de PDF/Excel pour les réceptions --- */}
-      <DepotageHistoryPDFExcelModal // Utilisez le nom de la modale pour les dépotages comme demandé
+      <ReceptionHistoryPDFExcelModal // Nom correct de la modale
         isOpen={isExportModalOpen}
         onClose={closeExportModal}
         agencies={agencies} // Passez les agences reçues du contrôleur à la modale
+        currentFilters={filterState} // Passez l'état des filtres frontend à la modale
       />
     </>
   );
 };
 
-Reception.layout = page => <MagLayout children={page} title="Réceptions" />;
+const Reception = ({ receptions, agencies })=>{
+  const {auth} = usePage().props
+  if(auth.user.role == "production"){
+    return(
+      <ProdLayout>
+        <PageContent receptions={receptions} agencies={agencies}/>
+      </ProdLayout>
+    )
+  }
+
+  if(auth.user.role == "magasin"){
+    return(
+      <MagLayout>
+        <PageContent receptions={receptions} agencies={agencies}/>
+      </MagLayout>
+    )
+  }
+}
 export default Reception;

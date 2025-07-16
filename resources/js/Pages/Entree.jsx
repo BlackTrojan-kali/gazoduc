@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import MagLayout from '../layout/MagLayout/MagLayout';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCube, faTrash, faFileExport, faFilter } from '@fortawesome/free-solid-svg-icons';
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '../components/ui/table';
@@ -8,8 +8,9 @@ import Swal from 'sweetalert2';
 import Button from '../components/ui/button/Button';
 import Input from '../components/form/input/InputField';
 import MovementHistoryPDFExcelModal from '../components/Modals/MovHistModal';
+import ProdLayout from '../layout/ProdLayout/ProdLayout';
 
-const Entree = ({ movements, articles, agencies, services }) => {
+const PageContent = ({ movements, articles, agencies, services }) => {
   // --- États pour la modale d'exportation ---
   const [isPDFExcelModalOpen, setIsPDFExcelModalOpen] = useState(false);
   const openPDFExcelModal = () => setIsPDFExcelModalOpen(true);
@@ -282,7 +283,26 @@ const Entree = ({ movements, articles, agencies, services }) => {
     </>
   );
 };
+const Entree = ({ movements, articles, agencies, services})=>{
+    const {auth} = usePage().props
+    if(auth.user.role == "production"){
+        return(
+          <ProdLayout>
+            <PageContent movements={movements} articles={articles} agencies={agencies} services={services}>
 
-Entree.layout = page => <MagLayout children={page} title="Mouvements" />;
+            </PageContent>
+          </ProdLayout>
+        )
+    }
+    if(auth.user.role == "magasin"){
+        return(
+          <MagLayout>
+            <PageContent movements={movements} articles={articles} agencies={agencies} services={services}>
+              
+            </PageContent>
+          </MagLayout>
+        )
+    }
+}
 
 export default Entree;

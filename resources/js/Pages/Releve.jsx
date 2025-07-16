@@ -203,11 +203,11 @@ const Releve = ({ releves: initialReleves, agencies }) => { // 'filters' est ret
                       <TableCell>{releve.id}</TableCell>
                       <TableCell>{releve.citerne ? releve.citerne.name : '—'}</TableCell>
                       <TableCell>{releve.agency ? releve.agency.name : '—'}</TableCell>
-                      <TableCell className="text-end">{releve.theorical_quantity.toLocaleString('fr-FR')}</TableCell>
-                      <TableCell className="text-end">{releve.measured_quantity.toLocaleString('fr-FR')}</TableCell>
-                      <TableCell className="text-end">{releve.difference.toLocaleString('fr-FR')}</TableCell>
+                      <TableCell >{releve.theorical_quantity.toLocaleString('fr-FR')}</TableCell>
+                      <TableCell>{releve.measured_quantity.toLocaleString('fr-FR')}</TableCell>
+                      <TableCell >{releve.difference.toLocaleString('fr-FR')}</TableCell>
                       <TableCell>{new Date(releve.reading_date).toLocaleDateString('fr-FR')}</TableCell>
-                      <TableCell>{releve.user ? `${releve.user.first_name} ${releve.user.last_name || ''}` : '—'}</TableCell>
+                      <TableCell>{releve.user ? `${releve.user.first_name} ` : '—'}</TableCell>
                       <TableCell>{new Date(releve.created_at).toLocaleDateString('fr-FR', {
                           year: 'numeric',
                           month: 'long',

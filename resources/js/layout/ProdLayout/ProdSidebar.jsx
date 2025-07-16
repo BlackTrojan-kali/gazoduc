@@ -11,8 +11,8 @@ const navItems = [
     icon:  <FontAwesomeIcon icon={faDashboard} />,
     name: "Dashboard",
     subItems: [
-      { name:"Stocks", path: "/magasin-index", pro: false },
-      { name: "citernes", path: "/magasin-citernes", pro: false },
+      { name:"Stocks", path: "/production-dashboard", pro: false },
+      { name: "citernes", path: "/production-citernes", pro: false },
     ],
   },
   {
@@ -21,18 +21,10 @@ const navItems = [
       subItems: [
       { name: "entrees", path: "/magasin-moves/entree", pro: false },
       { name: "sorties", path: "/magasin-moves/sortie", pro: false },
-      { name: "releves", path: "/releves", pro: false },
-      { name: "depotages", path: "/depotages", pro: false },
       { name: "reception", path: "/receptions", pro: false },
+      { name: "production", path: "/production-moves", pro: false },
     ],
-  },
-  {
-    icon:  <FontAwesomeIcon icon={faDriversLicense} />,
-    name: "Bordereaux de Route",
-    subItems: [
-      { name: "liste", path: "/magasin-route", pro: false },
-    ],
-  },
+  }
  
 ];
 
@@ -43,7 +35,7 @@ const othersItems= [
   }
 ];
 
-const MagSidebar = () => {
+const ProdSidebar = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const { url } = usePage(); // <--- GET CURRENT URL FROM INERTIA
   const {auth} = usePage().props
@@ -324,4 +316,4 @@ const MagSidebar = () => {
   );
 };
 
-export default MagSidebar;
+export default ProdSidebar;

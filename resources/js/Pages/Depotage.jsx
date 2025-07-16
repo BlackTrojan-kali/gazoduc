@@ -248,11 +248,10 @@ const Depotage = ({ depotages: initialDepotages, agencies }) => { // 'filters' a
               <TableHeader className="border-gray-100 dark:border-gray-800 border-y">
                 <TableRow>
                   <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">ID</TableCell>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Date Dépotage</TableCell>
                   <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Citerne Mobile</TableCell>
                   <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Citerne Fixe</TableCell>
                   <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Article</TableCell>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-end text-theme-xs dark:text-gray-400">Quantité (L)</TableCell>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Quantité (L)</TableCell>
                   <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Agence</TableCell>
                   <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">BL Numéro</TableCell>
                   <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Enregistré par</TableCell>
@@ -269,14 +268,13 @@ const Depotage = ({ depotages: initialDepotages, agencies }) => { // 'filters' a
                   filteredDepotages.map(depotage => ( // Itérer sur filteredDepotages
                     <TableRow key={depotage.id}>
                       <TableCell>{depotage.id}</TableCell>
-                      <TableCell>{new Date(depotage.depotage_date).toLocaleDateString('fr-FR')}</TableCell>
-                      <TableCell>{depotage.citerne_mobile ? depotage.citerne_mobile.name : '—'}</TableCell>
+                    <TableCell>{depotage.citerne_mobile ? depotage.citerne_mobile.name : '—'}</TableCell>
                       <TableCell>{depotage.citerne_fixe ? depotage.citerne_fixe.name : '—'}</TableCell>
                       <TableCell>{depotage.article ? depotage.article.name : '—'}</TableCell>
-                      <TableCell className="text-end">{depotage.quantity.toLocaleString('fr-FR')}</TableCell>
+                      <TableCell >{depotage.quantity.toLocaleString('fr-FR')}</TableCell>
                       <TableCell>{depotage.agency ? depotage.agency.name : '—'}</TableCell>
                       <TableCell>{depotage.bl_number || '—'}</TableCell>
-                      <TableCell>{depotage.user ? `${depotage.user.first_name} ${depotage.user.last_name || ''}` : '—'}</TableCell>
+                      <TableCell>{depotage.user ? `${depotage.user.first_name} ` : '—'}</TableCell>
                       <TableCell>{new Date(depotage.created_at).toLocaleDateString('fr-FR', {
                           year: 'numeric',
                           month: 'long',
