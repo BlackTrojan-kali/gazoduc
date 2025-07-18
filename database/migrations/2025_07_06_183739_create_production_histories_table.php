@@ -19,7 +19,7 @@ return new class extends Migration
             $table->foreign("article_id")->on("articles")->references("id");
             $table->decimal("quantity_produced");
             $table->decimal("total_weight_produced")->nullable();
-            $table->unsignedBigInteger("production_movement_id");
+            $table->unsignedBigInteger("production_movement_id")->nullable();
             $table->foreign("production_movement_id")->on("mouvements")->references("id");
             $table->unsignedBigInteger("agency_id");
             $table->foreign("agency_id")->on("agencies")->references("id");

@@ -1,26 +1,31 @@
 import React, { useState } from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import GaugeBottle from '../../components/GaugeBottle';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faEdit, faClipboardCheck } from '@fortawesome/free-solid-svg-icons'; // Importez faEdit et faClipboardCheck
+import { faPlus, faEdit, faClipboardCheck, faBottleWater } from '@fortawesome/free-solid-svg-icons';
 
 import ReceptionFormModal from '../../components/Modals/Magasin/ReceptionModal';
 import DepotageFormModal from '../../components/Modals/Magasin/DepotageModal';
-import EditCiterneStockModal from '../../components/Modals/Magasin/ReleveModal'; // Importez la modal d'édition
+import EditCiterneStockModal from '../../components/Modals/Magasin/ReleveModal';
+import ProductionBottleModal from '../../components/Modals/Production/ProdModal'; // Assurez-vous que le chemin est correct
 import ProdLayout from '../../layout/ProdLayout/ProdLayout';
 
-const ProdCiterne = ({ stocks, articles, citernes, agencies, citernesFixes, citernesMobiles }) => {
-  const [isReceptionModalOpen, setIsReceptionModalModalOpen] = useState(false);
+const ProdCiterne = ({ stocks, articles,articlesProd, citernes, agencies, citernesFixes, citernesMobiles }) => {
+  const { auth } = usePage().props;
+  const userRole = auth.user?.role?.name;
+
+  const [isReceptionModalOpen, setIsReceptionModalOpen] = useState(false);
   const [isDepotageModalOpen, setIsDepotageModalOpen] = useState(false);
-  const [isEditStockModalOpen, setIsEditStockModalOpen] = useState(false); // État pour la modal de modification
-  const [selectedStock, setSelectedStock] = useState(null); // Stock en cours de modification
+  const [isEditStockModalOpen, setIsEditStockModalOpen] = useState(false);
+  const [isProductionBottleModalOpen, setIsProductionBottleModalOpen] = useState(false);
+  const [selectedStock, setSelectedStock] = useState(null);
 
   const openReceptionModal = () => {
-    setIsReceptionModalModalOpen(true);
+    setIsReceptionModalOpen(true);
   };
 
   const closeReceptionModal = () => {
-    setIsReceptionModalModalOpen(false);
+    setIsReceptionModalOpen(false);
   };
 
   const openDepotageModal = () => {
@@ -31,10 +36,8 @@ const ProdCiterne = ({ stocks, articles, citernes, agencies, citernesFixes, cite
     setIsDepotageModalOpen(false);
   };
 
-  // Fonctions pour la modal d'édition de stock
-  // Cette fonction recevra un type d'action pour savoir quel champ pré-remplir ou mettre en focus
   const openEditStockModal = (stock, actionType) => {
-    setSelectedStock({ ...stock, actionType }); // Passe le stock complet et le type d'action
+    setSelectedStock({ ...stock, actionType });
     setIsEditStockModalOpen(true);
   };
 
@@ -42,6 +45,16 @@ const ProdCiterne = ({ stocks, articles, citernes, agencies, citernesFixes, cite
     setSelectedStock(null);
     setIsEditStockModalOpen(false);
   };
+
+  const openProductionBottleModal = () => {
+    setIsProductionBottleModalOpen(true);
+  };
+
+  const closeProductionBottleModal = () => {
+    setIsProductionBottleModalOpen(false);
+  };
+
+  const isProductionUser = userRole === 'Production';
 
   return (
     <>
@@ -51,7 +64,7 @@ const ProdCiterne = ({ stocks, articles, citernes, agencies, citernesFixes, cite
           Gestion des Stocks de Citernes
         </h1>
 
-        {/* --- Bloc des actions (Réception et Dépotage en haut) --- */}
+        {/* --- Bloc des actions (Réception, Dépotage, et Production conditionnelle) --- */}
         <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 mb-6 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -68,13 +81,30 @@ const ProdCiterne = ({ stocks, articles, citernes, agencies, citernesFixes, cite
                 Enregistrer une Réception
               </button>
 
+              {/* CE BOUTON A ÉTÉ MODIFIÉ POUR APPELER openProductionBottleModal */}
+              {/* Le bouton "Produire" ouvrira la modal de production de bouteilles pour tous les utilisateurs,
+                  mais le bouton "Produire Bouteilles Pleines" (plus spécifique) sera conditionnel.
+                  Si "Produire" est aussi spécifique à la production de bouteilles, il pourrait aussi être conditionnel.
+                  J'ai fait en sorte que les deux ouvrent la même modal pour la production de bouteilles.
+              */}
               <button
-                onClick={openDepotageModal}
+                onClick={openProductionBottleModal}
                 className="inline-flex items-center gap-2 rounded-lg border border-brand-300 bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 dark:border-brand-700 dark:bg-brand-700 dark:hover:bg-brand-600"
               >
-                <FontAwesomeIcon icon={faPlus} /> {/* Vous pouvez utiliser faArrowsSplitUpAndMerge si vous le préférez */}
+                <FontAwesomeIcon icon={faPlus} />
                Produire
               </button>
+
+              {/* Bouton pour ouvrir la modal de production de bouteilles - Conditionnel */}
+              {isProductionUser && (
+                <button
+                  onClick={openProductionBottleModal}
+                  className="inline-flex items-center gap-2 rounded-lg border border-purple-300 bg-purple-600 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-purple-700 dark:border-purple-700 dark:bg-purple-800 dark:hover:bg-purple-700"
+                >
+                  <FontAwesomeIcon icon={faBottleWater} />
+                  Produire Bouteilles Pleines
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -126,9 +156,8 @@ const ProdCiterne = ({ stocks, articles, citernes, agencies, citernesFixes, cite
                     Écart: <span className="font-bold">{discrepancy} kg</span>
                   </p>
 
-                  {/* Nouveaux Boutons par carte de citerne */}
+                  {/* Nouveaux Boutons par carte de citerne (si vous en avez besoin ici) */}
                   <div className="mt-4 flex flex-col sm:flex-row gap-2 w-full justify-center">
-                 
                   </div>
                 </div>
               );
@@ -163,7 +192,16 @@ const ProdCiterne = ({ stocks, articles, citernes, agencies, citernesFixes, cite
       <EditCiterneStockModal
         isOpen={isEditStockModalOpen}
         onClose={closeEditStockModal}
-        stockToEdit={selectedStock} // Passe le stock sélectionné et le type d'action
+        stockToEdit={selectedStock}
+      />
+
+      {/* La modal de Production de Bouteilles (NOUVELLE) */}
+      <ProductionBottleModal
+        isOpen={isProductionBottleModalOpen}
+        onClose={closeProductionBottleModal}
+        articles={articlesProd}
+        title="Enregistrer une Production de Bouteilles"
+        cisterns={citernesFixes}
       />
     </>
   );

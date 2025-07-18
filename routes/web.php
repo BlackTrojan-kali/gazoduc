@@ -153,4 +153,9 @@ Route::middleware(ProductionMiddleware::class)->group(function(){
     //production citernes routes
     Route::get("/production-dashboard",[ProductionController::class,"index"])->name("prod.index");
     Route::get("/production-citernes",[ProductionController::class,"citerne_index"])->name("prod.citerne");
-});
+    Route::get("/prod-history",[ProductionController::class,"prod_history"])->name("prod.hist");
+    Route::post("/producttion-produced",[ProductionController::class,"produce"])->name("prod.produce");
+    Route::delete("/production-delete/{idProd}",[ProductionController::class,"delete"])->name("prodMove.delete");
+    Route::get("/prod-history-pdf",[ProductionController::class,"export"])->name("prod.export");
+    
+}); 

@@ -8,7 +8,7 @@ import { faPlus, faEdit, faClipboardCheck } from '@fortawesome/free-solid-svg-ic
 import ReceptionFormModal from '../../components/Modals/Magasin/ReceptionModal';
 import DepotageFormModal from '../../components/Modals/Magasin/DepotageModal';
 import EditCiterneStockModal from '../../components/Modals/Magasin/ReleveModal'; // Importez la modal d'édition
-
+ 
 const MagCiterne = ({ stocks, articles, citernes, agencies, citernesFixes, citernesMobiles }) => {
   const [isReceptionModalOpen, setIsReceptionModalModalOpen] = useState(false);
   const [isDepotageModalOpen, setIsDepotageModalOpen] = useState(false);

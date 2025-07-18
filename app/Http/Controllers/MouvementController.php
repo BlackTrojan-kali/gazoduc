@@ -43,7 +43,13 @@ class MouvementController extends Controller
         ->where("storage_type",Auth::user()->role->name)
         ->with("article")
         ->first();
-
+        $article = Article::where("id",$request->article_id)->first();
+        if(Auth::user()->role->name == "production"){
+            if($article->type == "produit_fini" && $request->movement_type == "entree"){
+              
+                 return back()->with("warning","cet article doit etre produit");
+            }
+        }
         try {
             // 3. Traitement de la Logique de Stock via Transaction
             DB::beginTransaction();
@@ -52,6 +58,7 @@ class MouvementController extends Controller
 
                 // Ajustement de la quantité de stock
                 if ($movementType === 'entree') {
+                    
                     $stock->quantity += $quantity;
                 } elseif ($movementType === 'sortie') {
                     if ($stock->quantity < $quantity) {
