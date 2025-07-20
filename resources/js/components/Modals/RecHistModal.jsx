@@ -1,322 +1,127 @@
-import React, { useEffect } from 'react';
+// resources/js/components/Modals/ReceptionHistoryPDFExcelModal.jsx
+import React from 'react';
 import { useForm } from '@inertiajs/react';
-import Modal from './Modal'; // Votre composant de modale générique
-import InputField from "../form/input/InputField"; // Votre composant InputField
+import Modal from './Modal'; // Assurez-vous d'avoir un composant Modal générique
 import Button from '../ui/button/Button'; // Votre composant Button
-import Swal from 'sweetalert2'; // Pour les notifications
-import Select from 'react-select'; // Pour les sélecteurs améliorés
+import Input from '../form/input/InputField'; // Votre composant InputField
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faFileExport, faSpinner } from '@fortawesome/free-solid-svg-icons'; // Icônes
+import { faFileExport } from '@fortawesome/free-solid-svg-icons'; // Utilisez une icône générique d'exportation
 
-// Props attendues :
-// isOpen: boolean - pour contrôler l'ouverture/fermeture de la modal
-// onClose: function - callback pour fermer la modal
-// title: string - titre de la modal (ex: "Générer un PDF/Excel de Mouvements")
-// articles: array - liste des articles au format { id: number, name: string } (pour le filtre)
-// agencies: array - liste des agences au format { id: number, name: string } (pour le filtre)
-// currentFilters: object - filtres actuels pour pré-remplir le formulaire (optionnel)
+const ReceptionHistoryPDFExcelModal = ({ isOpen, onClose, agencies, currentFilters }) => {
+  const { data, setData, post, processing, errors } = useForm({
+    agency_id: currentFilters?.agency_id || '',
+    start_date: currentFilters?.start_date || '',
+    end_date: currentFilters?.end_date || '',
+    export_format: 'pdf', // Ajout du champ pour le type d'exportation, par défaut PDF
+  });
 
-const MovementHistoryPDFExcelModal = ({ isOpen, onClose, title, articles, agencies, currentFilters }) => {
-    const { data, setData, processing, errors, reset } = useForm({
-        start_date: currentFilters?.start_date || '',
-        end_date: currentFilters?.end_date || '',
-        article_id: currentFilters?.article_id || '',
-        agency_id: currentFilters?.agency_id || '',
-        type_mouvement: currentFilters?.type_mouvement || 'global', // Défaut à 'global'
-        file_type: 'pdf', // Ajout du champ pour le type de fichier, par défaut PDF
-    });
+  const handleChange = (e) => {
+    setData(e.target.id, e.target.value);
+  };
 
-    // Options pour react-select des articles
-    const articleOptions = Array.isArray(articles)
-        ? articles.map(article => ({ value: String(article.id), label: article.name }))
-        : [];
+  const handleDownload = () => {
+    const params = new URLSearchParams();
+    if (data.agency_id) {
+      params.append('agency_id', data.agency_id);
+    }
+    if (data.start_date) {
+      params.append('start_date', data.start_date);
+    }
+    if (data.end_date) {
+      params.append('end_date', data.end_date);
+    }
 
-    // Options pour react-select des agences
-    const agencyOptions = Array.isArray(agencies)
-        ? agencies.map(agency => ({ value: String(agency.id), label: agency.name }))
-        : [];
+    // --- CORRECTION CLÉ ICI : Ajoutez le format d'exportation aux paramètres ---
+    // C'est ce paramètre que votre fonction Laravel 'exportReceptions' lira.
+    params.append('export_format', data.export_format);
 
-    // Options pour le type de mouvement
-    const movementTypeOptions = [
-        { value: 'global', label: 'Global (Entrées & Sorties)' },
-        { value: 'entree', label: 'Entrée' },
-        { value: 'sortie', label: 'Sortie' },
-    ];
+    // La route 'receptions.export' est celle qui gère les deux types d'exportation.
+    // L'URL est construite en ajoutant les paramètres de recherche.
+    const exportUrl = route('receptions.export') + '?' + params.toString();
 
-    // Réinitialise le formulaire et définit les dates par défaut lors de l'ouverture de la modal
-    useEffect(() => {
-        if (isOpen) {
-            const today = new Date().toISOString().split('T')[0]; // Date du jour au format YYYY-MM-DD
-            reset({
-                start_date: currentFilters?.start_date || today,
-                end_date: currentFilters?.end_date || today,
-                article_id: currentFilters?.article_id || '',
-                agency_id: currentFilters?.agency_id || '',
-                type_mouvement: currentFilters?.type_mouvement || 'global',
-                file_type: 'pdf', // Réinitialise le type de fichier à PDF par défaut
-            });
-        }
-    }, [isOpen, reset, currentFilters]); // Dépend de isOpen, reset et currentFilters
+    // Ouvre le téléchargement dans un nouvel onglet, ce qui permet au navigateur
+    // de gérer le téléchargement du fichier (PDF ou Excel) et garde la modal ouverte ou la ferme.
+    window.open(exportUrl, '_blank');
+    onClose(); // Ferme la modal après avoir déclenché le téléchargement
+  };
 
-    // Gère les changements pour les champs InputField (date, select normal pour file_type)
-    const handleChange = (e) => {
-        const { id, value } = e.target;
-        setData(id, value);
-    };
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Exporter l'Historique des Réceptions">
+      <div className="p-4">
+        <p className="mb-4 text-gray-700 dark:text-gray-300">
+          Sélectionnez les critères d'exportation pour l'historique des réceptions.
+        </p>
 
-    // Gère les changements pour les champs Select (react-select)
-    const handleSelectChange = (selectedOption, { name }) => {
-        setData(name, selectedOption ? selectedOption.value : '');
-    };
+        {/* Champs de filtre Agence */}
+        <div className="mb-4">
+          <label htmlFor="agency_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Agence
+          </label>
+          <select
+            id="agency_id"
+            className="h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+            value={data.agency_id}
+            onChange={handleChange}
+          >
+            <option value="">Toutes les agences</option>
+            {agencies.map(agency => (
+              <option key={agency.id} value={String(agency.id)}>
+                {agency.name}
+              </option>
+            ))}
+          </select>
+          {errors.agency_id && <div className="text-red-500 text-sm mt-1">{errors.agency_id}</div>}
+        </div>
 
-    // Soumission du formulaire pour générer le rapport
-    const handleSubmit = (e) => {
-        e.preventDefault();
+        {/* Filtres de Date */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <Input
+                id="start_date"
+                type="date"
+                label="Date de début"
+                value={data.start_date}
+                onChange={handleChange}
+                error={errors.start_date}
+            />
+            <Input
+                id="end_date"
+                type="date"
+                label="Date de fin"
+                value={data.end_date}
+                onChange={handleChange}
+                error={errors.end_date}
+            />
+        </div>
 
-        // Validation des dates
-        if (!data.start_date || !data.end_date) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Dates Requises',
-                text: 'Veuillez sélectionner une date de début et une date de fin pour le rapport, monsieur.',
-            });
-            return;
-        }
+        {/* Nouveau champ pour le type de fichier à exporter */}
+        <div className="mb-6">
+          <label htmlFor="export_format" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Type de fichier
+          </label>
+          <select
+            id="export_format"
+            className="h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+            value={data.export_format}
+            onChange={handleChange}
+          >
+            <option value="pdf">PDF</option>
+            <option value="excel">Excel (XLSX)</option> {/* Maintenez XLSX pour Maatwebsite/Excel */}
+          </select>
+          {errors.export_format && <div className="text-red-500 text-sm mt-1">{errors.export_format}</div>}
+        </div>
 
-        if (new Date(data.start_date) > new Date(data.end_date)) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Dates Invalides',
-                text: 'La date de début ne peut pas être postérieure à la date de fin, monsieur.',
-            });
-            return;
-        }
-
-        // Construire la chaîne de requête pour l'URL
-        const queryString = new URLSearchParams(data).toString();
-        // Cible la route backend 'movements.generateReport' qui gérera l'exportation
-        const generateRoute = route('movements.generateReport') + '?' + queryString;
-
-        // Ouvre le rapport (PDF ou Excel) dans un nouvel onglet
-        window.open(generateRoute, '_blank');
-
-        // Notification et fermeture de la modal
-        Swal.fire({
-            icon: 'info',
-            title: 'Génération en cours',
-            text: `Le rapport des mouvements (${data.file_type.toUpperCase()}) est en cours de génération.`,
-            showConfirmButton: false,
-            timer: 2000
-        }).then(() => {
-            onClose(); // Ferme la modale
-        });
-    };
-
-    // Déterminer les valeurs sélectionnées pour react-select pour l'affichage
-    const selectedArticleOption = articleOptions.find(option => option.value === data.article_id);
-    const selectedAgencyOption = agencyOptions.find(option => option.value === data.agency_id);
-    const selectedMovementTypeOption = movementTypeOptions.find(option => option.value === data.type_mouvement);
-
-    return (
-        <Modal isOpen={isOpen} onClose={onClose} title={title}>
-            <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Champs de Date */}
-                <InputField
-                    id="start_date"
-                    type="date"
-                    label="Date de Début"
-                    value={data.start_date}
-                    onChange={handleChange}
-                    error={errors.start_date}
-                    required
-                />
-
-                <InputField
-                    id="end_date"
-                    type="date"
-                    label="Date de Fin"
-                    value={data.end_date}
-                    onChange={handleChange}
-                    error={errors.end_date}
-                    required
-                />
-
-                {/* Sélecteur d'Article avec react-select */}
-                <div className="mb-4">
-                    <label htmlFor="article_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Article
-                    </label>
-                    <Select
-                        id="article_id"
-                        name="article_id"
-                        options={[{ value: '', label: 'Tous les articles' }, ...articleOptions]} // Option "Tous"
-                        value={selectedArticleOption || { value: '', label: 'Tous les articles' }} // Gère la valeur par défaut
-                        onChange={handleSelectChange}
-                        placeholder="Sélectionner un article ou laisser vide pour tous"
-                        isClearable={true}
-                        isSearchable={true}
-                        classNamePrefix="react-select"
-                        // Styles Tailwind pour react-select
-                        styles={{
-                            control: (baseStyles, state) => ({
-                                ...baseStyles,
-                                height: '44px',
-                                minHeight: '44px',
-                                borderColor: errors.article_id ? '#EF4444' : (state.isFocused ? '#3B82F6' : '#D1D5DB'),
-                                backgroundColor: 'transparent',
-                                boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
-                                '&:hover': {
-                                    borderColor: state.isFocused ? '#3B82F6' : '#9CA3AF',
-                                },
-                            }),
-                            singleValue: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
-                            placeholder: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.3)' }),
-                            input: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
-                            menu: (baseStyles) => ({ ...baseStyles, backgroundColor: '#1F2937', zIndex: 9999 }),
-                            option: (baseStyles, state) => ({
-                                ...baseStyles,
-                                backgroundColor: state.isSelected ? '#2563EB' : state.isFocused ? '#374151' : '#1F2937',
-                                color: state.isSelected ? 'white' : 'rgb(249 250 251 / 0.9)',
-                                '&:hover': { backgroundColor: '#374151', color: 'rgb(249 250 251 / 0.9)' },
-                            }),
-                        }}
-                    />
-                    {errors.article_id && <p className="text-sm text-red-600 mt-1">{errors.article_id}</p>}
-                </div>
-
-                {/* Sélecteur d'Agence avec react-select */}
-                <div className="mb-4">
-                    <label htmlFor="agency_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Agence
-                    </label>
-                    <Select
-                        id="agency_id"
-                        name="agency_id"
-                        options={[{ value: '', label: 'Toutes les agences' }, ...agencyOptions]} // Option "Toutes"
-                        value={selectedAgencyOption || { value: '', label: 'Toutes les agences' }} // Gère la valeur par défaut
-                        onChange={handleSelectChange}
-                        placeholder="Sélectionner une agence ou laisser vide pour toutes"
-                        isClearable={true}
-                        isSearchable={true}
-                        classNamePrefix="react-select"
-                        // Styles Tailwind pour react-select
-                        styles={{
-                            control: (baseStyles, state) => ({
-                                ...baseStyles,
-                                height: '44px',
-                                minHeight: '44px',
-                                borderColor: errors.agency_id ? '#EF4444' : (state.isFocused ? '#3B82F6' : '#D1D5DB'),
-                                backgroundColor: 'transparent',
-                                boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
-                                '&:hover': {
-                                    borderColor: state.isFocused ? '#3B82F6' : '#9CA3AF',
-                                },
-                            }),
-                            singleValue: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
-                            placeholder: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.3)' }),
-                            input: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
-                            menu: (baseStyles) => ({ ...baseStyles, backgroundColor: '#1F2937', zIndex: 9999 }),
-                            option: (baseStyles, state) => ({
-                                ...baseStyles,
-                                backgroundColor: state.isSelected ? '#2563EB' : state.isFocused ? '#374151' : '#1F2937',
-                                color: state.isSelected ? 'white' : 'rgb(249 250 251 / 0.9)',
-                                '&:hover': { backgroundColor: '#374151', color: 'rgb(249 250 251 / 0.9)' },
-                            }),
-                        }}
-                    />
-                    {errors.agency_id && <p className="text-sm text-red-600 mt-1">{errors.agency_id}</p>}
-                </div>
-
-                {/* Sélecteur de Type de Mouvement */}
-                <div className="mb-4">
-                    <label htmlFor="type_mouvement" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Type de Mouvement
-                    </label>
-                    <Select
-                        id="type_mouvement"
-                        name="type_mouvement"
-                        options={movementTypeOptions}
-                        value={selectedMovementTypeOption || movementTypeOptions[0]} // Défaut à 'Global'
-                        onChange={handleSelectChange}
-                        placeholder="Sélectionner un type de mouvement"
-                        isClearable={true}
-                        classNamePrefix="react-select"
-                        styles={{
-                            control: (baseStyles, state) => ({
-                                ...baseStyles,
-                                height: '44px',
-                                minHeight: '44px',
-                                borderColor: errors.type_mouvement ? '#EF4444' : (state.isFocused ? '#3B82F6' : '#D1D5DB'),
-                                backgroundColor: 'transparent',
-                                boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
-                                '&:hover': {
-                                    borderColor: state.isFocused ? '#3B82F6' : '#9CA3AF',
-                                },
-                            }),
-                            singleValue: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
-                            placeholder: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.3)' }),
-                            input: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
-                            menu: (baseStyles) => ({ ...baseStyles, backgroundColor: '#1F2937', zIndex: 9999 }),
-                            option: (baseStyles, state) => ({
-                                ...baseStyles,
-                                backgroundColor: state.isSelected ? '#2563EB' : state.isFocused ? '#374151' : '#1F2937',
-                                color: state.isSelected ? 'white' : 'rgb(249 250 251 / 0.9)',
-                                '&:hover': { backgroundColor: '#374151', color: 'rgb(249 250 251 / 0.9)' },
-                            }),
-                        }}
-                    />
-                    {errors.type_mouvement && <p className="text-sm text-red-600 mt-1">{errors.type_mouvement}</p>}
-                </div>
-
-                {/* Champ pour le type de fichier à exporter */}
-                <div className="mb-4">
-                    <label htmlFor="file_type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Type de fichier
-                    </label>
-                    <select
-                        id="file_type"
-                        className="h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                        value={data.file_type}
-                        onChange={handleChange} // Utilise le même handleChange car c'est un select HTML natif
-                    >
-                        <option value="pdf">PDF</option>
-                        <option value="excel">Excel (XLSX)</option>
-                    </select>
-                    {errors.file_type && <p className="text-sm text-red-600 mt-1">{errors.file_type}</p>}
-                </div>
-
-
-                <div className="flex justify-end mt-6">
-                    <Button
-                        type="button"
-                        onClick={onClose}
-                        variant="destructive"
-                        className="mr-2"
-                        disabled={processing}
-                    >
-                        Annuler
-                    </Button>
-                    <Button
-                        type="submit"
-                        variant="primary"
-                        disabled={processing}
-                    >
-                        {processing ? (
-                            <>
-                                <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
-                                Génération...
-                            </>
-                        ) : (
-                            <>
-                                <FontAwesomeIcon icon={faFileExport} className="mr-2" />
-                                Générer
-                            </>
-                        )}
-                    </Button>
-                </div>
-            </form>
-        </Modal>
-    );
+        <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
+          <Button onClick={onClose} variant="secondary" className="mr-2">
+            Annuler
+          </Button>
+          <Button onClick={handleDownload} disabled={processing}>
+            <FontAwesomeIcon icon={faFileExport} className="mr-2" />
+            Générer
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
 };
 
-export default MovementHistoryPDFExcelModal;
+export default ReceptionHistoryPDFExcelModal;

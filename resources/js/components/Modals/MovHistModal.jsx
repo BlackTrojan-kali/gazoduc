@@ -17,7 +17,8 @@ import { faFileExport, faSpinner } from '@fortawesome/free-solid-svg-icons'; // 
 // services: array - NOUVEAU ! Liste des services/rôles au format { id: number, name: string } (pour le filtre)
 // currentFilters: object - filtres actuels pour pré-remplir le formulaire (optionnel)
 
-const MovementHistoryPDFExcelModal = ({ isOpen, onClose, title, articles, agencies, services, currentFilters }) => {
+// Ajout d'une valeur par défaut pour le titre des props
+const MovementHistoryPDFExcelModal = ({ isOpen, onClose, title = "Exporter l'Historique des Mouvements", articles, agencies, services, currentFilters }) => {
     const { data, setData, processing, errors, reset } = useForm({
         start_date: currentFilters?.start_date || '',
         end_date: currentFilters?.end_date || '',
@@ -129,12 +130,60 @@ const MovementHistoryPDFExcelModal = ({ isOpen, onClose, title, articles, agenci
     // Déterminer les valeurs sélectionnées pour react-select pour l'affichage
     const selectedArticleOption = articleOptions.find(option => option.value === data.article_id);
     const selectedAgencyOption = agencyOptions.find(option => option.value === data.agency_id);
-    const selectedServiceOption = serviceOptions.find(option => option.value === data.service_id); // NOUVEAU !
+    const selectedServiceOption = serviceOptions.find(option => option.value === data.service_id);
     const selectedMovementTypeOption = movementTypeOptions.find(option => option.value === data.type_mouvement);
-    const selectedFileTypeOption = fileTypeOptions.find(option => option.value === data.file_type); // NOUVEAU !
+
+    // Styles personnalisés pour react-select (vos styles existants, ajustés pour le texte gris clair)
+    const reactSelectStyles = {
+        control: (baseStyles, state) => ({
+            ...baseStyles,
+            height: '44px',
+            minHeight: '44px',
+            borderColor: errors.article_id || errors.agency_id || errors.service_id || errors.type_mouvement
+                ? '#EF4444' // Rouge en cas d'erreur
+                : (state.isFocused ? '#3B82F6' : (state.menuIsOpen ? '#3B82F6' : '#D1D5DB')), // Bleu au focus, gris par défaut
+            backgroundColor: 'transparent', // Permet au fond du modal de transparaître
+            boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
+            '&:hover': {
+                borderColor: state.isFocused ? '#3B82F6' : '#9CA3AF',
+            },
+        }),
+        // Texte principal dans le champ de sélection
+        singleValue: (baseStyles) => ({
+            ...baseStyles,
+            color: '#D1D5DB', // Gris clair pour le texte sélectionné (mode sombre)
+            // Vous pouvez ajouter une condition pour le mode clair si nécessaire, ex:
+            // color: document.documentElement.classList.contains('dark') ? '#D1D5DB' : '#333',
+        }),
+        // Texte du placeholder
+        placeholder: (baseStyles) => ({
+            ...baseStyles,
+            color: '#9CA3AF', // Gris légèrement plus foncé pour le placeholder
+        }),
+        // Texte saisi dans le champ de recherche
+        input: (baseStyles) => ({
+            ...baseStyles,
+            color: '#D1D5DB', // Gris clair pour le texte saisi
+        }),
+        menu: (baseStyles) => ({ ...baseStyles, backgroundColor: '#1F2937', zIndex: 9999 }), // Fond du menu déroulant (dark)
+        option: (baseStyles, state) => ({
+            ...baseStyles,
+            backgroundColor: state.isSelected ? '#2563EB' : state.isFocused ? '#374151' : '#1F2937',
+            color: state.isSelected ? 'white' : '#D1D5DB', // Texte des options : blanc pour sélection, gris clair sinon
+            '&:active': { // Pour le clic actif
+                backgroundColor: '#2563EB',
+                color: 'white',
+            },
+            '&:hover': { backgroundColor: '#374151', color: '#D1D5DB' },
+        }),
+        // Ajustements pour les indicateurs (flèche, croix de clear)
+        indicatorSeparator: (baseStyles) => ({ ...baseStyles, backgroundColor: '#4B5563' }),
+        dropdownIndicator: (baseStyles) => ({ ...baseStyles, color: '#9CA3AF' }),
+        clearIndicator: (baseStyles) => ({ ...baseStyles, color: '#9CA3AF', '&:hover': { color: '#EF4444' } }),
+    };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={title}>
+        <Modal isOpen={isOpen} onClose={onClose} title={title}> {/* Le titre est maintenant géré ici */}
             <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Champs de Date */}
                 <InputField
@@ -145,6 +194,7 @@ const MovementHistoryPDFExcelModal = ({ isOpen, onClose, title, articles, agenci
                     onChange={handleChange}
                     error={errors.start_date}
                     required
+                    // InputField est supposé déjà gérer le dark mode
                 />
 
                 <InputField
@@ -155,6 +205,7 @@ const MovementHistoryPDFExcelModal = ({ isOpen, onClose, title, articles, agenci
                     onChange={handleChange}
                     error={errors.end_date}
                     required
+                    // InputField est supposé déjà gérer le dark mode
                 />
 
                 {/* Sélecteur d'Article avec react-select */}
@@ -172,30 +223,7 @@ const MovementHistoryPDFExcelModal = ({ isOpen, onClose, title, articles, agenci
                         isClearable={true}
                         isSearchable={true}
                         classNamePrefix="react-select"
-                        // Styles Tailwind pour react-select (vos styles existants)
-                        styles={{
-                            control: (baseStyles, state) => ({
-                                ...baseStyles,
-                                height: '44px',
-                                minHeight: '44px',
-                                borderColor: errors.article_id ? '#EF4444' : (state.isFocused ? '#3B82F6' : '#D1D5DB'),
-                                backgroundColor: 'transparent',
-                                boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
-                                '&:hover': {
-                                    borderColor: state.isFocused ? '#3B82F6' : '#9CA3AF',
-                                },
-                            }),
-                            singleValue: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
-                            placeholder: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.3)' }),
-                            input: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
-                            menu: (baseStyles) => ({ ...baseStyles, backgroundColor: '#1F2937', zIndex: 9999 }),
-                            option: (baseStyles, state) => ({
-                                ...baseStyles,
-                                backgroundColor: state.isSelected ? '#2563EB' : state.isFocused ? '#374151' : '#1F2937',
-                                color: state.isSelected ? 'white' : 'rgb(249 250 251 / 0.9)',
-                                '&:hover': { backgroundColor: '#374151', color: 'rgb(249 250 251 / 0.9)' },
-                            }),
-                        }}
+                        styles={reactSelectStyles}
                     />
                     {errors.article_id && <p className="text-sm text-red-600 mt-1">{errors.article_id}</p>}
                 </div>
@@ -215,35 +243,12 @@ const MovementHistoryPDFExcelModal = ({ isOpen, onClose, title, articles, agenci
                         isClearable={true}
                         isSearchable={true}
                         classNamePrefix="react-select"
-                        // Styles Tailwind pour react-select (vos styles existants)
-                        styles={{
-                            control: (baseStyles, state) => ({
-                                ...baseStyles,
-                                height: '44px',
-                                minHeight: '44px',
-                                borderColor: errors.agency_id ? '#EF4444' : (state.isFocused ? '#3B82F6' : '#D1D5DB'),
-                                backgroundColor: 'transparent',
-                                boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
-                                '&:hover': {
-                                    borderColor: state.isFocused ? '#3B82F6' : '#9CA3AF',
-                                },
-                            }),
-                            singleValue: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
-                            placeholder: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.3)' }),
-                            input: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
-                            menu: (baseStyles) => ({ ...baseStyles, backgroundColor: '#1F2937', zIndex: 9999 }),
-                            option: (baseStyles, state) => ({
-                                ...baseStyles,
-                                backgroundColor: state.isSelected ? '#2563EB' : state.isFocused ? '#374151' : '#1F2937',
-                                color: state.isSelected ? 'white' : 'rgb(249 250 251 / 0.9)',
-                                '&:hover': { backgroundColor: '#374151', color: 'rgb(249 250 251 / 0.9)' },
-                            }),
-                        }}
+                        styles={reactSelectStyles}
                     />
                     {errors.agency_id && <p className="text-sm text-red-600 mt-1">{errors.agency_id}</p>}
                 </div>
 
-                {/* Sélecteur de Service/Rôle (NOUVEAU !) */}
+                {/* Sélecteur de Service/Rôle */}
                 <div className="mb-4">
                     <label htmlFor="service_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Service
@@ -258,30 +263,7 @@ const MovementHistoryPDFExcelModal = ({ isOpen, onClose, title, articles, agenci
                         isClearable={true}
                         isSearchable={true}
                         classNamePrefix="react-select"
-                        // Styles Tailwind pour react-select (vos styles existants)
-                        styles={{
-                            control: (baseStyles, state) => ({
-                                ...baseStyles,
-                                height: '44px',
-                                minHeight: '44px',
-                                borderColor: errors.service_id ? '#EF4444' : (state.isFocused ? '#3B82F6' : '#D1D5DB'),
-                                backgroundColor: 'transparent',
-                                boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
-                                '&:hover': {
-                                    borderColor: state.isFocused ? '#3B82F6' : '#9CA3AF',
-                                },
-                            }),
-                            singleValue: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
-                            placeholder: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.3)' }),
-                            input: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
-                            menu: (baseStyles) => ({ ...baseStyles, backgroundColor: '#1F2937', zIndex: 9999 }),
-                            option: (baseStyles, state) => ({
-                                ...baseStyles,
-                                backgroundColor: state.isSelected ? '#2563EB' : state.isFocused ? '#374151' : '#1F2937',
-                                color: state.isSelected ? 'white' : 'rgb(249 250 251 / 0.9)',
-                                '&:hover': { backgroundColor: '#374151', color: 'rgb(249 250 251 / 0.9)' },
-                            }),
-                        }}
+                        styles={reactSelectStyles}
                     />
                     {errors.service_id && <p className="text-sm text-red-600 mt-1">{errors.service_id}</p>}
                 </div>
@@ -295,52 +277,42 @@ const MovementHistoryPDFExcelModal = ({ isOpen, onClose, title, articles, agenci
                         id="type_mouvement"
                         name="type_mouvement"
                         options={movementTypeOptions}
-                        value={selectedMovementTypeOption || movementTypeOptions[0]} // Défaut à 'Global'
+                        value={selectedMovementTypeOption || movementTypeOptions[0]}
                         onChange={handleSelectChange}
                         placeholder="Sélectionner un type de mouvement"
                         isClearable={true}
                         classNamePrefix="react-select"
-                        // Styles Tailwind pour react-select (vos styles existants)
-                        styles={{
-                            control: (baseStyles, state) => ({
-                                ...baseStyles,
-                                height: '44px',
-                                minHeight: '44px',
-                                borderColor: errors.type_mouvement ? '#EF4444' : (state.isFocused ? '#3B82F6' : '#D1D5DB'),
-                                backgroundColor: 'transparent',
-                                boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
-                                '&:hover': {
-                                    borderColor: state.isFocused ? '#3B82F6' : '#9CA3AF',
-                                },
-                            }),
-                            singleValue: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
-                            placeholder: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.3)' }),
-                            input: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
-                            menu: (baseStyles) => ({ ...baseStyles, backgroundColor: '#1F2937', zIndex: 9999 }),
-                            option: (baseStyles, state) => ({
-                                ...baseStyles,
-                                backgroundColor: state.isSelected ? '#2563EB' : state.isFocused ? '#374151' : '#1F2937',
-                                color: state.isSelected ? 'white' : 'rgb(249 250 251 / 0.9)',
-                                '&:hover': { backgroundColor: '#374151', color: 'rgb(249 250 251 / 0.9)' },
-                            }),
-                        }}
+                        styles={reactSelectStyles}
                     />
                     {errors.type_mouvement && <p className="text-sm text-red-600 mt-1">{errors.type_mouvement}</p>}
                 </div>
 
-                {/* Champ pour le type de fichier à exporter (NOUVEAU !) */}
+                {/* Champ pour le type de fichier à exporter (balise <select> native) */}
                 <div className="mb-4">
                     <label htmlFor="file_type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Type de fichier
                     </label>
                     <select
                         id="file_type"
-                        className="h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                        className="h-11 w-full appearance-none rounded-lg border
+                                   border-gray-300 dark:border-gray-700
+                                   bg-white dark:bg-gray-800
+                                   px-4 py-2.5 pr-11 text-sm shadow-theme-xs
+                                   text-gray-900 dark:text-white/90
+                                   placeholder:text-gray-400 dark:placeholder:text-white/30
+                                   focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10
+                                   dark:focus:border-brand-800"
                         value={data.file_type}
                         onChange={handleChange}
                     >
                         {fileTypeOptions.map(option => (
-                            <option key={option.value} value={option.value}>{option.label}</option>
+                            <option
+                                key={option.value}
+                                value={option.value}
+                                className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white/90"
+                            >
+                                {option.label}
+                            </option>
                         ))}
                     </select>
                     {errors.file_type && <p className="text-sm text-red-600 mt-1">{errors.file_type}</p>}
@@ -368,7 +340,7 @@ const MovementHistoryPDFExcelModal = ({ isOpen, onClose, title, articles, agenci
                             </>
                         ) : (
                             <>
-                                <FontAwesomeIcon icon={faFileExport} className="mr-2" /> {/* Icône générique d'exportation */}
+                                <FontAwesomeIcon icon={faFileExport} className="mr-2" />
                                 Générer
                             </>
                         )}
