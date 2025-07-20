@@ -110,7 +110,10 @@ const Depotage = ({ depotages: initialDepotages, agencies }) => { // 'filters' a
       }
     });
 
-    Inertia.get(route('depotages.index'), currentParams, {
+    // Assurez-vous d'avoir 'Inertia' importé ou défini globalement si vous l'utilisez
+    // Si ce n'est pas le cas, vous devrez l'importer explicitement :
+    // import { Inertia } from '@inertiajs/inertia'; // ou '@inertiajs/react' si vous l'utilisez comme ça
+    window.Inertia.get(route('depotages.index'), currentParams, {
       preserveState: true,
       preserveScroll: true,
       only: ['depotages'], // Ne demande que la prop 'depotages'
@@ -238,7 +241,6 @@ const Depotage = ({ depotages: initialDepotages, agencies }) => { // 'filters' a
                 <FontAwesomeIcon icon={faTimes} />
                 Réinitialiser
               </Button>
-              {/* Le filtre est appliqué en temps réel, pas besoin d'un bouton "Appliquer" séparé */}
             </div>
           </div>
           {/* --- Fin Section de Filtrage Frontend --- */}
@@ -262,27 +264,28 @@ const Depotage = ({ depotages: initialDepotages, agencies }) => { // 'filters' a
               <TableBody>
                 {filteredDepotages.length === 0 ? ( // Utiliser filteredDepotages ici
                   <TableRow>
-                    <TableCell colSpan={11} className="py-6 text-center text-gray-400">Aucun dépotage trouvé avec ces filtres, monsieur.</TableCell>
+                    <TableCell colSpan={10} className="py-6 text-center text-gray-400">Aucun dépotage trouvé avec ces filtres, monsieur.</TableCell>
                   </TableRow>
                 ) : (
                   filteredDepotages.map(depotage => ( // Itérer sur filteredDepotages
                     <TableRow key={depotage.id}>
-                      <TableCell>{depotage.id}</TableCell>
-                    <TableCell>{depotage.citerne_mobile ? depotage.citerne_mobile.name : '—'}</TableCell>
-                      <TableCell>{depotage.citerne_fixe ? depotage.citerne_fixe.name : '—'}</TableCell>
-                      <TableCell>{depotage.article ? depotage.article.name : '—'}</TableCell>
-                      <TableCell >{depotage.quantity.toLocaleString('fr-FR')}</TableCell>
-                      <TableCell>{depotage.agency ? depotage.agency.name : '—'}</TableCell>
-                      <TableCell>{depotage.bl_number || '—'}</TableCell>
-                      <TableCell>{depotage.user ? `${depotage.user.first_name} ` : '—'}</TableCell>
-                      <TableCell>{new Date(depotage.created_at).toLocaleDateString('fr-FR', {
+                      {/* Appliquer py-4 à chaque TableCell pour plus d'espace */}
+                      <TableCell className="py-4">{depotage.id}</TableCell>
+                      <TableCell className="py-4">{depotage.citerne_mobile ? depotage.citerne_mobile.name : '—'}</TableCell>
+                      <TableCell className="py-4">{depotage.citerne_fixe ? depotage.citerne_fixe.name : '—'}</TableCell>
+                      <TableCell className="py-4">{depotage.article ? depotage.article.name : '—'}</TableCell>
+                      <TableCell className="py-4">{depotage.quantity.toLocaleString('fr-FR')}</TableCell>
+                      <TableCell className="py-4">{depotage.agency ? depotage.agency.name : '—'}</TableCell>
+                      <TableCell className="py-4">{depotage.bl_number || '—'}</TableCell>
+                      <TableCell className="py-4">{depotage.user ? `${depotage.user.first_name} ` : '—'}</TableCell>
+                      <TableCell className="py-4">{new Date(depotage.created_at).toLocaleDateString('fr-FR', {
                           year: 'numeric',
                           month: 'long',
                           day: 'numeric',
                           hour: '2-digit',
                           minute: '2-digit',
                         })}</TableCell>
-                      <TableCell>
+                      <TableCell className="py-4">
                         <div className="flex gap-2 justify-center">
                           <button
                             disabled={processing}
@@ -302,8 +305,6 @@ const Depotage = ({ depotages: initialDepotages, agencies }) => { // 'filters' a
             </Table>
 
             {/* --- CONTRÔLES DE PAGINATION D'INERTIA --- */}
-            {/* La pagination Inertia continue de fonctionner sur les données initiales paginées par le backend.
-                Les filtres frontend ne modifient que l'affichage de la page actuelle. */}
             {initialDepotages.links && initialDepotages.links.length > 3 && (
               <nav className="flex justify-end mt-4">
                 <div className="flex gap-2">

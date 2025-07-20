@@ -87,7 +87,7 @@ const ReleveHistoryPDFExcelModal = ({ isOpen, onClose, agencies }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-gray-900/50"> {/* Opacité du fond ajustée */}
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-gray-900/50"> {/* Opacité du fond ajustée */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md mx-auto">
         <div className="flex justify-between items-center border-b pb-3 mb-4 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Générer Historique des Relevés</h3>

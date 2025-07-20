@@ -167,12 +167,6 @@ const Releve = ({ releves: initialReleves, agencies }) => { // 'filters' est ret
                 <FontAwesomeIcon icon={faTimes} />
                 Réinitialiser
               </Button>
-              {/* Le bouton "Appliquer Filtres" n'est plus nécessaire car le filtre est appliqué en temps réel via onChange */}
-              {/* Vous pouvez le garder si vous préférez une application manuelle après avoir rempli tous les champs */}
-              {/* <Button onClick={applyFilters} variant="primary" className="inline-flex items-center gap-2">
-                <FontAwesomeIcon icon={faSearch} />
-                Appliquer Filtres
-              </Button> */}
             </div>
           </div>
           {/* --- Fin Section de Filtrage Frontend --- */}
@@ -200,15 +194,16 @@ const Releve = ({ releves: initialReleves, agencies }) => { // 'filters' est ret
                 ) : (
                   filteredReleves.map(releve => (
                     <TableRow key={releve.id}>
-                      <TableCell>{releve.id}</TableCell>
-                      <TableCell>{releve.citerne ? releve.citerne.name : '—'}</TableCell>
-                      <TableCell>{releve.agency ? releve.agency.name : '—'}</TableCell>
-                      <TableCell >{releve.theorical_quantity.toLocaleString('fr-FR')}</TableCell>
-                      <TableCell>{releve.measured_quantity.toLocaleString('fr-FR')}</TableCell>
-                      <TableCell >{releve.difference.toLocaleString('fr-FR')}</TableCell>
-                      <TableCell>{new Date(releve.reading_date).toLocaleDateString('fr-FR')}</TableCell>
-                      <TableCell>{releve.user ? `${releve.user.first_name} ` : '—'}</TableCell>
-                      <TableCell>{new Date(releve.created_at).toLocaleDateString('fr-FR', {
+                      {/* Ajoutez py-4 ou py-3 sur chaque TableCell pour plus de padding vertical */}
+                      <TableCell className="py-4">{releve.id}</TableCell>
+                      <TableCell className="py-4">{releve.citerne ? releve.citerne.name : '—'}</TableCell>
+                      <TableCell className="py-4">{releve.agency ? releve.agency.name : '—'}</TableCell>
+                      <TableCell className="py-4">{releve.theorical_quantity.toLocaleString('fr-FR')}</TableCell>
+                      <TableCell className="py-4">{releve.measured_quantity.toLocaleString('fr-FR')}</TableCell>
+                      <TableCell className="py-4">{releve.difference.toLocaleString('fr-FR')}</TableCell>
+                      <TableCell className="py-4">{new Date(releve.reading_date).toLocaleDateString('fr-FR')}</TableCell>
+                      <TableCell className="py-4">{releve.user ? `${releve.user.first_name} ` : '—'}</TableCell>
+                      <TableCell className="py-4">{new Date(releve.created_at).toLocaleDateString('fr-FR', {
                           year: 'numeric',
                           month: 'long',
                           day: 'numeric',
@@ -222,8 +217,6 @@ const Releve = ({ releves: initialReleves, agencies }) => { // 'filters' est ret
             </Table>
 
             {/* --- CONTRÔLES DE PAGINATION D'INERTIA --- */}
-            {/* La pagination Inertia continue de fonctionner sur les données initiales paginées par le backend.
-                Les filtres frontend ne modifient que l'affichage de la page actuelle. */}
             {initialReleves.links && initialReleves.links.length > 3 && (
               <nav className="flex justify-end mt-4">
                 <div className="flex gap-2">

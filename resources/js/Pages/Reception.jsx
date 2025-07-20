@@ -107,7 +107,8 @@ const PageContent = ({ receptions:initialReceptions, agencies }) => { // 'filter
 
     // Recharge la page 'receptions.index' via Inertia avec les paramètres de pagination
     // Les filtres frontend ne sont PAS inclus dans l'URL.
-    Inertia.get(route('receptions.index', { page: newPage, per_page: initialReceptions.per_page }), {
+    // Assurez-vous d'avoir 'Inertia' importé ou défini globalement si vous l'utilisez
+    window.Inertia.get(route('receptions.index', { page: newPage, per_page: initialReceptions.per_page }), {
         preserveScroll: true,
         preserveState: true,
         only: ['receptions'], // Ne demande que la prop 'receptions'
@@ -265,26 +266,27 @@ const PageContent = ({ receptions:initialReceptions, agencies }) => { // 'filter
               <TableBody>
                 {filteredReceptions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="py-6 text-center text-gray-400">Aucune réception trouvée avec ces filtres, monsieur.</TableCell>
+                    <TableCell colSpan={9} className="py-6 text-center text-gray-400">Aucune réception trouvée avec ces filtres, monsieur.</TableCell>
                   </TableRow>
                 ) : (
                   filteredReceptions.map(reception => (
                     <TableRow key={reception.id}>
-                      <TableCell>{reception.id}</TableCell>
-                      <TableCell>{reception.citerne ? reception.citerne.name : '—'}</TableCell>
-                      <TableCell>{reception.article ? reception.article.name : '—'}</TableCell>
-                      <TableCell >{reception.received_quantity.toLocaleString('fr-FR')}</TableCell>
-                      <TableCell>{reception.agency ? reception.agency.name : '—'}</TableCell>
-                      <TableCell>{reception.user ? `${reception.user.first_name} ` : '—'}</TableCell>
-                      <TableCell>{reception.origin || '—'}</TableCell>
-                      <TableCell>{new Date(reception.created_at).toLocaleDateString('fr-FR', {
+                      {/* Appliquer py-4 à chaque TableCell pour plus d'espace */}
+                      <TableCell className="py-4">{reception.id}</TableCell>
+                      <TableCell className="py-4">{reception.citerne_mobile ? reception.citerne_mobile.name : '—'}</TableCell>
+                      <TableCell className="py-4">{reception.article ? reception.article.name : '—'}</TableCell>
+                      <TableCell className="py-4">{reception.received_quantity.toLocaleString('fr-FR')}</TableCell>
+                      <TableCell className="py-4">{reception.destination_agency ? reception.destination_agency.name : '—'}</TableCell>
+                      <TableCell className="py-4">{reception.user ? `${reception.user.first_name} ` : '—'}</TableCell>
+                      <TableCell className="py-4">{reception.origin || '—'}</TableCell>
+                      <TableCell className="py-4">{new Date(reception.created_at).toLocaleDateString('fr-FR', {
                           year: 'numeric',
                           month: 'long',
                           day: 'numeric',
                           hour: '2-digit',
                           minute: '2-digit',
                         })}</TableCell>
-                      <TableCell>
+                      <TableCell className="py-4">
                         <div className="flex gap-2 justify-center">
                           <button
                             disabled={processing}
