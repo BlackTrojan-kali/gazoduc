@@ -17,6 +17,7 @@ use App\Http\Controllers\MagasinController;
 use App\Http\Controllers\MouvementController;
 use App\Http\Controllers\ProductionController;
 use App\Http\Controllers\receptionController;
+use App\Http\Controllers\RegionalController;
 use App\Http\Controllers\RegionController;
 use App\Http\Controllers\ReleveController;
 use App\Http\Controllers\StockController;
@@ -27,6 +28,7 @@ use App\Http\Middleware\IsAdminMiddleware;
 use App\Http\Middleware\isAuthenticatedMiddleware;
 use App\Http\Middleware\MagasinMiddleware;
 use App\Http\Middleware\ProductionMiddleware;
+use App\Http\Middleware\RegionaMiddleware;
 use App\Models\Mouvement;
 
 //auth routes
@@ -121,6 +123,9 @@ Route::middleware(isAuthenticatedMiddleware::class)->group(function(){
    Route::get("/magasin-moves/{type}",[MouvementController::class,"moves"])->name("magasin.moves");
    Route::delete("/magasin-move-delete/{idmov}",[MouvementController::class,"delete"])->name("magasin.move.delete");
     Route::get('/movements/generate-report', [MouvementController::class, 'generateReport'])->name('movements.generateReport');
+    //production
+        Route::get("/prod-history-pdf",[ProductionController::class,"export"])->name("prod.export");
+    Route::get("/prod-history",[ProductionController::class,"prod_history"])->name("prod.hist");
 });
 
 Route::middleware(IsAdminMiddleware::class)->group(function(){
@@ -145,17 +150,19 @@ Route::middleware(IsAdminMiddleware::class)->group(function(){
     Route::post("/store-commercial",[UserController::class,"store_commercial"])->name("commercial.store");
     Route::put("/update-production/{idceo}",[UserController::class,"update_commercial"])->name("commercial.update");
     Route::put("/archived-commercial/{idceo}",[UserController::class,"archive_commercial"])->name("commercial.archive");
+
   
 });
-
+Route::middleware(RegionaMiddleware::class)->group(function(){
+    Route::get("/controlleur-index",[RegionalController::class,"index"])->name("controlleur.index");
+    Route::get("/controlleur-citerne",[RegionalController::class,"citerne_index"])->name("controlleur.citerne");
+});
 //production middleware
 Route::middleware(ProductionMiddleware::class)->group(function(){
     //production citernes routes
     Route::get("/production-dashboard",[ProductionController::class,"index"])->name("prod.index");
     Route::get("/production-citernes",[ProductionController::class,"citerne_index"])->name("prod.citerne");
-    Route::get("/prod-history",[ProductionController::class,"prod_history"])->name("prod.hist");
     Route::post("/producttion-produced",[ProductionController::class,"produce"])->name("prod.produce");
     Route::delete("/production-delete/{idProd}",[ProductionController::class,"delete"])->name("prodMove.delete");
-    Route::get("/prod-history-pdf",[ProductionController::class,"export"])->name("prod.export");
     
 }); 

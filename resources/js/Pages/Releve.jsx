@@ -1,14 +1,15 @@
 import React, { useState, useMemo } from 'react'; // Importez useState et useMemo
 import MagLayout from '../layout/MagLayout/MagLayout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFileExport, faSearch, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '../components/ui/table';
 import Button from '../components/ui/button/Button';
 import Input from '../components/form/input/InputField';
 import ReleveHistoryPDFExcelModal from '../components/Modals/ReleveHistModal';
+import RegLayout from '../layout/RegLayout/RegLayout';
 
-const Releve = ({ releves: initialReleves, agencies }) => { // 'filters' est retiré des props
+const PageContent = ({ releves: initialReleves, agencies }) => { // 'filters' est retiré des props
   // --- États pour la modale d'exportation ---
   const [isPDFExcelModalOpen, setIsPDFExcelModalOpen] = useState(false);
   const openPDFExcelModal = () => setIsPDFExcelModalOpen(true);
@@ -260,5 +261,21 @@ const Releve = ({ releves: initialReleves, agencies }) => { // 'filters' est ret
   );
 };
 
-Releve.layout = page => <MagLayout children={page} title="Relevés" />;
+const Releve =({releves,agencies})=>{
+  const  {auth} = usePage().props
+  if(auth.user.role == "magasin"){
+    return (
+      <MagLayout title="releves">
+        <PageContent releves={releves} agencies={agencies}/>
+      </MagLayout>
+    )
+  }
+   if(auth.user.role == "controleur"){
+    return (
+      <RegLayout title="releves">
+        <PageContent releves={releves} agencies={agencies}/>
+      </RegLayout>
+    )
+  }
+}
 export default Releve;

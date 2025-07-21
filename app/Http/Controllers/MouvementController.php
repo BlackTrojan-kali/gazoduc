@@ -99,79 +99,104 @@ class MouvementController extends Controller
             return back()->with('error', 'Échec de l\'enregistrement du mouvement : ' . $e->getMessage())->withInput();
         }
     }
+    public function moves(Request $request, $type)
+    {
+        $user = Auth::user();
+        $userRoleName = $user->role->name;
 
-public function moves(Request $request, $type)
-{
-    // Récupérer l'utilisateur authentifié et ses informations
-    $user = Auth::user();
-    $userRoleName = $user->role->name;
+        $filterArticleName = $request->query('article_name');
+        $filterQualification = $request->query('qualification');
+        $filterAgencyId = $request->query('agency_id');
 
-    // --- Récupérer les paramètres de filtre de la requête ---
-    $filterArticleName = $request->query('article_name');
-    $filterQualification = $request->query('qualification');
-    $filterAgencyId = $request->query('agency_id');
-    // --------------------------------------------------------
+        // Initialiser la requête de base pour les mouvements
+        $movementsQuery = Mouvement::with('agency', 'article', 'user');
 
-    // Construire la requête de base pour les mouvements
-    $movementsQuery = Mouvement::with('agency', 'article', 'user')
-        ->where('movement_type',$type)
-        ->where('source_location', $userRoleName);
-    // Limiter à l'agence de l'utilisateur selon son rôle
-    $restrictedRoles = ['magasin', 'production', 'commercial'];
-    if (in_array($userRoleName, $restrictedRoles)) {
-        $movementsQuery->where('agency_id', $user->agency_id);
-    } elseif ($filterAgencyId) {
-        $movementsQuery->where('agency_id', $filterAgencyId);
+        // --- Logique de filtrage basée sur le rôle ---
+        $restrictedRoles = ['magasin', 'production', 'commercial'];
+
+        if ($userRoleName === 'controleur' || $userRoleName === 'direction') {
+            // Pour 'controleur' et 'direction': afficher TOUS les types de mouvements.
+            // Le paramètre $type est ignoré ici.
+
+            if ($userRoleName === 'controleur') {
+                // Pour 'controleur': Limiter à l'agence de l'utilisateur
+                $movementsQuery->where('agency_id', $user->agency_id);
+            } elseif ($userRoleName === 'direction') {
+                // Pour 'direction': Afficher toutes les agences, mais permettre le filtrage si agency_id est fourni
+                if ($filterAgencyId) {
+                    $movementsQuery->where('agency_id', $filterAgencyId);
+                }
+            }
+            // Aucune restriction de source_location pour ces rôles ici
+        } else {
+            // Pour les autres rôles: appliquer la logique existante (filtrage par type et restrictions d'agence/source_location)
+            $movementsQuery->where('movement_type', $type);
+            $movementsQuery->where('source_location', $userRoleName);
+            if (in_array($userRoleName, $restrictedRoles)) {
+                $movementsQuery->where('agency_id', $user->agency_id);
+            } elseif ($filterAgencyId) {
+                $movementsQuery->where('agency_id', $filterAgencyId);
+            }
+        }
+        // ------------------------------------
+
+        // --- Appliquer les filtres additionnels (Nom d'article, Qualification) ---
+        if ($filterArticleName) {
+            $movementsQuery->whereHas('article', function ($query) use ($filterArticleName) {
+                $query->where('name', 'like', '%' . $filterArticleName . '%');
+            });
+        }
+
+        if ($filterQualification) {
+            $movementsQuery->where('qualification', $filterQualification);
+        }
+        // ---------------------------------------------
+
+        // Récupérer les mouvements paginés
+        $movements = $movementsQuery->latest()->paginate(15);
+
+        // Récupérer les articles pour les filtres
+        $articles = Article::where('entreprise_id', $user->entreprise_id)
+            ->where('type', '!=', 'matiere_premiere')
+            ->orderBy('name')
+            ->get();
+
+        // Récupérer les agences en fonction du rôle
+        if ($userRoleName === 'direction') {
+            $agencies = Agency::where('entreprise_id', $user->entreprise_id)->get();
+        } elseif (in_array($userRoleName, $restrictedRoles) || $userRoleName === 'controleur') {
+            $agencies = Agency::where('id', $user->agency_id)->get();
+        } else {
+            $agencies = Agency::where('entreprise_id', $user->entreprise_id)->get();
+        }
+
+        // --- Récupérer les services (rôles) en fonction du rôle ---
+        // La modification se trouve ici
+        if ($userRoleName === 'controleur' || $userRoleName === 'direction') {
+            // Pour 'controleur' et 'direction': toujours retourner les rôles spécifiques
+            $services = Role::whereIn('name', ['magasin', 'production', 'commercial'])->get();
+        } elseif (in_array($userRoleName, $restrictedRoles)) {
+            // Pour les rôles restreints ('magasin', 'production', 'commercial'): seulement leur propre rôle
+            $services = Role::where('name', $userRoleName)->get();
+        } else {
+            // Fallback pour tout autre rôle non explicitement géré
+            $services = Role::all();
+        }
+        // --------------------------------------------------------
+
+        // Retour de la vue avec Inertia
+        return Inertia::render('Entree', [ // Vous devrez peut-être changer 'Entree' pour une vue plus générique comme 'Mouvements'
+            'movements' => $movements,
+            'articles' => $articles,
+            'agencies' => $agencies,
+            'services' => $services,
+            'filters' => [
+                'article_name' => $filterArticleName,
+                'qualification' => $filterQualification,
+                'agency_id' => $filterAgencyId,
+            ],
+        ]);
     }
-
-    // --- Appliquer les filtres ---
-    if ($filterArticleName) {
-        $movementsQuery->whereHas('article', function ($query) use ($filterArticleName) {
-            $query->where('name', 'like', '%' . $filterArticleName . '%');
-        });
-    }
-
-    if ($filterQualification) {
-        $movementsQuery->where('qualification', $filterQualification);
-    }
-    // -----------------------------
-
-    // Récupération des mouvements paginés
-    $movements = $movementsQuery->latest()->paginate(15);
-    // Récupération des articles pour les filtres
-    $articles = Article::where('entreprise_id', $user->entreprise_id)
-        ->where('type', '!=', 'matiere_premiere')
-        ->orderBy('name')
-        ->get();
-
-    // Récupération des agences selon le rôle
-    if (in_array($userRoleName, $restrictedRoles)) {
-        $agencies = Agency::where('id', $user->agency_id)->get();
-    } else {
-        $agencies = Agency::where('entreprise_id', $user->entreprise_id)->get();
-    }
-
-    // Récupération des services selon le rôle
-    if (in_array($userRoleName, $restrictedRoles)) {
-        $services = Role::where('name', $userRoleName)->get();
-    } else {
-        $services = Role::all();
-    }
-
-    // Retour de la vue avec Inertia
-    return Inertia::render('Entree', [
-        'movements' => $movements,
-        'articles' => $articles,
-        'agencies' => $agencies,
-        'services' => $services,
-        'filters' => [
-            'article_name' => $filterArticleName,
-            'qualification' => $filterQualification,
-            'agency_id' => $filterAgencyId,
-        ],
-    ]);
-}
-
     public function delete($idmov){
         $move = Mouvement::where("id",$idmov)->first();
         $stock =  Stock::where("agency_id",Auth::user()->agency_id)

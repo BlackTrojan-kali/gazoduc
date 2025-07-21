@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react'; // Importez useState et useMemo
 import MagLayout from '../layout/MagLayout/MagLayout';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrash, faFileExport, faSearch, faTimes } from '@fortawesome/free-solid-svg-icons'; // Ajoutez faSearch et faTimes
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '../components/ui/table';
@@ -10,8 +10,9 @@ import Swal from 'sweetalert2';
 import Button from '../components/ui/button/Button';
 import Input from '../components/form/input/InputField'; // Importez votre composant Input
 import DepotageHistoryPDFExcelModal from '../components/Modals/DepHistModal'; // Assurez-vous que le chemin est correct
+import RegLayout from '../layout/RegLayout/RegLayout';
 
-const Depotage = ({ depotages: initialDepotages, agencies }) => { // 'filters' a été retiré des props
+const PageContent = ({ depotages: initialDepotages, agencies }) => { // 'filters' a été retiré des props
   const { delete: inertiaDelete, processing } = useForm();
 
   // --- États et fonctions pour la modale d'exportation ---
@@ -347,6 +348,22 @@ const Depotage = ({ depotages: initialDepotages, agencies }) => { // 'filters' a
     </>
   );
 };
+const Depotage = ({depotages,agencies})=>{
+  const {auth} = usePage().props
+  if(auth.user.role == "magasin"){
+    return (
+      <MagLayout>
+        <PageContent depotages={depotages} agencies={agencies}/>
+      </MagLayout>
+    )
+  }
 
-Depotage.layout = page => <MagLayout children={page} title="Dépotages" />;
+  if(auth.user.role == "controleur"){
+    return (
+      <RegLayout>
+        <PageContent depotages={depotages} agencies={agencies}/>
+      </RegLayout>
+    )
+  }
+}
 export default Depotage;

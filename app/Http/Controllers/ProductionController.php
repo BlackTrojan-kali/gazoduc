@@ -103,7 +103,7 @@ class ProductionController extends Controller
                 $agencies =Agency::where("id",Auth::user()->agency_id)->get();
             }    
                 return Inertia("Production/ProdMoves",compact("prodMoves","articles","citernes","agencies"));
-            }
+            } 
 
     public function delete($idProd){
         

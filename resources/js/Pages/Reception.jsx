@@ -12,6 +12,7 @@ import Input from '../components/form/input/InputField'; // Importez votre compo
 // Assurez-vous que le chemin et le nom de la modale sont corrects (ReceptionHistoryPDFExcelModal.jsx)
 import ReceptionHistoryPDFExcelModal from '../components/Modals/RecHistModal';
 import ProdLayout from '../layout/ProdLayout/ProdLayout';
+import RegLayout from '../layout/RegLayout/RegLayout';
 
 const PageContent = ({ receptions:initialReceptions, agencies }) => { // 'filters' est retiré des props
   // Initialisation de useForm d'Inertia pour la suppression
@@ -362,6 +363,13 @@ const Reception = ({ receptions, agencies })=>{
       <MagLayout>
         <PageContent receptions={receptions} agencies={agencies}/>
       </MagLayout>
+    )
+  }
+  if(auth.user.role == "controleur"){
+    return(
+      <RegLayout>
+        <PageContent receptions={receptions} agencies={agencies}/>
+      </RegLayout>
     )
   }
 }

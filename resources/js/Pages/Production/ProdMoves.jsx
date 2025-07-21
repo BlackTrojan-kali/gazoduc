@@ -11,9 +11,10 @@ import ExportProductionModal from '../../components/Modals/ProdPdfModal'; // <--
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFilter, faTimes, faCalendarAlt, faSearch, faChevronLeft, faChevronRight, faTrashAlt, faSpinner, faFileExport } from '@fortawesome/free-solid-svg-icons'; // faPlus retiré, faFileExport maintenu
 import Swal from 'sweetalert2';
+import RegLayout from '../../layout/RegLayout/RegLayout';
 
 // NOTE : Pour cette modal, la prop 'services' n'est pas nécessaire si elle ne filtre que par les données de production.
-const ProdMoves = ({ prodMoves, agencies, articles, citernes }) => { // 'services' retiré des props ici
+const PageContent = ({ prodMoves, agencies, articles, citernes }) => { // 'services' retiré des props ici
   const { url } = usePage();
   const { delete: inertiaDelete, processing } = useForm();
 
@@ -422,6 +423,20 @@ const ProdMoves = ({ prodMoves, agencies, articles, citernes }) => { // 'service
     </>
   );
 };
-
-ProdMoves.layout = page => <ProdLayout children={page} />;
+const ProdMoves = ({ prodMoves, agencies, articles, citernes })=>{
+  const {auth} = usePage().props
+  if(auth.user.role == "production"){
+    return (
+      <ProdLayout>
+        <PageContent prodMoves={prodMoves} agencies={agencies} articles={articles} citernes={citernes}/>
+      </ProdLayout>
+    )
+  }  if(auth.user.role == "controleur"){
+    return (
+      <RegLayout>
+        <PageContent prodMoves={prodMoves} agencies={agencies} articles={articles} citernes={citernes}/>
+      </RegLayout>
+    )
+  }
+}
 export default ProdMoves;

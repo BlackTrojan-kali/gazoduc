@@ -20,7 +20,7 @@ class MagasinController extends Controller
         ->get();  
          $articles = Article::where("entreprise_id",Auth::user()->entreprise_id)->where("type","!=","matiere_premiere")->get();
         $agencies = Agency::where("id",Auth::user()->agency_id)->where("entreprise_id",Auth::user()->entreprise_id)->get();
-       
+        
         return Inertia("Magasin/MagIndex",compact("stocks","articles","agencies"));
     }
 

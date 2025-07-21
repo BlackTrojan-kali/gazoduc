@@ -1,15 +1,19 @@
 import React, { useState, useMemo } from 'react';
-import MagLayout from '../layout/MagLayout/MagLayout';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCube, faTrash, faFileExport, faFilter } from '@fortawesome/free-solid-svg-icons';
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '../components/ui/table';
 import Swal from 'sweetalert2';
 import Button from '../components/ui/button/Button';
-import Input from '../components/form/input/InputField';
-import MovementHistoryPDFExcelModal from '../components/Modals/MovHistModal';
-import ProdLayout from '../layout/ProdLayout/ProdLayout';
+import Input from '../components/form/input/InputField'; // Assurez-vous que c'est le bon chemin pour votre InputField
+import MovementHistoryPDFExcelModal from '../components/Modals/MovHistModal'; // Assurez-vous que c'est le bon chemin pour votre modale
 
+// Layouts - assurez-vous que les chemins sont corrects
+import MagLayout from '../layout/MagLayout/MagLayout';
+import ProdLayout from '../layout/ProdLayout/ProdLayout';
+import RegLayout from '../layout/RegLayout/RegLayout';
+
+// --- Composant PageContent: Contient la logique principale de la page ---
 const PageContent = ({ movements, articles, agencies, services }) => {
   // --- États pour la modale d'exportation ---
   const [isPDFExcelModalOpen, setIsPDFExcelModalOpen] = useState(false);
@@ -26,6 +30,11 @@ const PageContent = ({ movements, articles, agencies, services }) => {
   // --- Filtrage des mouvements selon les filtres (optimisé avec useMemo) ---
   const filteredMovements = useMemo(() => {
     // La source de données pour le filtrage est movements.data (la page actuelle de mouvements reçue de Laravel)
+    // C'est important car 'movements' est un objet de pagination Inertia, et les données sont dans 'data'.
+    if (!movements || !movements.data) {
+      return []; // Retourne un tableau vide si les données ne sont pas encore disponibles
+    }
+
     return movements.data.filter(movement => {
       // 1. Filtrer par type de mouvement
       const matchesType = filterMovementType === '' || movement.movement_type === filterMovementType;
@@ -40,7 +49,7 @@ const PageContent = ({ movements, articles, agencies, services }) => {
         (movement.qualification && movement.qualification.toLowerCase() === filterQualification.toLowerCase());
 
       // 4. Filtrer par agence
-      // Convertir agency_id en chaîne pour une comparaison stricte
+      // Convertir agency_id en chaîne pour une comparaison stricte pour s'assurer que '1' (string) == 1 (number)
       const matchesAgency = filterAgencyId === '' || String(movement.agency_id) === String(filterAgencyId);
 
       return matchesType && matchesArticleName && matchesQualification && matchesAgency;
@@ -100,6 +109,7 @@ const PageContent = ({ movements, articles, agencies, services }) => {
               </h3>
             </div>
             <div className="flex items-center gap-3">
+              {/* Bouton d'exportation */}
               <Button
                 onClick={openPDFExcelModal}
                 variant="secondary"
@@ -129,7 +139,7 @@ const PageContent = ({ movements, articles, agencies, services }) => {
                   value={filterMovementType}
                   onChange={(e) => setFilterMovementType(e.target.value)}
                 >
-                  <option value="">Tous les types</option> {/* Texte mis à jour pour plus de clarté */}
+                  <option value="">Tous les types</option>
                   <option value="entree">Entrée</option>
                   <option value="sortie">Sortie</option>
                 </select>
@@ -272,7 +282,7 @@ const PageContent = ({ movements, articles, agencies, services }) => {
         </div>
       </div>
 
-           {/* La modale de génération de PDF/Excel */}
+      {/* La modale de génération de PDF/Excel */}
       <MovementHistoryPDFExcelModal
         isOpen={isPDFExcelModalOpen}
         onClose={closePDFExcelModal}
@@ -283,26 +293,40 @@ const PageContent = ({ movements, articles, agencies, services }) => {
     </>
   );
 };
-const Entree = ({ movements, articles, agencies, services})=>{
-    const {auth} = usePage().props
-    if(auth.user.role == "production"){
-        return(
-          <ProdLayout>
-            <PageContent movements={movements} articles={articles} agencies={agencies} services={services}>
 
-            </PageContent>
-          </ProdLayout>
-        )
+// --- Composant principal Entree: Gère le layout en fonction du rôle de l'utilisateur ---
+const Entree = ({ movements, articles, agencies, services }) => {
+    const { auth } = usePage().props;
+    const userRole = auth.user.role; // Accéder au nom du rôle
+
+    // Rendu conditionnel du layout basé sur le rôle de l'utilisateur
+    if (userRole === "production") {
+        return (
+            <ProdLayout>
+                <PageContent movements={movements} articles={articles} agencies={agencies} services={services} />
+            </ProdLayout>
+        );
     }
-    if(auth.user.role == "magasin"){
-        return(
-          <MagLayout>
-            <PageContent movements={movements} articles={articles} agencies={agencies} services={services}>
-              
-            </PageContent>
-          </MagLayout>
-        )
+    if (userRole === "magasin") {
+        return (
+            <MagLayout>
+                <PageContent movements={movements} articles={articles} agencies={agencies} services={services} />
+            </MagLayout>
+        );
     }
-}
+    if (userRole === "controleur" ) { // Ajout de 'direction' ici
+       return (
+          <RegLayout>
+            <PageContent movements={movements} articles={articles} agencies={agencies} services={services} />
+          </RegLayout>
+        );
+    }
+    // Fallback pour les rôles non définis ou si auth.user.role n'est pas ce qui est attendu
+    return (
+        <MagLayout> {/* Ou un layout par défaut si aucun rôle ne correspond */}
+            <PageContent movements={movements} articles={articles} agencies={agencies} services={services} />
+        </MagLayout>
+    );
+};
 
 export default Entree;
