@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Model; 
 
 class ArticleCategoryPrice extends Model
 {
@@ -14,5 +14,8 @@ class ArticleCategoryPrice extends Model
 
     public function article(){
         return $this->belongsTo(Article::class,"article_id");
+    }
+    public function agency(){
+        return $this->belongsTo(Agency::class,"agency_id");
     }
 }

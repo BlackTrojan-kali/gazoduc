@@ -1,10 +1,10 @@
 import React, { useEffect } from 'react';
-import Modal from './Modal'; // Chemin vers le composant Modal
-import Form from '../form/Form';   // Chemin vers le composant Form
-import Label from '../form/Label'; // Chemin vers le composant Label
-import Input from '../form/input/InputField'; // Chemin vers le composant InputField
-import FileInput from '../form/input/FileInput'; // <--- CHEMIN AJUSTÉ: Votre composant FileInput
-import TextArea from '../form/input/TextArea'; // <--- CHEMIN AJUSTÉ: Votre composant TextArea
+import Modal from './Modal';
+import Form from '../form/Form';
+import Label from '../form/Label';
+import Input from '../form/input/InputField';
+import FileInput from '../form/input/FileInput';
+import TextArea from '../form/input/TextArea'; // Assurez-vous que ce chemin est correct
 
 import { useForm, usePage } from '@inertiajs/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -13,15 +13,14 @@ import { faSpinner } from '@fortawesome/free-solid-svg-icons';
 const CreateCompanyModal = ({ isOpen, onClose }) => {
   const { data, setData, post, processing, errors, reset, recentlySuccessful } = useForm({
     name: '',
-    code: '', // Champ pour le code de l'entreprise
-    logo_path: null, // Pour le fichier du logo_path (objet File)
+    code: '',
+    logo_path: null,
     tax_number: '',
     phone_number: '',
     email_address: '',
     address: '',
   });
 
-  // Gère la réinitialisation du formulaire et la fermeture de la modale après une soumission réussie
   useEffect(() => {
     if (recentlySuccessful) {
       reset();
@@ -30,18 +29,18 @@ const CreateCompanyModal = ({ isOpen, onClose }) => {
   }, [recentlySuccessful, reset, onClose]);
 
   const handleSubmit = () => {
-    // Affiche les données du formulaire dans la console avant l'envoi
     console.log("Données du formulaire avant soumission, monsieur:", data);
 
-    // Envoie les données du formulaire à la route Laravel 'companies.store'
     post(route('createCompany'), {
-      preserveScroll: true, // Maintient la position de défilement après la redirection Inertia
+      preserveScroll: true,
     });
   };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Creer une entreprise">
       <Form onSubmit={handleSubmit} className="space-y-4">
+        {/* ... (autres champs InputField) ... */}
+
         {/* Champ Nom de l'entreprise */}
         <div>
           <Label htmlFor="name">Entreprise Name <span className="text-red-500">*</span></Label>
@@ -50,10 +49,10 @@ const CreateCompanyModal = ({ isOpen, onClose }) => {
             id="name"
             name="name"
             value={data.name}
-            onChange={(e) => setData('name', e.target.value)}
-            disabled={processing} // Désactive le champ pendant la soumission
-            error={!!errors.name} // Indique une erreur si présente
-            hint={errors.name} // Affiche le message d'erreur
+            onChange={(e) => setData('name', e.target.value)} // Correct: e.target.value
+            disabled={processing}
+            error={!!errors.name}
+            hint={errors.name}
           />
         </div>
 
@@ -65,7 +64,7 @@ const CreateCompanyModal = ({ isOpen, onClose }) => {
             id="code"
             name="code"
             value={data.code}
-            onChange={(e) => setData('code', e.target.value)}
+            onChange={(e) => setData('code', e.target.value)} // Correct: e.target.value
             disabled={processing}
             error={!!errors.code}
             hint={errors.code}
@@ -78,12 +77,10 @@ const CreateCompanyModal = ({ isOpen, onClose }) => {
           <FileInput
             id="logo_path"
             name="logo_path"
-            onChange={(e) => setData('logo_path', e.target.files[0])} // Récupère le premier fichier sélectionné (objet File)
-            className={errors.logo_path ? "border-error-500" : ""} // Applique un style de bordure rouge en cas d'erreur
-            // Si votre composant FileInput accepte une prop 'disabled', vous pouvez l'ajouter ici:
-            // disabled={processing}
+            onChange={(e) => setData('logo_path', e.target.files[0])} // Correct: e.target.files[0]
+            className={errors.logo_path ? "border-error-500" : ""}
+            // disabled={processing} // Décommentez si votre FileInput supporte cette prop
           />
-          {/* Affichage du message d'erreur spécifique au logo_path */}
           {errors.logo_path && <p className="mt-1.5 text-xs text-error-500 dark:text-error-400">{errors.logo_path}</p>}
         </div>
 
@@ -95,7 +92,7 @@ const CreateCompanyModal = ({ isOpen, onClose }) => {
             id="taxt_number"
             name="tax_number"
             value={data.tax_number}
-            onChange={(e) => setData('tax_number', e.target.value)}
+            onChange={(e) => setData('tax_number', e.target.value)} // Correct: e.target.value
             disabled={processing}
             error={!!errors.tax_number}
             hint={errors.tax_number}
@@ -110,7 +107,7 @@ const CreateCompanyModal = ({ isOpen, onClose }) => {
             id="phone_number"
             name="phone_number"
             value={data.phone_number}
-            onChange={(e) => setData('phone_number', e.target.value)}
+            onChange={(e) => setData('phone_number', e.target.value)} // Correct: e.target.value
             disabled={processing}
             error={!!errors.phone_number}
             hint={errors.phone_number}
@@ -125,7 +122,7 @@ const CreateCompanyModal = ({ isOpen, onClose }) => {
             id="email_address"
             name="email_address"
             value={data.email_address}
-            onChange={(e) => setData('email_address', e.target.value)}
+            onChange={(e) => setData('email_address', e.target.value)} // Correct: e.target.value
             disabled={processing}
             error={!!errors.email_address}
             hint={errors.email_address}
@@ -139,11 +136,12 @@ const CreateCompanyModal = ({ isOpen, onClose }) => {
             id="address"
             name="address"
             value={data.address}
-            onChange={(value) => setData('address', value)} // Votre TextArea renvoie directement la valeur
-            rows={3} // Nombre de lignes pour le champ texte
+            // MODIFICATION ICI : Passe l'événement `e` complet au lieu de `value` directe
+            onChange={(e) => setData('address', e.target.value)}
+            rows={3}
             disabled={processing}
-            error={!!errors.address}
-            hint={errors.address}
+            errorMessage={errors.address} // Utilisez errorMessage au lieu de error
+            // hint={errors.address} // Le message d'erreur est déjà dans errorMessage
           />
         </div>
 
@@ -153,22 +151,22 @@ const CreateCompanyModal = ({ isOpen, onClose }) => {
             type="button"
             className="text-red-500 background-transparent font-bold uppercase px-6 py-2 text-sm outline-none focus:outline-none mr-1 mb-1 ease-linear transition-all duration-150"
             onClick={onClose}
-            disabled={processing} // Désactive le bouton d'annulation pendant la soumission
+            disabled={processing}
           >
             Cancel
           </button>
           <button
             type="submit"
             className="bg-blue-500 text-white active:bg-brand-700 font-bold uppercase text-sm px-6 py-3 rounded shadow hover:shadow-lg outline-none focus:outline-none ease-linear transition-all duration-150"
-            disabled={processing} // Désactive le bouton de soumission pendant la soumission
+            disabled={processing}
           >
-            {processing ? ( // Affiche le spinner et le texte "Submitting..." pendant la soumission
+            {processing ? (
               <>
                 <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
                 Submitting...
               </>
             ) : (
-              'Create' // Texte par défaut du bouton
+              'Create'
             )}
           </button>
         </div>

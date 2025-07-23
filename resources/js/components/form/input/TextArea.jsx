@@ -1,18 +1,21 @@
 import React from "react";
 
 const TextArea = ({
-  placeholder = "Enter your message", // Default placeholder
-  rows = 3, // Default number of rows
-  value = "", // Default value
-  onChange, // Callback for changes
-  className = "", // Additional custom styles
-  disabled = false, // Disabled state
-  error = false, // Error state
-  hint = "", // Default hint text
+  placeholder = "Enter your message",
+  rows = 3,
+  value = "",
+  onChange, // Cette prop doit recevoir l'événement complet
+  className = "",
+  disabled = false,
+  errorMessage = "",
+  hint = "",
 }) => {
+  const hasError = !!errorMessage;
+
+  // Modifiez cette fonction pour passer l'événement `e` directement au parent
   const handleChange = (e) => {
     if (onChange) {
-      onChange(e.target.value);
+      onChange(e); // <-- Passez l'événement `e` complet au parent
     }
   };
 
@@ -20,10 +23,10 @@ const TextArea = ({
 
   if (disabled) {
     textareaClasses += ` bg-gray-100 opacity-50 text-gray-500 border-gray-300 cursor-not-allowed opacity40 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700`;
-  } else if (error) {
-    textareaClasses += ` bg-transparent  border-gray-300 focus:border-error-300 focus:ring-3 focus:ring-error-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-error-800`;
+  } else if (hasError) {
+    textareaClasses += ` bg-transparent  border-red-500 focus:border-red-500 focus:ring-3 focus:ring-red-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-red-800`;
   } else {
-    textareaClasses += ` bg-transparent text-gray-900 dark:text-gray-300 text-gray-900 border-gray-300 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800`;
+    textareaClasses += ` bg-transparent text-gray-900 dark:text-gray-300 border-gray-300 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800`;
   }
 
   return (
@@ -32,16 +35,17 @@ const TextArea = ({
         placeholder={placeholder}
         rows={rows}
         value={value}
-        onChange={handleChange}
+        onChange={handleChange} // Appelle la handleChange interne
         disabled={disabled}
         className={textareaClasses}
       />
-      {hint && (
-        <p
-          className={`mt-2 text-sm ${
-            error ? "text-error-500" : "text-gray-500 dark:text-gray-400"
-          }`}
-        >
+      {hasError && (
+        <p className="mt-1 text-xs text-red-600 dark:text-red-400">
+          {errorMessage}
+        </p>
+      )}
+      {hint && !hasError && (
+        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
           {hint}
         </p>
       )}

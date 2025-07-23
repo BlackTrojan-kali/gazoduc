@@ -14,14 +14,14 @@ return new class extends Migration
         Schema::create('clients', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger("client_category_id");
-            $table->foreign("client_category_id")->on("clients")->references("id");
+            $table->foreign("client_category_id")->on("client_categories")->references("id");
             $table->string("client_type")->nullable();
             $table->string("name");
             $table->string("phone_number")->nullable();
             $table->string("email_address")->nullable();
             $table->string("address")->nullable();
             $table->string("NUI")->unique()->nullable();
-            $table->boolean("archived");
+            $table->boolean("archived")->default(0);
             $table->timestamps();
         });
     }

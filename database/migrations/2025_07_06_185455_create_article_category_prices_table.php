@@ -20,6 +20,7 @@ return new class extends Migration
             $table->foreign("article_id")->on("articles")->references("id");
             $table->foreign("client_category_id")->on("client_categories")->references("id");
             $table->decimal("price");
+            $table->decimal("consigne_price")->nullable();
             $table->timestamps();
         });
     }

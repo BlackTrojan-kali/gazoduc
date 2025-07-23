@@ -3,8 +3,10 @@
 use App\Http\Controllers\AgencyController;
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CiterneController;
 use App\Http\Controllers\CityController;
+use App\Http\Controllers\ClientController;
 use App\Http\Controllers\DepotageController;
 use App\Http\Controllers\DirectionController;
 use App\Http\Controllers\SuperAdminController;
@@ -15,6 +17,7 @@ use App\Http\Controllers\EntrepriseController;
 use App\Http\Controllers\LicenceController;
 use App\Http\Controllers\MagasinController;
 use App\Http\Controllers\MouvementController;
+use App\Http\Controllers\PriceController;
 use App\Http\Controllers\ProductionController;
 use App\Http\Controllers\receptionController;
 use App\Http\Controllers\RegionalController;
@@ -126,6 +129,21 @@ Route::middleware(isAuthenticatedMiddleware::class)->group(function(){
     //production
         Route::get("/prod-history-pdf",[ProductionController::class,"export"])->name("prod.export");
     Route::get("/prod-history",[ProductionController::class,"prod_history"])->name("prod.hist");
+    //clients routes
+    Route::get("/client-index",[ClientController::class,"index"])->name("client.index");
+    Route::post("/client-store",[ClientController::class,"store"])->name("client.store");
+    Route::put("/client-update/{idCli}",[ClientController::class,"update"])->name("client.update");
+    Route::delete("/client-delete/{idCli}",[ClientController::class,"destroy"])->name("client.destroy");
+    //clients cats
+    Route::get("/client-cat",[CategoryController::class,"index"])->name("cat.index");
+    Route::post("/client-cat-store",[CategoryController::class,"store"])->name("cat.store");
+    Route::put("/client-cat-update/{idCat}",[CategoryController::class,"update"])->name("cat.update");
+    Route::delete("/client-cat-delete/{idCat}",[CategoryController::class,"destroy"])->name("cat.delete");
+    //clients price
+    Route::get("/client-price",[PriceController::class,"index"])->name("price.index");
+    Route::post("/client-price-store",[PriceController::class,"store"])->name("price.store");
+    Route::put("/client-price-update/{idprice}",[PriceController::class,"update"])->name("price.update");
+    Route::delete("/client-price-delete/{idprice}",[PriceController::class,"delete"])->name("price.delete");
 });
 
 Route::middleware(IsAdminMiddleware::class)->group(function(){
