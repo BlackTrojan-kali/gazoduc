@@ -3,6 +3,7 @@
 use App\Http\Controllers\AgencyController;
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\bankController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CiterneController;
 use App\Http\Controllers\CityController;
@@ -93,7 +94,11 @@ Route::middleware(DirectionMiddleware::class)->group(function(){
     Route::get('/citernes/index', [CiterneController::class, 'index'])->name('citernes.index');
     Route::post('/citernes/store', [CiterneController::class, 'store'])->name('citernes.store');
     Route::put('/citernes/uptate/{idCit}', [CiterneController::class, 'update'])->name('citernes.update');
-
+    //banks routes
+    Route::get("/banks/index",[bankController::class,"index"])->name("banks.index");
+    Route::post("/banks/store",[bankController::class,"store"])->name("banks.store");
+    Route::put("/banks/update/{idBank}",[bankController::class,"update"])->name("banks.update");
+    Route::put("/banks/archive/{idBank}",[bankController::class,"archive"])->name("banks.archive");
     
 });
 //magasinier middleware

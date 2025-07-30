@@ -3,7 +3,7 @@ import { Link, usePage } from "@inertiajs/react"; // <--- IMPORT usePage HERE
 
 import { useSidebar } from "../../context/SidebarContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronDown, faDashboard, faDotCircle, faDriversLicense, faGlobe,  faUser,  } from "@fortawesome/free-solid-svg-icons";
+import { faChevronDown, faCoins, faDashboard, faDotCircle, faDriversLicense, faGlobe,  faUser,  } from "@fortawesome/free-solid-svg-icons";
 
 
 const navItems = [
@@ -17,10 +17,10 @@ const navItems = [
     ],
   },
   {
-    icon:  <FontAwesomeIcon icon={faGlobe} />,
-    name: "Regions",
+    icon:  <FontAwesomeIcon icon={faCoins} />,
+    name: "Banks",
       subItems: [
-      { name: "regions", path: "/regions", pro: false },
+      { name: "banks", path: "/banks/index", pro: false },
       { name: "villes", path: "/cities", pro: false },
     ],
   },

@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('banks', function (Blueprint $table) {
             $table->id();
             $table->string("name");
-            $table->string("account_number");
+            $table->string("account_number")->nullable();
             $table->boolean("archived")->default(false);
             $table->timestamps();
         });
