@@ -23,7 +23,7 @@ return new class extends Migration
             $table->string("currency");
             $table->string("invoice_type");
             $table->string("status");
-            $table->boolean("archived");
+            $table->boolean("archived")->default(false);
             $table->timestamps();
         });
     }

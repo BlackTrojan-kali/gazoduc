@@ -8,6 +8,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CiterneController;
 use App\Http\Controllers\CityController;
 use App\Http\Controllers\ClientController;
+use App\Http\Controllers\CommercialController;
 use App\Http\Controllers\DepotageController;
 use App\Http\Controllers\DirectionController;
 use App\Http\Controllers\SuperAdminController;
@@ -15,6 +16,7 @@ use App\Http\Middleware\SuperAdminMiddleWare;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\EntrepriseController;
+use App\Http\Controllers\FactureController;
 use App\Http\Controllers\LicenceController;
 use App\Http\Controllers\MagasinController;
 use App\Http\Controllers\MouvementController;
@@ -27,6 +29,7 @@ use App\Http\Controllers\ReleveController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\SubController;
 use App\Http\Controllers\UserController;
+use App\Http\Middleware\CommercialMiddleware;
 use App\Http\Middleware\DirectionMiddleware;
 use App\Http\Middleware\IsAdminMiddleware;
 use App\Http\Middleware\isAuthenticatedMiddleware;
@@ -149,8 +152,15 @@ Route::middleware(isAuthenticatedMiddleware::class)->group(function(){
     Route::post("/client-price-store",[PriceController::class,"store"])->name("price.store");
     Route::put("/client-price-update/{idprice}",[PriceController::class,"update"])->name("price.update");
     Route::delete("/client-price-delete/{idprice}",[PriceController::class,"delete"])->name("price.delete");
+    //invoice route
+    Route::get('/factures/{facture}/print', [FactureController::class, 'printFacture'])->name('factures.print');
 });
-
+Route::middleware(CommercialMiddleware::class)->group(function(){
+    //commercial routes
+    Route::get("/commercial-page-index",[CommercialController::class,"index"])->name("compage.index");
+    Route::get("/commercial-page-sales",[CommercialController::class,"sales"])->name("compage.sales");
+    Route::post("/commercial-page-sales-store",[CommercialController::class,"store"])->name("compage.store");
+});
 Route::middleware(IsAdminMiddleware::class)->group(function(){
    //regional routes
     Route::get("/regional",[UserController::class,"index_regional"])->name("regional");

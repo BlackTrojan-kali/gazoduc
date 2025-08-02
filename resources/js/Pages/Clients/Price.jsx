@@ -133,7 +133,7 @@ const Price = ({ prices, clientCategories, articles, agencies }) => { // Props n
                         </p>
                       </TableCell>
                       <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                        {price.client_category ? price.client_category.name : 'N/A'}
+                        {price.category ? price.category.name : 'N/A'}
                       </TableCell>
                       <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
                         {price.agency ? price.agency.name : 'N/A'}

@@ -20,6 +20,7 @@ class PriceController extends Controller
         $agencies = [];
         if(Auth::user()->role->name != "direction"){
         $prices= ArticleCategoryPrice::with("article","agency","category")->where("agency_id",Auth::user()->agency_id)->paginate(15);
+
         $clientCategories = ClientCategory::get();
         $articles = Article::where("type","!=","matiere_premiere")->get();
         $agencies = Agency::where("id",Auth::user()->agency_id)->get();
