@@ -5,8 +5,9 @@ import { faCube, faTrash, faFileExport, faFilter } from '@fortawesome/free-solid
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '../components/ui/table';
 import Swal from 'sweetalert2';
 import Button from '../components/ui/button/Button';
-import Input from '../components/form/input/InputField'; // Assurez-vous que c'est le bon chemin pour votre InputField
-import MovementHistoryPDFExcelModal from '../components/Modals/MovHistModal'; // Assurez-vous que c'est le bon chemin pour votre modale
+import Input from '../components/form/input/InputField';
+import MovementHistoryPDFExcelModal from '../components/Modals/MovHistModal';
+import Select from 'react-select'; // Import du composant Select
 
 // Layouts - assurez-vous que les chemins sont corrects
 import MagLayout from '../layout/MagLayout/MagLayout';
@@ -21,40 +22,36 @@ const PageContent = ({ movements, articles, agencies, services }) => {
   const closePDFExcelModal = () => setIsPDFExcelModalOpen(false);
 
   // --- États pour les filtres frontend ---
-  // Initialisez filterMovementType avec une chaîne vide pour "Tous"
   const [filterMovementType, setFilterMovementType] = useState('');
-  const [filterArticleName, setFilterArticleName] = useState('');
+  const [filterArticle, setFilterArticle] = useState(null);
   const [filterQualification, setFilterQualification] = useState('');
-  const [filterAgencyId, setFilterAgencyId] = useState('');
+  // CHANGEMENT : Remplacer l'ID de l'agence par un objet pour le Select
+  const [filterAgency, setFilterAgency] = useState(null);
 
   // --- Filtrage des mouvements selon les filtres (optimisé avec useMemo) ---
   const filteredMovements = useMemo(() => {
-    // La source de données pour le filtrage est movements.data (la page actuelle de mouvements reçue de Laravel)
-    // C'est important car 'movements' est un objet de pagination Inertia, et les données sont dans 'data'.
     if (!movements || !movements.data) {
-      return []; // Retourne un tableau vide si les données ne sont pas encore disponibles
+      return [];
     }
 
     return movements.data.filter(movement => {
       // 1. Filtrer par type de mouvement
       const matchesType = filterMovementType === '' || movement.movement_type === filterMovementType;
 
-      // 2. Filtrer par nom d'article
-      const matchesArticleName = filterArticleName === '' ||
-        (movement.article && movement.article.name.toLowerCase().includes(filterArticleName.toLowerCase()));
+      // 2. Filtrer par article
+      const matchesArticle = !filterArticle || (movement.article && movement.article.id === parseInt(filterArticle.value));
 
       // 3. Filtrer par qualification
-      // Assurez-vous que movement.qualification existe avant d'appeler .toLowerCase()
       const matchesQualification = filterQualification === '' ||
         (movement.qualification && movement.qualification.toLowerCase() === filterQualification.toLowerCase());
 
       // 4. Filtrer par agence
-      // Convertir agency_id en chaîne pour une comparaison stricte pour s'assurer que '1' (string) == 1 (number)
-      const matchesAgency = filterAgencyId === '' || String(movement.agency_id) === String(filterAgencyId);
+      // CHANGEMENT : Utiliser l'ID de l'agence du Select
+      const matchesAgency = !filterAgency || String(movement.agency_id) === filterAgency.value;
 
-      return matchesType && matchesArticleName && matchesQualification && matchesAgency;
+      return matchesType && matchesArticle && matchesQualification && matchesAgency;
     });
-  }, [movements.data, filterMovementType, filterArticleName, filterQualification, filterAgencyId]); // Dépendances pour useMemo
+  }, [movements.data, filterMovementType, filterArticle, filterQualification, filterAgency]);
 
   // --- useForm d'Inertia pour la suppression ---
   const { delete: inertiaDelete, processing } = useForm();
@@ -80,8 +77,6 @@ const PageContent = ({ movements, articles, agencies, services }) => {
               'Le mouvement a été supprimé avec succès et le stock ajusté.',
               'success'
             );
-            // Inertia rafraîchira automatiquement les props 'movements' après une suppression réussie,
-            // ce qui re-déclenchera le filtrage si nécessaire.
           },
           onError: (errors) => {
             console.error('Erreur de suppression:', errors);
@@ -96,10 +91,64 @@ const PageContent = ({ movements, articles, agencies, services }) => {
     });
   };
 
+  // Options pour le sélecteur d'articles
+  const articleOptions = Array.isArray(articles)
+    ? articles.map(article => ({ value: String(article.id), label: article.name }))
+    : [];
+
+  // Options pour le sélecteur d'agences
+  const agencyOptions = Array.isArray(agencies)
+    ? agencies.map(agency => ({ value: String(agency.id), label: agency.name }))
+    : [];
+
+  // Définition des variables CSS pour les couleurs en fonction du thème
+  const colors = {
+    '--text-color': 'rgb(31 41 55)',
+    '--placeholder-color': 'rgb(107 114 128)',
+    '--border-color': 'rgb(209 213 219)',
+    '--bg-menu': 'rgb(255 255 255)',
+    '--bg-option-hover': 'rgb(243 244 246)',
+  };
+  if (document.documentElement.classList.contains('dark')) {
+    colors['--text-color'] = 'rgb(249 250 251 / 0.9)';
+    colors['--placeholder-color'] = 'rgb(156 163 175)';
+    colors['--border-color'] = 'rgb(75 85 99)';
+    colors['--bg-menu'] = 'rgb(31 41 55)';
+    colors['--bg-option-hover'] = 'rgb(55 65 81)';
+  }
+
+  // Styles personnalisés pour react-select, utilisant les variables CSS
+  const selectStyles = {
+    control: (baseStyles, state) => ({
+      ...baseStyles,
+      height: '44px',
+      minHeight: '44px',
+      borderColor: state.isFocused ? '#3B82F6' : 'var(--border-color)',
+      backgroundColor: 'transparent',
+      boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
+      '&:hover': {
+        borderColor: state.isFocused ? '#3B82F6' : '#9CA3AF',
+      },
+    }),
+    singleValue: (baseStyles) => ({ ...baseStyles, color: 'var(--text-color)' }),
+    placeholder: (baseStyles) => ({ ...baseStyles, color: 'var(--placeholder-color)' }),
+    input: (baseStyles) => ({ ...baseStyles, color: 'var(--text-color)' }),
+    menu: (baseStyles) => ({ ...baseStyles, backgroundColor: 'var(--bg-menu)', zIndex: 9999 }),
+    option: (baseStyles, state) => ({
+      ...baseStyles,
+      backgroundColor: state.isSelected ? '#2563EB' : state.isFocused ? 'var(--bg-option-hover)' : 'var(--bg-menu)',
+      color: state.isSelected ? 'white' : 'var(--text-color)',
+      '&:hover': { backgroundColor: 'var(--bg-option-hover)', color: 'var(--text-color)' },
+    }),
+    indicatorSeparator: (baseStyles) => ({ ...baseStyles, backgroundColor: 'var(--border-color)' }),
+    dropdownIndicator: (baseStyles) => ({ ...baseStyles, color: 'var(--placeholder-color)' }),
+    clearIndicator: (baseStyles) => ({ ...baseStyles, color: 'var(--placeholder-color)', '&:hover': { color: '#EF4444' } }),
+  };
+
   return (
     <>
       <Head title="Mouvements" />
-      <div className="p-6">
+      <div className="p-6" style={colors}>
         <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
           <div className="flex flex-col gap-2 mb-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -109,7 +158,6 @@ const PageContent = ({ movements, articles, agencies, services }) => {
               </h3>
             </div>
             <div className="flex items-center gap-3">
-              {/* Bouton d'exportation */}
               <Button
                 onClick={openPDFExcelModal}
                 variant="secondary"
@@ -121,7 +169,6 @@ const PageContent = ({ movements, articles, agencies, services }) => {
             </div>
           </div>
 
-          {/* --- Zone de filtrage --- */}
           <div className="mb-6 p-4 border border-gray-200 rounded-lg dark:border-gray-700 dark:bg-white/[0.02]">
             <h4 className="text-md font-semibold text-gray-700 dark:text-white/80 mb-3">
               <FontAwesomeIcon icon={faFilter} className="mr-2 text-blue-500" />
@@ -145,15 +192,22 @@ const PageContent = ({ movements, articles, agencies, services }) => {
                 </select>
               </div>
 
-              {/* Filtre par nom d'article */}
-              <Input
-                id="filterArticleName"
-                type="text"
-                label="Nom de l'Article"
-                value={filterArticleName}
-                onChange={(e) => setFilterArticleName(e.target.value)}
-                placeholder="Rechercher par article..."
-              />
+              {/* Filtre par nom d'article (maintenant avec react-select) */}
+              <div>
+                <label htmlFor="filterArticle" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Article
+                </label>
+                <Select
+                  id="filterArticle"
+                  options={articleOptions}
+                  value={filterArticle}
+                  onChange={setFilterArticle}
+                  isClearable={true}
+                  placeholder="Rechercher par article..."
+                  classNamePrefix="react-select"
+                  styles={selectStyles}
+                />
+              </div>
 
               {/* Filtre par qualification */}
               <div>
@@ -174,28 +228,24 @@ const PageContent = ({ movements, articles, agencies, services }) => {
                 </select>
               </div>
 
-              {/* Filtre par agence */}
+              {/* Filtre par agence (maintenant avec react-select) */}
               <div>
-                <label htmlFor="filterAgencyId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label htmlFor="filterAgency" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Agence
                 </label>
-                <select
-                  id="filterAgencyId"
-                  className="h-11 w-full rounded-lg border px-4 py-2.5 text-sm shadow-theme-xs border-gray-300 dark:border-gray-700 bg-transparent placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                  value={filterAgencyId}
-                  onChange={(e) => setFilterAgencyId(e.target.value)}
-                >
-                  <option value="">Toutes les agences</option>
-                  {agencies && agencies.map(agency => (
-                    <option key={agency.id} value={String(agency.id)}>
-                      {agency.name}
-                    </option>
-                  ))}
-                </select>
+                <Select
+                  id="filterAgency"
+                  options={agencyOptions}
+                  value={filterAgency}
+                  onChange={setFilterAgency}
+                  isClearable={true}
+                  placeholder="Toutes les agences"
+                  classNamePrefix="react-select"
+                  styles={selectStyles}
+                />
               </div>
             </div>
           </div>
-          {/* --- Fin zone de filtrage --- */}
 
           <div className="max-w-full overflow-x-auto">
             <Table>
@@ -249,7 +299,6 @@ const PageContent = ({ movements, articles, agencies, services }) => {
               </TableBody>
             </Table>
 
-            {/* --- CONTRÔLES DE PAGINATION D'INERTIA (s'appliquent aux données brutes de la page) --- */}
             {movements.links && movements.links.length > 3 && (
               <nav className="flex justify-end mt-4">
                 <div className="flex gap-2">
@@ -264,9 +313,8 @@ const PageContent = ({ movements, articles, agencies, services }) => {
                             ? 'bg-white border-gray-300 text-gray-700 disabled:opacity-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 cursor-not-allowed'
                             : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-800 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 dark:hover:bg-white/[0.03] dark:hover:text-gray-200'
                         }`}
-                      preserveState // Garde l'état des filtres frontend quand vous changez de page
+                      preserveState
                       preserveScroll
-                      // 'only' pour re-requérir seulement les props pertinentes du backend
                       only={['movements', 'articles', 'agencies', 'services']}
                       onClick={(e) => {
                         if (!link.url) e.preventDefault();
@@ -277,12 +325,10 @@ const PageContent = ({ movements, articles, agencies, services }) => {
                 </div>
               </nav>
             )}
-            {/* --------------------------------------------------------------------------------- */}
           </div>
         </div>
       </div>
 
-      {/* La modale de génération de PDF/Excel */}
       <MovementHistoryPDFExcelModal
         isOpen={isPDFExcelModalOpen}
         onClose={closePDFExcelModal}
@@ -297,9 +343,8 @@ const PageContent = ({ movements, articles, agencies, services }) => {
 // --- Composant principal Entree: Gère le layout en fonction du rôle de l'utilisateur ---
 const Entree = ({ movements, articles, agencies, services }) => {
     const { auth } = usePage().props;
-    const userRole = auth.user.role; // Accéder au nom du rôle
+    const userRole = auth.user.role;
 
-    // Rendu conditionnel du layout basé sur le rôle de l'utilisateur
     if (userRole === "production") {
         return (
             <ProdLayout>
@@ -314,16 +359,15 @@ const Entree = ({ movements, articles, agencies, services }) => {
             </MagLayout>
         );
     }
-    if (userRole === "controleur" ) { // Ajout de 'direction' ici
+    if (userRole === "controleur" || userRole === "direction") {
        return (
           <RegLayout>
             <PageContent movements={movements} articles={articles} agencies={agencies} services={services} />
           </RegLayout>
         );
     }
-    // Fallback pour les rôles non définis ou si auth.user.role n'est pas ce qui est attendu
     return (
-        <MagLayout> {/* Ou un layout par défaut si aucun rôle ne correspond */}
+        <MagLayout>
             <PageContent movements={movements} articles={articles} agencies={agencies} services={services} />
         </MagLayout>
     );

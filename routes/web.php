@@ -20,6 +20,7 @@ use App\Http\Controllers\FactureController;
 use App\Http\Controllers\LicenceController;
 use App\Http\Controllers\MagasinController;
 use App\Http\Controllers\MouvementController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PriceController;
 use App\Http\Controllers\ProductionController;
 use App\Http\Controllers\receptionController;
@@ -154,12 +155,21 @@ Route::middleware(isAuthenticatedMiddleware::class)->group(function(){
     Route::delete("/client-price-delete/{idprice}",[PriceController::class,"delete"])->name("price.delete");
     //invoice route
     Route::get('/factures/{facture}/print', [FactureController::class, 'printFacture'])->name('factures.print');
+    Route::get('/sales/export-pdf', [FactureController::class, 'exportPdf'])->name('sales.export.pdf');
+    Route::get('/sales/items', [FactureController::class, 'sales'])->name('sales.items');
+    Route::get('/facture-items/export-item-pdf', [FactureController::class, 'exportItemPdf'])->name('facture-items.export.pdf');
+    Route::delete('/factures/delete/{idFac}', [FactureController::class, 'delete'])->name('factures.delete');
+    //payment routes
+    Route::get("/payment-index",[PaymentController::class,"index"])->name("payment.index");
 });
 Route::middleware(CommercialMiddleware::class)->group(function(){
     //commercial routes
     Route::get("/commercial-page-index",[CommercialController::class,"index"])->name("compage.index");
     Route::get("/commercial-page-sales",[CommercialController::class,"sales"])->name("compage.sales");
     Route::post("/commercial-page-sales-store",[CommercialController::class,"store"])->name("compage.store");
+    //payment routes
+    Route::post("/payment-store",[PaymentController::class,"store"])->name("payments.store");
+
 });
 Route::middleware(IsAdminMiddleware::class)->group(function(){
    //regional routes

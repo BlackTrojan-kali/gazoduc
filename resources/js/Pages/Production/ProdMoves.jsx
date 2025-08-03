@@ -4,23 +4,18 @@ import ProdLayout from '../../layout/ProdLayout/ProdLayout';
 import InputField from '../../components/form/input/InputField';
 import Button from '../../components/ui/button/Button';
 import Select from 'react-select';
-// --- DÉBUT DE LA CORRECTION ---
-// Import du composant modal d'exportation spécifique aux productions
-import ExportProductionModal from '../../components/Modals/ProdPdfModal'; // <-- Assurez-vous que le chemin est correct
-// --- FIN DE LA CORRECTION ---
+import ExportProductionModal from '../../components/Modals/ProdPdfModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faFilter, faTimes, faCalendarAlt, faSearch, faChevronLeft, faChevronRight, faTrashAlt, faSpinner, faFileExport } from '@fortawesome/free-solid-svg-icons'; // faPlus retiré, faFileExport maintenu
+import { faFilter, faTimes, faCalendarAlt, faSearch, faChevronLeft, faChevronRight, faTrashAlt, faSpinner, faFileExport } from '@fortawesome/free-solid-svg-icons';
 import Swal from 'sweetalert2';
 import RegLayout from '../../layout/RegLayout/RegLayout';
 
-// NOTE : Pour cette modal, la prop 'services' n'est pas nécessaire si elle ne filtre que par les données de production.
-const PageContent = ({ prodMoves, agencies, articles, citernes }) => { // 'services' retiré des props ici
+const PageContent = ({ prodMoves, agencies, articles, citernes }) => {
   const { url } = usePage();
   const { delete: inertiaDelete, processing } = useForm();
 
   const initialMoves = prodMoves.data;
 
-  // États des filtres du tableau (pas ceux de la modal d'exportation)
   const [filteredMoves, setFilteredMoves] = useState(initialMoves);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAgency, setSelectedAgency] = useState(null);
@@ -29,10 +24,8 @@ const PageContent = ({ prodMoves, agencies, articles, citernes }) => { // 'servi
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  // État du modal d'exportation (pour contrôler son affichage)
-  const [showExportModal, setShowExportModal] = useState(false); // Bien nommé pour la clarté
+  const [showExportModal, setShowExportModal] = useState(false);
 
-  // Options pour les sélecteurs de filtres du tableau (elles sont aussi passées au modal d'exportation)
   const agencyOptions = Array.isArray(agencies)
     ? agencies.map(agency => ({ value: String(agency.id), label: agency.name }))
     : [];
@@ -43,7 +36,6 @@ const PageContent = ({ prodMoves, agencies, articles, citernes }) => { // 'servi
     ? citernes.map(citerne => ({ value: String(citerne.id), label: citerne.name }))
     : [];
 
-  // Fonction pour appliquer les filtres du tableau (locale à cette page)
   const applyFilters = () => {
     let tempMoves = initialMoves;
 
@@ -81,7 +73,6 @@ const PageContent = ({ prodMoves, agencies, articles, citernes }) => { // 'servi
     setFilteredMoves(tempMoves);
   };
 
-  // Réinitialiser les filtres du tableau
   const resetFilters = () => {
     setSearchTerm('');
     setSelectedAgency(null);
@@ -97,32 +88,50 @@ const PageContent = ({ prodMoves, agencies, articles, citernes }) => { // 'servi
     applyFilters();
   }, [searchTerm, selectedAgency, selectedArticle, selectedCiterne, startDate, endDate, prodMoves]);
 
-  // Styles personnalisés pour react-select (communs aux deux, mais définis ici)
+  // Définition des variables CSS pour les couleurs en fonction du thème
+  const colors = {
+    '--text-color': 'rgb(31 41 55)',
+    '--placeholder-color': 'rgb(107 114 128)',
+    '--border-color': 'rgb(209 213 219)',
+    '--bg-menu': 'rgb(255 255 255)',
+    '--bg-option-hover': 'rgb(243 244 246)',
+  };
+  if (document.documentElement.classList.contains('dark')) {
+    colors['--text-color'] = 'rgb(249 250 251 / 0.9)';
+    colors['--placeholder-color'] = 'rgb(156 163 175)';
+    colors['--border-color'] = 'rgb(75 85 99)';
+    colors['--bg-menu'] = 'rgb(31 41 55)';
+    colors['--bg-option-hover'] = 'rgb(55 65 81)';
+  }
+
+  // Styles personnalisés pour react-select, utilisant les variables CSS
   const selectStyles = {
     control: (baseStyles, state) => ({
       ...baseStyles,
       height: '44px',
       minHeight: '44px',
-      borderColor: state.isFocused ? '#3B82F6' : '#D1D5DB',
+      borderColor: state.isFocused ? '#3B82F6' : 'var(--border-color)',
       backgroundColor: 'transparent',
       boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
       '&:hover': {
         borderColor: state.isFocused ? '#3B82F6' : '#9CA3AF',
       },
     }),
-    singleValue: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
-    placeholder: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.3)' }),
-    input: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
-    menu: (baseStyles) => ({ ...baseStyles, backgroundColor: '#1F2937', zIndex: 9999 }),
+    singleValue: (baseStyles) => ({ ...baseStyles, color: 'var(--text-color)' }),
+    placeholder: (baseStyles) => ({ ...baseStyles, color: 'var(--placeholder-color)' }),
+    input: (baseStyles) => ({ ...baseStyles, color: 'var(--text-color)' }),
+    menu: (baseStyles) => ({ ...baseStyles, backgroundColor: 'var(--bg-menu)', zIndex: 9999 }),
     option: (baseStyles, state) => ({
       ...baseStyles,
-      backgroundColor: state.isSelected ? '#2563EB' : state.isFocused ? '#374151' : '#1F2937',
-      color: state.isSelected ? 'white' : 'rgb(249 250 251 / 0.9)',
-      '&:hover': { backgroundColor: '#374151', color: 'rgb(249 250 251 / 0.9)' },
+      backgroundColor: state.isSelected ? '#2563EB' : state.isFocused ? 'var(--bg-option-hover)' : 'var(--bg-menu)',
+      color: state.isSelected ? 'white' : 'var(--text-color)',
+      '&:hover': { backgroundColor: 'var(--bg-option-hover)', color: 'var(--text-color)' },
     }),
+    indicatorSeparator: (baseStyles) => ({ ...baseStyles, backgroundColor: 'var(--border-color)' }),
+    dropdownIndicator: (baseStyles) => ({ ...baseStyles, color: 'var(--placeholder-color)' }),
+    clearIndicator: (baseStyles) => ({ ...baseStyles, color: 'var(--placeholder-color)', '&:hover': { color: '#EF4444' } }),
   };
 
-  // Fonction de suppression (inchangée)
   const handleDelete = (productionId) => {
     Swal.fire({
       title: 'Êtes-vous sûr, monsieur ?',
@@ -144,7 +153,6 @@ const PageContent = ({ prodMoves, agencies, articles, citernes }) => { // 'servi
               showConfirmButton: false,
               timer: 2000,
             });
-            // Inertia gérera le rechargement de la page avec les données à jour
           },
           onError: (errors) => {
             Swal.fire({
@@ -162,16 +170,14 @@ const PageContent = ({ prodMoves, agencies, articles, citernes }) => { // 'servi
   return (
     <>
       <Head title="Historique Productions" />
-      <div className="p-6">
-        {/* Header de la page */}
+      <div className="p-6" style={colors}>
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-xl font-bold text-gray-900 dark:text-white/90">
             Historique des Productions de Bouteilles
           </h1>
           <div className="flex gap-3">
-            {/* Bouton pour ouvrir le modal d'exportation */}
             <Button
-              onClick={() => setShowExportModal(true)} // Ouvre la modal ExportProductionModal
+              onClick={() => setShowExportModal(true)}
               variant="primary"
               className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600"
             >
@@ -180,9 +186,7 @@ const PageContent = ({ prodMoves, agencies, articles, citernes }) => { // 'servi
             </Button>
           </div>
         </div>
-        {/* Fin du Header */}
 
-        {/* Bloc des filtres du tableau */}
         <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 mb-6 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
           <div className="flex flex-col gap-4">
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90 mb-2">
@@ -281,9 +285,7 @@ const PageContent = ({ prodMoves, agencies, articles, citernes }) => { // 'servi
             </div>
           </div>
         </div>
-        {/* Fin du bloc des filtres */}
 
-        {/* Tableau des productions */}
         <div className="overflow-x-auto rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
@@ -372,7 +374,6 @@ const PageContent = ({ prodMoves, agencies, articles, citernes }) => { // 'servi
           </table>
         </div>
 
-        {/* Liens de pagination */}
         {prodMoves.links.length > 3 && (
           <div className="flex flex-wrap justify-center items-center mt-6 gap-2">
             {prodMoves.links.map((link, index) => (
@@ -402,7 +403,6 @@ const PageContent = ({ prodMoves, agencies, articles, citernes }) => { // 'servi
           </div>
         )}
 
-        {/* Informations sur la pagination (optionnel) */}
         {prodMoves.total > 0 && (
             <div className="text-center text-sm text-gray-600 dark:text-gray-400 mt-4">
                 Affichage de {prodMoves.from} à {prodMoves.to} sur {prodMoves.total} productions.
@@ -410,15 +410,12 @@ const PageContent = ({ prodMoves, agencies, articles, citernes }) => { // 'servi
         )}
       </div>
 
-      {/* Rendre le composant ExportProductionModal ici */}
       <ExportProductionModal
-        show={showExportModal} // Utilisez la prop 'show' comme défini dans ExportProductionModal
+        show={showExportModal}
         onClose={() => setShowExportModal(false)}
         agencies={agencies}
         articles={articles}
         citernes={citernes}
-        // Il n'y a pas de prop 'title' dans ExportProductionModal, elle est définie en dur
-        // Il n'y a pas de prop 'currentFilters' dans ExportProductionModal pour pré-remplir
       />
     </>
   );

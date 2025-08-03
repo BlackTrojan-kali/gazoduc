@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Agency;
 use App\Models\Article;
 use App\Models\ArticleCategoryPrice;
 use App\Models\Client;
@@ -111,11 +112,29 @@ class CommercialController extends Controller
             'totalMonthlySales' => $totalMonthlySales,
             'currentMonth' => $now->format('F Y'),]);
     }
-    public function sales(){
-        $factures = Facture::where("agency_id",Auth::user()->agency_id)->with("client","user","items.article","agency")->paginate(15);
+    public function sales()
+    {
+        // Récupération des factures filtrées par l'agence de l'utilisateur
+        $factures = Facture::where("agency_id", Auth::user()->agency_id)
+            ->with("client", "user", "items.article", "agency")
+            ->paginate(15);
+
+        // Récupération de toutes les données nécessaires
         $articles = Article::all();
         $clients = Client::with("category")->get();
-        return inertia("Commercial/ComSales",compact("factures","articles","clients"));
+
+        // Logique conditionnelle pour les agences
+        // Assumons que vous avez une méthode 'hasRole' sur votre modèle User.
+        if (Auth::user()->role->name == 'direction') {
+            $agencies = Agency::all();
+        } else {
+            // Récupère uniquement l'agence de l'utilisateur connecté
+            // La méthode 'get()' retourne une collection, ce qui est cohérent avec 'Agency::all()'.
+            $agencies = Agency::where('id', Auth::user()->agency_id)->get();
+        }
+
+        // Retourne la vue Inertia avec toutes les données
+        return inertia("Commercial/ComSales", compact("factures", "articles", "clients", "agencies"));
     }
       public function store(Request $request)
     {

@@ -13,6 +13,6 @@ class FactureItem extends Model
     }
 
     public function facture(){
-        return $this->belongsTo(Facture::class,"agency_id");
+        return $this->belongsTo(Facture::class,"facture_id");
     }
 }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Select from 'react-select'; // react-select est toujours nécessaire pour les autres dropdowns
+import Select from 'react-select';
 import InputField from '../form/input/InputField';
 import Button from '../ui/button/Button';
 import Modal from './Modal';
@@ -12,10 +12,9 @@ const ExportProductionModal = ({ show, onClose, agencies, articles, citernes }) 
   const [exportCiterne, setExportCiterne] = useState(null);
   const [exportStartDate, setExportStartDate] = useState('');
   const [exportEndDate, setExportEndDate] = useState('');
-  // Changement ici : le format est une simple chaîne de caractères
-  const [exportFormat, setExportFormat] = useState('pdf'); // PDF par défaut
+  const [exportFormat, setExportFormat] = useState('pdf');
 
-  // Options pour les sélecteurs react-select (inchangées)
+  // Options pour les sélecteurs react-select
   const agencyOptions = Array.isArray(agencies)
     ? agencies.map(agency => ({ value: String(agency.id), label: agency.name }))
     : [];
@@ -26,7 +25,7 @@ const ExportProductionModal = ({ show, onClose, agencies, articles, citernes }) 
     ? citernes.map(citerne => ({ value: String(citerne.id), label: citerne.name }))
     : [];
 
-  // Styles personnalisés pour react-select (inchangés)
+  // Styles personnalisés pour react-select pour une bonne visibilité dans les deux modes
   const selectStyles = {
     control: (baseStyles, state) => ({
       ...baseStyles,
@@ -39,9 +38,11 @@ const ExportProductionModal = ({ show, onClose, agencies, articles, citernes }) 
         borderColor: state.isFocused ? '#3B82F6' : '#9CA3AF',
       },
     }),
-    singleValue: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
-    placeholder: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.3)' }),
-    input: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
+    // Styles pour le mode clair
+    singleValue: (baseStyles) => ({ ...baseStyles, color: '#1F2937' }),
+    placeholder: (baseStyles) => ({ ...baseStyles, color: '#6B7280' }),
+    input: (baseStyles) => ({ ...baseStyles, color: '#1F2937' }),
+    // Styles pour le mode sombre
     menu: (baseStyles) => ({ ...baseStyles, backgroundColor: '#1F2937', zIndex: 9999 }),
     option: (baseStyles, state) => ({
       ...baseStyles,
@@ -68,13 +69,12 @@ const ExportProductionModal = ({ show, onClose, agencies, articles, citernes }) 
     if (exportEndDate) {
       params.append('end_date', exportEndDate);
     }
-    // Utilise la valeur directe de l'état pour le format
     params.append('format', exportFormat);
 
-    const exportUrl = route('prod.export', params.toString()); // Assurez-vous que le nom de la route est 'production.export'
+    const exportUrl = route('prod.export', params.toString());
     window.location.href = exportUrl;
 
-    onClose(); // Ferme le modal après l'exportation
+    onClose();
   };
 
   return (
@@ -160,7 +160,6 @@ const ExportProductionModal = ({ show, onClose, agencies, articles, citernes }) 
             name="exportFormat"
             value={exportFormat}
             onChange={(e) => setExportFormat(e.target.value)}
-            // Appliquez des styles Tailwind CSS directs pour correspondre au design de InputField/React-Select
             className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm
                        bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200
                        dark:border-gray-600 dark:placeholder-gray-400"

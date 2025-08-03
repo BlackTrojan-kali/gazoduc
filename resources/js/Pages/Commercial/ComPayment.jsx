@@ -1,0 +1,354 @@
+import React, { useState, useMemo } from 'react';
+import ComLayout from '../../layout/ComLayout/ComLayout';
+import { Head, Link, useForm } from '@inertiajs/react';
+import { Table, TableBody, TableCell, TableHeader, TableRow } from '../../components/ui/table';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faEye, faPrint, faTrash, faPlus, faFilter, faSpinner, faEraser } from '@fortawesome/free-solid-svg-icons';
+import Swal from 'sweetalert2';
+import Select from 'react-select';
+
+// --- Importation de la modale de versement depuis le dossier 'modals' ---
+import NewPaymentModal from '../../components/Modals/Payment/NewPaymentModal';
+
+// Styles personnalisés pour react-select, définis une seule fois
+// pour éviter la duplication de code.
+const getSelectStyles = () => {
+  const colors = {
+    '--text-color': 'rgb(31 41 55)',
+    '--placeholder-color': 'rgb(107 114 128)',
+    '--border-color': 'rgb(209 213 219)',
+    '--bg-menu': 'rgb(255 255 255)',
+    '--bg-option-hover': 'rgb(243 244 246)',
+  };
+  
+  // Ajuste les couleurs si le thème sombre est activé
+  if (document.documentElement.classList.contains('dark')) {
+    colors['--text-color'] = 'rgb(249 250 251 / 0.9)';
+    colors['--placeholder-color'] = 'rgb(156 163 175)';
+    colors['--border-color'] = 'rgb(75 85 99)';
+    colors['--bg-menu'] = 'rgb(31 41 55)';
+    colors['--bg-option-hover'] = 'rgb(55 65 81)';
+  }
+
+  return {
+    control: (baseStyles, state) => ({
+      ...baseStyles,
+      height: '44px',
+      minHeight: '44px',
+      borderColor: state.isFocused ? '#3B82F6' : colors['--border-color'],
+      backgroundColor: 'transparent',
+      boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
+      '&:hover': {
+        borderColor: state.isFocused ? '#3B82F6' : '#9CA3AF',
+      },
+    }),
+    singleValue: (baseStyles) => ({ ...baseStyles, color: colors['--text-color'] }),
+    placeholder: (baseStyles) => ({ ...baseStyles, color: colors['--placeholder-color'] }),
+    input: (baseStyles) => ({ ...baseStyles, color: colors['--text-color'] }),
+    menu: (baseStyles) => ({ ...baseStyles, backgroundColor: colors['--bg-menu'], zIndex: 9999 }),
+    option: (baseStyles, state) => ({
+      ...baseStyles,
+      backgroundColor: state.isSelected ? '#2563EB' : state.isFocused ? colors['--bg-option-hover'] : colors['--bg-menu'],
+      color: state.isSelected ? 'white' : colors['--text-color'],
+      '&:hover': { backgroundColor: colors['--bg-option-hover'], color: colors['--text-color'] },
+    }),
+    indicatorSeparator: (baseStyles) => ({ ...baseStyles, backgroundColor: colors['--border-color'] }),
+    dropdownIndicator: (baseStyles) => ({ ...baseStyles, color: colors['--placeholder-color'] }),
+    clearIndicator: (baseStyles) => ({ ...baseStyles, color: colors['--placeholder-color'], '&:hover': { color: '#EF4444' } }),
+  };
+};
+
+// Composant principal de la page
+const ComPayment = ({ payments, clients, agencies, banks, sales }) => {
+  const [isNewPaymentModalOpen, setIsNewPaymentModalOpen] = useState(false);
+  
+  // --- États pour les filtres frontend ---
+  const [filterClient, setFilterClient] = useState(null);
+  const [filterAgency, setFilterAgency] = useState(null);
+  const [filterBank, setFilterBank] = useState(null);
+  const [filterStartDate, setFilterStartDate] = useState('');
+  const [filterEndDate, setFilterEndDate] = useState('');
+
+  // --- Filtrage des paiements selon les filtres (optimisé avec useMemo) ---
+  const filteredPayments = useMemo(() => {
+    if (!payments || !payments.data) {
+      return [];
+    }
+    
+    return payments.data.filter(payment => {
+      // 1. Filtrer par client
+      const matchesClient = !filterClient || (payment.client && String(payment.client.id) === filterClient.value);
+      
+      // 2. Filtrer par agence
+      const matchesAgency = !filterAgency || (payment.agency && String(payment.agency.id) === filterAgency.value);
+
+      // 3. Filtrer par banque
+      const matchesBank = !filterBank || (payment.bank && String(payment.bank.id) === filterBank.value);
+      
+      // 4. Filtrer par période de date
+      const paymentDate = new Date(payment.created_at);
+      const start = filterStartDate ? new Date(filterStartDate) : null;
+      const end = filterEndDate ? new Date(filterEndDate) : null;
+      
+      const matchesDateRange = (!start || paymentDate >= start) && (!end || paymentDate <= end);
+      
+      return matchesClient && matchesAgency && matchesBank && matchesDateRange;
+    });
+  }, [payments.data, filterClient, filterAgency, filterBank, filterStartDate, filterEndDate]);
+
+  // --- Fonctions pour les modales ---
+  const openNewPaymentModal = () => {
+    setIsNewPaymentModalOpen(true);
+  };
+  const closeNewPaymentModal = () => {
+    setIsNewPaymentModalOpen(false);
+  };
+  
+  // --- Fonction pour réinitialiser les filtres ---
+  const handleClearFilters = () => {
+    setFilterClient(null);
+    setFilterAgency(null);
+    setFilterBank(null);
+    setFilterStartDate('');
+    setFilterEndDate('');
+  };
+
+  // Options pour les sélecteurs de filtres
+  const clientOptions = useMemo(() => 
+    Array.isArray(clients) ? clients.map(client => ({ value: String(client.id), label: client.name })) : [],
+    [clients]
+  );
+  
+  const agencyOptions = useMemo(() => 
+    Array.isArray(agencies) ? agencies.map(agency => ({ value: String(agency.id), label: agency.name })) : [],
+    [agencies]
+  );
+
+  const bankOptions = useMemo(() => 
+    Array.isArray(banks) ? banks.map(bank => ({ value: String(bank.id), label: bank.name })) : [],
+    [banks]
+  );
+
+  const selectStyles = getSelectStyles();
+  
+  return (
+    <>
+      <Head title="Liste des Versements" />
+
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Liste des Versements
+          </h1>
+          <div className="flex gap-2">
+            <button
+              onClick={openNewPaymentModal}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-blue-600 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-blue-700 dark:border-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600"
+            >
+              <FontAwesomeIcon icon={faPlus} /> Nouveau Versement
+            </button>
+          </div>
+        </div>
+        
+        <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6">
+          {/* Section de filtrage */}
+          <div className="mb-6 p-4 border border-gray-200 rounded-lg dark:border-gray-700 dark:bg-white/[0.02]">
+            <h4 className="text-md font-semibold text-gray-700 dark:text-white/80 mb-3">
+              <FontAwesomeIcon icon={faFilter} className="mr-2 text-blue-500" />
+              Filtres
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* Filtre par client */}
+              <div>
+                <label htmlFor="filterClient" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Client
+                </label>
+                <Select
+                  id="filterClient"
+                  options={clientOptions}
+                  value={filterClient}
+                  onChange={setFilterClient}
+                  isClearable={true}
+                  placeholder="Tous les clients"
+                  classNamePrefix="react-select"
+                  styles={selectStyles}
+                />
+              </div>
+
+              {/* Filtre par agence */}
+              <div>
+                <label htmlFor="filterAgency" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Agence
+                </label>
+                <Select
+                  id="filterAgency"
+                  options={agencyOptions}
+                  value={filterAgency}
+                  onChange={setFilterAgency}
+                  isClearable={true}
+                  placeholder="Toutes les agences"
+                  classNamePrefix="react-select"
+                  styles={selectStyles}
+                />
+              </div>
+
+              {/* Filtre par banque */}
+              <div>
+                <label htmlFor="filterBank" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Banque
+                </label>
+                <Select
+                  id="filterBank"
+                  options={bankOptions}
+                  value={filterBank}
+                  onChange={setFilterBank}
+                  isClearable={true}
+                  placeholder="Toutes les banques"
+                  classNamePrefix="react-select"
+                  styles={selectStyles}
+                />
+              </div>
+
+              {/* Filtre par date de début */}
+              <div>
+                <label htmlFor="filterStartDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Date de Début
+                </label>
+                <input
+                  id="filterStartDate"
+                  type="date"
+                  value={filterStartDate}
+                  onChange={(e) => setFilterStartDate(e.target.value)}
+                  className="h-11 w-full rounded-lg border px-4 py-2.5 text-sm shadow-theme-xs border-gray-300 dark:border-gray-700 bg-transparent placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                />
+              </div>
+
+              {/* Filtre par date de fin */}
+              <div>
+                <label htmlFor="filterEndDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Date de Fin
+                </label>
+                <input
+                  id="filterEndDate"
+                  type="date"
+                  value={filterEndDate}
+                  onChange={(e) => setFilterEndDate(e.target.value)}
+                  className="h-11 w-full rounded-lg border px-4 py-2.5 text-sm shadow-theme-xs border-gray-300 dark:border-gray-700 bg-transparent placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                />
+              </div>
+            </div>
+            
+            {/* Bouton pour réinitialiser les filtres */}
+            <div className="flex justify-end mt-4">
+              <button
+                onClick={handleClearFilters}
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:bg-gray-800 dark:text-white/90 dark:border-gray-700 dark:hover:bg-white/[0.03]"
+              >
+                <FontAwesomeIcon icon={faEraser} /> Réinitialiser les filtres
+              </button>
+            </div>
+          </div>
+          
+
+          <div className="max-w-full overflow-x-auto">
+            <Table>
+              <TableHeader className="border-gray-100 dark:border-gray-800 border-y">
+                <TableRow>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                    Client
+                  </TableCell>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                    Banque
+                  </TableCell>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                    Somme
+                  </TableCell>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                    Type
+                  </TableCell>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                    Note
+                  </TableCell>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                    Commentaire Somme
+                  </TableCell>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                    Agence
+                  </TableCell>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400">
+                    Actions
+                  </TableCell>
+                </TableRow>
+              </TableHeader>
+
+              <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
+                {filteredPayments && filteredPayments.length > 0 ? (
+                  filteredPayments.map((payment) => (
+                    <TableRow key={payment.id}>
+                      <TableCell className="py-3 font-medium text-gray-800 text-theme-sm dark:text-white/90">
+                        {payment.client ? payment.client.name : 'N/A'}
+                      </TableCell>
+                      <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
+                        {payment.bank ? payment.bank.name : 'N/A'}
+                      </TableCell>
+                      <TableCell className="py-3 font-semibold text-gray-800 text-theme-sm dark:text-white/90">
+                        {payment.amout}
+                      </TableCell>
+                      <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
+                        {payment.type || 'N/A'}
+                      </TableCell>
+                      <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
+                        {payment.notes || 'N/A'}
+                      </TableCell>
+                      <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
+                        {payment.amount_notes || 'N/A'}
+                      </TableCell>
+                      <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
+                        {payment.agency ? payment.agency.name : 'N/A'}
+                      </TableCell>
+                      <TableCell className="py-3 flex items-center justify-center gap-2">
+                        {/* Ajoutez les actions ici si nécessaire. Exemple :
+                        <button
+                          className="p-2 rounded-lg text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
+                          title="Voir les détails"
+                          onClick={() => handleViewDetails(payment.id)}
+                        >
+                          <FontAwesomeIcon icon={faEye} />
+                        </button> */}
+                        <button
+                          className="p-2 rounded-lg text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
+                          title="Voir les détails"
+                        >
+                          <FontAwesomeIcon icon={faEye} />
+                        </button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={8} className="py-3 text-center text-gray-500 dark:text-gray-400">
+                      Aucun versement trouvé pour les filtres appliqués, monsieur.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+            {/* Ajoutez la pagination ici si votre backend la fournit */}
+          </div>
+        </div>
+      </div>
+
+      {/* Modale Nouveau Versement */}
+      <NewPaymentModal
+        isOpen={isNewPaymentModalOpen}
+        onClose={closeNewPaymentModal}
+        clients={clients}
+        banks={banks}
+        sales={sales} // S'assurer que 'sales' est bien passé pour le filtre de la modale
+      />
+    </>
+  );
+};
+
+ComPayment.layout = page => <ComLayout children={page} />;
+export default ComPayment;

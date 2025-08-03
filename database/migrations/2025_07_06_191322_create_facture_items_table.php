@@ -14,9 +14,9 @@ return new class extends Migration
         Schema::create('facture_items', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger("facture_id");
-            $table->foreign("facture_id")->on("factures")->references("id");
+            $table->foreign("facture_id")->on("factures")->references("id")->onDelete("cascade");
             $table->unsignedBigInteger("article_id");
-            $table->foreign("article_id")->on("articles")->references("id");
+            $table->foreign("article_id")->on("articles")->references("id")->onDelete("cascade");
             $table->decimal("quantity");
             $table->decimal("unit_price");
             $table->decimal("subtotal");

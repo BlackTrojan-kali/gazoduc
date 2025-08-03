@@ -14,11 +14,13 @@ return new class extends Migration
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger("user_id");
-            $table->foreign("user_id")->on("users")->references("id");
+            $table->foreign("user_id")->on("users")->references("id")->onDelete("cascade");
             $table->unsignedBigInteger("agency_id");
-            $table->foreign("agency_id")->on("agencies")->references("id");
+            $table->foreign("agency_id")->on("agencies")->references("id")->onDelete("cascade");
             $table->unsignedBigInteger("bank_id");
-            $table->foreign("bank_id")->on("banks")->references("id");
+            $table->foreign("bank_id")->on("banks")->references("id")->onDelete("cascarde");
+            $table->unsignedBigInteger("client_id");
+            $table->foreign("client_id")->on("clients")->references("id")->onDelete("cascade");
             $table->decimal("amout"); //somme versee
             $table->string("type");//consigne,gpl,accessoire,carburant
             $table->text("notes")->nullable();

@@ -18,7 +18,7 @@ const navItems = [
     icon:  <FontAwesomeIcon icon={faCoins} />,
     name: "Banks",
       subItems: [
-      { name: "versements", path: "/banks/index", pro: false },
+      { name: "versements", path: "/payment-index", pro: false },
       { name: "associations", path: "/cities", pro: false },
     ],
   },
@@ -26,8 +26,8 @@ const navItems = [
     icon:  <FontAwesomeIcon icon={faDollar} />,
     name: "Ventes",
     subItems: [
-      { name: "Ventes", path: "/commercial-page-sales", pro: false },
-      { name: "Factures", path: "/subs", pro: false },
+      { name: "Factures", path: "/commercial-page-sales", pro: false },
+      { name: "Ventes", path: "/sales/items", pro: false },
     ],
   },
  

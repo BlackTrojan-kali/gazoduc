@@ -191,7 +191,7 @@ const Souscription = ({ subs, entreprises, licences }) => {
                         {sub.price || 'N/A'}
                       </TableCell>
                       <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                        {sub.nombre_agence || 'N/A'}
+                        {sub.entreprise.agency? sub.entreprise.agency.length: 'N/A'}
                       </TableCell>
                       <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
                         {sub.date_souscription}

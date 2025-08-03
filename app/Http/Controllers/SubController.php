@@ -15,7 +15,7 @@ class SubController extends Controller
 {
     //
     public function index(){
-        $subs = Subscription::with("entreprise","licence")->orderBy("created_at","desc")->paginate(15);
+        $subs = Subscription::with("entreprise.agency","licence")->orderBy("created_at","desc")->paginate(15);
         $licences = Licence::all();
         $entreprises = Entreprise::all();
         return Inertia("Souscription",compact("subs","licences","entreprises"));

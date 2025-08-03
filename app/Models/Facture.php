@@ -30,4 +30,10 @@ class Facture extends Model
     public function items(){
         return $this->hasMany(FactureItem::class);
     }
+    public function payments()
+{
+    return $this->belongsToMany(Payment::class, 'facture_payments')
+                ->withPivot('amount')
+                ->withTimestamps();
+}
 }

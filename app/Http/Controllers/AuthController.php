@@ -46,6 +46,7 @@ class AuthController extends Controller
                    Notification::create([
             "user_id"=>Auth::user()->id,
             "notification_type"=>"Magasin_auth",
+            "agency_id"=>Auth::user()->agency_id,
             "message"=>"magasinier ".Auth::user()->name." logged in",
             "is_read"=>false,
         ]);
@@ -55,6 +56,7 @@ class AuthController extends Controller
                    Notification::create([
             "user_id"=>Auth::user()->id,
             "notification_type"=>"Prod_auth",
+            "agency_id"=>Auth::user()->agency_id,
             "message"=>"Production ".Auth::user()->name." logged in",
             "is_read"=>false,
         ]);
@@ -64,6 +66,7 @@ class AuthController extends Controller
                    Notification::create([
             "user_id"=>Auth::user()->id,
             "notification_type"=>"reg_auth",
+            "agency_id"=>Auth::user()->agency_id,
             "message"=>"Regional ".Auth::user()->name." logged in",
             "is_read"=>false,
         ]);

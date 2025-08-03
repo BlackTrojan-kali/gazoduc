@@ -112,9 +112,51 @@ const ProductionBottleModal = ({ isOpen, onClose, title, cisterns, articles, cur
     const selectedCisternOption = cisternOptions.find(option => option.value === data.cistern_id);
     const selectedArticleOption = articleOptions.find(option => option.value === data.article_id); // NOUVEAU: pour l'article
 
+    // Définition des variables CSS pour les couleurs
+    const colors = {
+      '--text-color': 'rgb(31 41 55)', // Gris foncé pour le mode clair
+      '--placeholder-color': 'rgb(107 114 128)', // Gris moyen
+      '--border-color': 'rgb(209 213 219)',
+      '--bg-menu': 'rgb(255 255 255)',
+      '--bg-option-hover': 'rgb(243 244 246)',
+    };
+    if (document.documentElement.classList.contains('dark')) {
+      colors['--text-color'] = 'rgb(249 250 251 / 0.9)'; // Blanc cassé pour le mode sombre
+      colors['--placeholder-color'] = 'rgb(156 163 175)'; // Gris pour le placeholder
+      colors['--border-color'] = 'rgb(75 85 99)';
+      colors['--bg-menu'] = 'rgb(31 41 55)';
+      colors['--bg-option-hover'] = 'rgb(55 65 81)';
+    }
+
+    // Styles personnalisés pour react-select
+    const reactSelectStyles = {
+        control: (baseStyles, state) => ({
+            ...baseStyles,
+            height: '44px',
+            minHeight: '44px',
+            borderColor: errors.cistern_id || errors.article_id ? '#EF4444' : (state.isFocused ? '#3B82F6' : 'var(--border-color)'),
+            backgroundColor: 'transparent',
+            boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
+            '&:hover': { borderColor: state.isFocused ? '#3B82F6' : 'var(--border-color)' },
+        }),
+        singleValue: (baseStyles) => ({ ...baseStyles, color: 'var(--text-color)' }),
+        placeholder: (baseStyles) => ({ ...baseStyles, color: 'var(--placeholder-color)' }),
+        input: (baseStyles) => ({ ...baseStyles, color: 'var(--text-color)' }),
+        menu: (baseStyles) => ({ ...baseStyles, backgroundColor: 'var(--bg-menu)', zIndex: 9999 }),
+        option: (baseStyles, state) => ({
+            ...baseStyles,
+            backgroundColor: state.isSelected ? '#2563EB' : state.isFocused ? 'var(--bg-option-hover)' : 'var(--bg-menu)',
+            color: state.isSelected ? 'white' : 'var(--text-color)',
+            '&:hover': { backgroundColor: 'var(--bg-option-hover)', color: 'var(--text-color)' },
+        }),
+        indicatorSeparator: (baseStyles) => ({ ...baseStyles, backgroundColor: 'var(--border-color)' }),
+        dropdownIndicator: (baseStyles) => ({ ...baseStyles, color: 'var(--placeholder-color)' }),
+        clearIndicator: (baseStyles) => ({ ...baseStyles, color: 'var(--placeholder-color)', '&:hover': { color: '#EF4444' } }),
+    };
+
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={title}>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4" style={colors}>
                 {/* Sélecteur de Citerne avec react-select */}
                 <div className="mb-4">
                     <label htmlFor="cistern_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -130,27 +172,7 @@ const ProductionBottleModal = ({ isOpen, onClose, title, cisterns, articles, cur
                         isClearable={true}
                         isSearchable={true}
                         classNamePrefix="react-select"
-                        styles={{
-                            control: (baseStyles, state) => ({
-                                ...baseStyles,
-                                height: '44px',
-                                minHeight: '44px',
-                                borderColor: errors.cistern_id ? '#EF4444' : (state.isFocused ? '#3B82F6' : '#D1D5DB'),
-                                backgroundColor: 'transparent',
-                                boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
-                                '&:hover': { borderColor: state.isFocused ? '#3B82F6' : '#9CA3AF' },
-                            }),
-                            singleValue: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
-                            placeholder: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.3)' }),
-                            input: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
-                            menu: (baseStyles) => ({ ...baseStyles, backgroundColor: '#1F2937', zIndex: 9999 }),
-                            option: (baseStyles, state) => ({
-                                ...baseStyles,
-                                backgroundColor: state.isSelected ? '#2563EB' : state.isFocused ? '#374151' : '#1F2937',
-                                color: state.isSelected ? 'white' : 'rgb(249 250 251 / 0.9)',
-                                '&:hover': { backgroundColor: '#374151', color: 'rgb(249 250 251 / 0.9)' },
-                            }),
-                        }}
+                        styles={reactSelectStyles}
                     />
                     {errors.cistern_id && <p className="text-sm text-red-600 mt-1">{errors.cistern_id}</p>}
                 </div>
@@ -170,27 +192,7 @@ const ProductionBottleModal = ({ isOpen, onClose, title, cisterns, articles, cur
                         isClearable={true}
                         isSearchable={true}
                         classNamePrefix="react-select"
-                        styles={{
-                            control: (baseStyles, state) => ({
-                                ...baseStyles,
-                                height: '44px',
-                                minHeight: '44px',
-                                borderColor: errors.article_id ? '#EF4444' : (state.isFocused ? '#3B82F6' : '#D1D5DB'),
-                                backgroundColor: 'transparent',
-                                boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
-                                '&:hover': { borderColor: state.isFocused ? '#3B82F6' : '#9CA3AF' },
-                            }),
-                            singleValue: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
-                            placeholder: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.3)' }),
-                            input: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
-                            menu: (baseStyles) => ({ ...baseStyles, backgroundColor: '#1F2937', zIndex: 9999 }),
-                            option: (baseStyles, state) => ({
-                                ...baseStyles,
-                                backgroundColor: state.isSelected ? '#2563EB' : state.isFocused ? '#374151' : '#1F2937',
-                                color: state.isSelected ? 'white' : 'rgb(249 250 251 / 0.9)',
-                                '&:hover': { backgroundColor: '#374151', color: 'rgb(249 250 251 / 0.9)' },
-                            }),
-                        }}
+                        styles={reactSelectStyles}
                     />
                     {errors.article_id && <p className="text-sm text-red-600 mt-1">{errors.article_id}</p>}
                 </div>
