@@ -7,11 +7,9 @@ import { faFilePdf, faSpinner } from '@fortawesome/free-solid-svg-icons';
 // Importation de votre composant de modale personnalisé
 import Modal from '../Modal.jsx';
 
-const ExportPaymentsModal = ({ isOpen, onClose, clients, banks }) => {
+const ExportSalesModal = ({ isOpen, onClose, clients, agencies }) => {
   const [filterClient, setFilterClient] = useState(null);
-  const [filterBank, setFilterBank] = useState(null);
-  const [filterNotes, setFilterNotes] = useState('');
-  const [filterAmountNotes, setFilterAmountNotes] = useState('');
+  const [filterAgency, setFilterAgency] = useState(null);
   const [filterStartDate, setFilterStartDate] = useState('');
   const [filterEndDate, setFilterEndDate] = useState('');
   const [isExporting, setIsExporting] = useState(false);
@@ -37,9 +35,9 @@ const ExportPaymentsModal = ({ isOpen, onClose, clients, banks }) => {
     ? [{ value: 'all', label: 'Tous les clients' }, ...clients.map(client => ({ value: String(client.id), label: client.name }))]
     : [{ value: 'all', label: 'Tous les clients' }];
     
-  const bankOptions = Array.isArray(banks)
-    ? [{ value: 'all', label: 'Toutes les banques' }, ...banks.map(bank => ({ value: String(bank.id), label: bank.name }))]
-    : [{ value: 'all', label: 'Toutes les banques' }];
+  const agencyOptions = Array.isArray(agencies)
+    ? [{ value: 'all', label: 'Toutes les agences' }, ...agencies.map(agency => ({ value: String(agency.id), label: agency.name }))]
+    : [{ value: 'all', label: 'Toutes les agences' }];
 
   // Styles pour react-select, utilisant les variables CSS
   const selectStyles = {
@@ -73,13 +71,11 @@ const ExportPaymentsModal = ({ isOpen, onClose, clients, banks }) => {
     setIsExporting(true);
 
     const clientId = filterClient?.value === 'all' ? null : filterClient?.value;
-    const bankId = filterBank?.value === 'all' ? null : filterBank?.value;
+    const agencyId = filterAgency?.value === 'all' ? null : filterAgency?.value;
 
-    const exportUrl = route('payments.export.pdf', {
+    const exportUrl = route('sales.export.pdf', {
       client_id: clientId,
-      bank_id: bankId,
-      notes: filterNotes || null,
-      amount_notes: filterAmountNotes || null,
+      agency_id: agencyId,
       start_date: filterStartDate || null,
       end_date: filterEndDate || null,
     });
@@ -100,7 +96,7 @@ const ExportPaymentsModal = ({ isOpen, onClose, clients, banks }) => {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Exporter l'historique des versements"
+      title="Exporter l'historique des ventes"
     >
       <div className="space-y-4" style={colors}>
         {/* Filtre par client */}
@@ -120,50 +116,20 @@ const ExportPaymentsModal = ({ isOpen, onClose, clients, banks }) => {
           />
         </div>
 
-        {/* Filtre par banque */}
+        {/* Filtre par agence */}
         <div>
-          <label htmlFor="exportBank" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
-            Banque
+          <label htmlFor="exportAgency" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
+            Agence
           </label>
           <Select
-            id="exportBank"
-            options={bankOptions}
-            value={filterBank}
-            onChange={setFilterBank}
+            id="exportAgency"
+            options={agencyOptions}
+            value={filterAgency}
+            onChange={setFilterAgency}
             isClearable={true}
-            placeholder="Toutes les banques"
+            placeholder="Toutes les agences"
             classNamePrefix="react-select"
             styles={selectStyles}
-          />
-        </div>
-
-        {/* Filtre par commentaire */}
-        <div>
-          <label htmlFor="exportNotes" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
-            Commentaire
-          </label>
-          <input
-            id="exportNotes"
-            type="text"
-            value={filterNotes}
-            onChange={(e) => setFilterNotes(e.target.value)}
-            placeholder="Rechercher par commentaire"
-            className="h-11 w-full rounded-lg border px-4 py-2.5 text-sm shadow-theme-xs border-gray-300 dark:border-gray-700 bg-transparent placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-          />
-        </div>
-
-        {/* Filtre par commentaire de la somme */}
-        <div>
-          <label htmlFor="exportAmountNotes" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
-            Commentaire de la somme
-          </label>
-          <input
-            id="exportAmountNotes"
-            type="text"
-            value={filterAmountNotes}
-            onChange={(e) => setFilterAmountNotes(e.target.value)}
-            placeholder="Rechercher par commentaire de la somme"
-            className="h-11 w-full rounded-lg border px-4 py-2.5 text-sm shadow-theme-xs border-gray-300 dark:border-gray-700 bg-transparent placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
           />
         </div>
 
@@ -225,4 +191,4 @@ const ExportPaymentsModal = ({ isOpen, onClose, clients, banks }) => {
   );
 };
 
-export default ExportPaymentsModal;
+export default ExportSalesModal;

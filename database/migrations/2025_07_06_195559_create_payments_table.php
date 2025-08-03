@@ -18,7 +18,7 @@ return new class extends Migration
             $table->unsignedBigInteger("agency_id");
             $table->foreign("agency_id")->on("agencies")->references("id")->onDelete("cascade");
             $table->unsignedBigInteger("bank_id");
-            $table->foreign("bank_id")->on("banks")->references("id")->onDelete("cascarde");
+            $table->foreign("bank_id")->on("banks")->references("id")->onDelete("cascade");
             $table->unsignedBigInteger("client_id");
             $table->foreign("client_id")->on("clients")->references("id")->onDelete("cascade");
             $table->decimal("amout"); //somme versee

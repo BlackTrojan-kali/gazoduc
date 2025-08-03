@@ -33,7 +33,7 @@ class ProductionController extends Controller
        //
     public function citerne_index(){
         $stocks = Stock::where("agency_id",Auth::user()->agency_id)
-        ->where("storage_type","citerne gaz")
+        ->where("storage_type","gaz")->orWhere("storage_type","liquide")
         ->with("article","citerne")
         ->get();
         $agencies = Agency::where("id",Auth::user()->agency_id)->where("entreprise_id",Auth::user()->entreprise_id)->get();

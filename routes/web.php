@@ -161,6 +161,7 @@ Route::middleware(isAuthenticatedMiddleware::class)->group(function(){
     Route::delete('/factures/delete/{idFac}', [FactureController::class, 'delete'])->name('factures.delete');
     //payment routes
     Route::get("/payment-index",[PaymentController::class,"index"])->name("payment.index");
+    Route::get("/payment-export",[PaymentController::class,"exportPaymentsToPdf"])->name("payments.export");
 });
 Route::middleware(CommercialMiddleware::class)->group(function(){
     //commercial routes
@@ -169,7 +170,9 @@ Route::middleware(CommercialMiddleware::class)->group(function(){
     Route::post("/commercial-page-sales-store",[CommercialController::class,"store"])->name("compage.store");
     //payment routes
     Route::post("/payment-store",[PaymentController::class,"store"])->name("payments.store");
-
+    Route::post("/payment-associate/",[PaymentController::class,"associate"])->name("payments.associate");
+    Route::post('/payments/disassociate', [PaymentController::class, 'disassociate'])->name('payments.disassociate');
+    Route::delete('/payments/{payment}', [PaymentController::class, 'destroy'])->name('payments.destroy');
 });
 Route::middleware(IsAdminMiddleware::class)->group(function(){
    //regional routes

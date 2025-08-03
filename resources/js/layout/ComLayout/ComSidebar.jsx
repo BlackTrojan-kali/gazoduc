@@ -19,7 +19,6 @@ const navItems = [
     name: "Banks",
       subItems: [
       { name: "versements", path: "/payment-index", pro: false },
-      { name: "associations", path: "/cities", pro: false },
     ],
   },
   {

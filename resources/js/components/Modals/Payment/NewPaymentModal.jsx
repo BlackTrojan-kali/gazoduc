@@ -295,7 +295,8 @@ const NewPaymentModal = ({ isOpen, onClose, clients, banks, sales }) => {
         sales={selectedClientSales} // Passer uniquement les ventes du client sélectionné
         onSave={handleSalesSelected}
         processing={processing} // Passer l'état de traitement pour désactiver le bouton de soumission
-      />
+        paymentType={data.type}
+/>
     </>
   );
 };

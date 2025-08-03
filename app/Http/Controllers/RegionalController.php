@@ -12,14 +12,14 @@ class RegionalController extends Controller
 {
     //
     public function index(){
-         $stocks = Stock::where("agency_id",Auth::user()->agency_id)->where("storage_type","!=","citerne gaz")
+         $stocks = Stock::where("agency_id",Auth::user()->agency_id)->where("storage_type","!=","gaz")
         ->with("article",'agency')
         ->get();  
         return inertia("Regional/RegIndex",compact("stocks"));
     } 
     public function citerne_index(){
          $stocks = Stock::where("agency_id",Auth::user()->agency_id)
-        ->where("storage_type","citerne gaz")
+        ->where("storage_type","gaz")->orWhere("storage_type","liquide")
         ->with("article","citerne")
         ->get();
 

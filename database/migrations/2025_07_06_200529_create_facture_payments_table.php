@@ -14,9 +14,9 @@ return new class extends Migration
         Schema::create('facture_payments', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger("payment_id");
-            $table->foreign("payment_id")->on("payments")->references("id");
+            $table->foreign("payment_id")->on("payments")->references("id")->onDelete("cascade");
             $table->unsignedBigInteger("facture_id");
-            $table->foreign("facture_id")->on("factures")->references("id");
+            $table->foreign("facture_id")->on("factures")->references("id")->onDelete("cascade");
             $table->decimal("amount")->nullable();
             $table->timestamps();
         });

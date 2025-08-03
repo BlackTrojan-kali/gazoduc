@@ -3,15 +3,23 @@ import ComLayout from '../../layout/ComLayout/ComLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '../../components/ui/table';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEye, faPrint, faTrash, faPlus, faFilter, faSpinner, faEraser } from '@fortawesome/free-solid-svg-icons';
+import { faEye, faPrint, faTrash, faPlus, faFilter, faEraser, faLink, faUnlink, faFilePdf } from '@fortawesome/free-solid-svg-icons'; // <-- Ajout de faFilePdf
 import Swal from 'sweetalert2';
 import Select from 'react-select';
 
 // --- Importation de la modale de versement depuis le dossier 'modals' ---
 import NewPaymentModal from '../../components/Modals/Payment/NewPaymentModal';
 
+// --- IMPORTATION DE LA MODALE D'ASSOCIATION ---
+import AssociatePaymentModal from '../../components/Modals/Payment/AssociateModal';
+
+// --- IMPORTATION DE LA NOUVELLE MODALE DE DISSOCIATION ---
+import DisassociatePaymentModal from '../../components/Modals/Payment/DissociateModal';
+
+// --- NOUVELLE IMPORTATION : Modale d'exportation PDF ---
+import ExportPaymentPdfModal from '../../components/Modals/Payment/ExportPaymentPdfModal'; // <-- Nouvelle importation
+
 // Styles personnalisés pour react-select, définis une seule fois
-// pour éviter la duplication de code.
 const getSelectStyles = () => {
   const colors = {
     '--text-color': 'rgb(31 41 55)',
@@ -21,7 +29,6 @@ const getSelectStyles = () => {
     '--bg-option-hover': 'rgb(243 244 246)',
   };
   
-  // Ajuste les couleurs si le thème sombre est activé
   if (document.documentElement.classList.contains('dark')) {
     colors['--text-color'] = 'rgb(249 250 251 / 0.9)';
     colors['--placeholder-color'] = 'rgb(156 163 175)';
@@ -58,10 +65,19 @@ const getSelectStyles = () => {
   };
 };
 
-// Composant principal de la page
 const ComPayment = ({ payments, clients, agencies, banks, sales }) => {
+  // --- États pour les modales ---
   const [isNewPaymentModalOpen, setIsNewPaymentModalOpen] = useState(false);
+  const [isAssociateModalOpen, setIsAssociateModalOpen] = useState(false);
+  const [selectedPaymentForAssociation, setSelectedPaymentForAssociation] = useState(null);
   
+  // NOUVEAU : États pour la modale de dissociation
+  const [isDisassociateModalOpen, setIsDisassociateModalOpen] = useState(false);
+  const [selectedPaymentForDisassociation, setSelectedPaymentForDisassociation] = useState(null);
+
+  // NOUVEAU : État pour la modale d'exportation PDF
+  const [isExportPdfModalOpen, setIsExportPdfModalOpen] = useState(false); // <-- Nouvel état
+
   // --- États pour les filtres frontend ---
   const [filterClient, setFilterClient] = useState(null);
   const [filterAgency, setFilterAgency] = useState(null);
@@ -69,23 +85,21 @@ const ComPayment = ({ payments, clients, agencies, banks, sales }) => {
   const [filterStartDate, setFilterStartDate] = useState('');
   const [filterEndDate, setFilterEndDate] = useState('');
 
+  // Utilisation de useForm pour la suppression
+  const { delete: inertiaDelete } = useForm({});
+
   // --- Filtrage des paiements selon les filtres (optimisé avec useMemo) ---
   const filteredPayments = useMemo(() => {
-    if (!payments || !payments.data) {
+    // S'assurer que 'payments.data' est une liste avant de la filtrer
+    if (!payments || !Array.isArray(payments.data)) {
       return [];
     }
     
     return payments.data.filter(payment => {
-      // 1. Filtrer par client
       const matchesClient = !filterClient || (payment.client && String(payment.client.id) === filterClient.value);
-      
-      // 2. Filtrer par agence
       const matchesAgency = !filterAgency || (payment.agency && String(payment.agency.id) === filterAgency.value);
-
-      // 3. Filtrer par banque
       const matchesBank = !filterBank || (payment.bank && String(payment.bank.id) === filterBank.value);
       
-      // 4. Filtrer par période de date
       const paymentDate = new Date(payment.created_at);
       const start = filterStartDate ? new Date(filterStartDate) : null;
       const end = filterEndDate ? new Date(filterEndDate) : null;
@@ -96,15 +110,68 @@ const ComPayment = ({ payments, clients, agencies, banks, sales }) => {
     });
   }, [payments.data, filterClient, filterAgency, filterBank, filterStartDate, filterEndDate]);
 
-  // --- Fonctions pour les modales ---
-  const openNewPaymentModal = () => {
-    setIsNewPaymentModalOpen(true);
+  // --- Fonctions pour les modales et actions ---
+  const openNewPaymentModal = () => setIsNewPaymentModalOpen(true);
+  const closeNewPaymentModal = () => setIsNewPaymentModalOpen(false);
+
+  const openAssociateModal = (paymentId) => {
+    const paymentToAssociate = payments.data.find(p => p.id === paymentId);
+    setSelectedPaymentForAssociation(paymentToAssociate);
+    setIsAssociateModalOpen(true);
   };
-  const closeNewPaymentModal = () => {
-    setIsNewPaymentModalOpen(false);
+  const closeAssociateModal = () => {
+    setIsAssociateModalOpen(false);
+    setSelectedPaymentForAssociation(null);
   };
   
-  // --- Fonction pour réinitialiser les filtres ---
+  // NOUVEAU : Fonctions pour la modale de dissociation
+  const openDisassociateModal = (payment) => {
+    console.log("clicked")
+    setSelectedPaymentForDisassociation(payment);
+    setIsDisassociateModalOpen(true);
+  };
+  const closeDisassociateModal = () => {
+    setIsDisassociateModalOpen(false);
+    setSelectedPaymentForDisassociation(null);
+  };
+
+  // NOUVEAU : Fonctions pour la modale d'exportation PDF
+  const openExportPdfModal = () => setIsExportPdfModalOpen(true); // <-- Nouvelle fonction
+  const closeExportPdfModal = () => setIsExportPdfModalOpen(false); // <-- Nouvelle fonction
+
+  const handleDeletePayment = (paymentId) => {
+    Swal.fire({
+      title: 'Êtes-vous sûr, monsieur ?',
+      text: "Vous ne pourrez pas annuler cette action !",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Oui, supprimer !',
+      cancelButtonText: 'Annuler',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        inertiaDelete(route('payments.destroy', paymentId), { // Assurez-vous que cette route existe
+          onSuccess: () => {
+            Swal.fire(
+              'Supprimé !',
+              'Le versement a été supprimé avec succès, monsieur.',
+              'success'
+            );
+          },
+          onError: (errors) => {
+            console.error(errors);
+            Swal.fire(
+              'Erreur',
+              'Une erreur est survenue lors de la suppression.',
+              'error'
+            );
+          },
+        });
+      }
+    });
+  };
+  
   const handleClearFilters = () => {
     setFilterClient(null);
     setFilterAgency(null);
@@ -129,6 +196,14 @@ const ComPayment = ({ payments, clients, agencies, banks, sales }) => {
     [banks]
   );
 
+  // NOUVELLES OPTIONS : Types de versement pour le filtre PDF
+  const paymentTypeOptions = useMemo(() => [
+    { value: 'Cash', label: 'Cash' },
+    { value: 'Mobile Money', label: 'Mobile Money' },
+    { value: 'Virement bancaire', label: 'Virement bancaire' },
+    { value: 'Chèque', label: 'Chèque' },
+  ], []);
+
   const selectStyles = getSelectStyles();
   
   return (
@@ -141,6 +216,13 @@ const ComPayment = ({ payments, clients, agencies, banks, sales }) => {
             Liste des Versements
           </h1>
           <div className="flex gap-2">
+            {/* NOUVEAU BOUTON : Exporter PDF */}
+            <button
+              onClick={openExportPdfModal} // <-- Appel de la nouvelle fonction
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-red-600 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-red-700 dark:border-red-700 dark:bg-red-700 dark:hover:bg-red-600"
+            >
+              <FontAwesomeIcon icon={faFilePdf} /> Exporter PDF
+            </button>
             <button
               onClick={openNewPaymentModal}
               className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-blue-600 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-blue-700 dark:border-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600"
@@ -238,7 +320,6 @@ const ComPayment = ({ payments, clients, agencies, banks, sales }) => {
               </div>
             </div>
             
-            {/* Bouton pour réinitialiser les filtres */}
             <div className="flex justify-end mt-4">
               <button
                 onClick={handleClearFilters}
@@ -292,7 +373,7 @@ const ComPayment = ({ payments, clients, agencies, banks, sales }) => {
                         {payment.bank ? payment.bank.name : 'N/A'}
                       </TableCell>
                       <TableCell className="py-3 font-semibold text-gray-800 text-theme-sm dark:text-white/90">
-                        {payment.amout}
+                        {payment.amount}
                       </TableCell>
                       <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
                         {payment.type || 'N/A'}
@@ -307,19 +388,36 @@ const ComPayment = ({ payments, clients, agencies, banks, sales }) => {
                         {payment.agency ? payment.agency.name : 'N/A'}
                       </TableCell>
                       <TableCell className="py-3 flex items-center justify-center gap-2">
-                        {/* Ajoutez les actions ici si nécessaire. Exemple :
                         <button
                           className="p-2 rounded-lg text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
                           title="Voir les détails"
-                          onClick={() => handleViewDetails(payment.id)}
+                          onClick={() => { /* Logique pour voir les détails */ }}
                         >
                           <FontAwesomeIcon icon={faEye} />
-                        </button> */}
+                        </button>
                         <button
-                          className="p-2 rounded-lg text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
-                          title="Voir les détails"
+                          className="p-2 rounded-lg text-green-600 hover:bg-green-100 dark:hover:bg-green-900 transition-colors"
+                          title="Associer d'autres factures"
+                          onClick={() => openAssociateModal(payment.id)}
                         >
-                          <FontAwesomeIcon icon={faEye} />
+                          <FontAwesomeIcon icon={faLink} />
+                        </button>
+                        {/* NOUVEAU BOUTON : Dissocier les factures */}
+                        <button
+                          className="p-2 rounded-lg text-yellow-600 hover:bg-yellow-100 dark:hover:bg-yellow-900 transition-colors"
+                          title="Dissocier des factures"
+                          onClick={() => openDisassociateModal(payment)}
+                          // Le bouton est désactivé si aucune facture n'est associée
+                          disabled={!payment.factures || payment.factures.length === 0}
+                        >
+                          <FontAwesomeIcon icon={faUnlink} />
+                        </button>
+                        <button
+                          className="p-2 rounded-lg text-red-600 hover:bg-red-100 dark:hover:bg-red-900 transition-colors"
+                          title="Supprimer le versement"
+                          onClick={() => handleDeletePayment(payment.id)}
+                        >
+                          <FontAwesomeIcon icon={faTrash} />
                         </button>
                       </TableCell>
                     </TableRow>
@@ -333,7 +431,6 @@ const ComPayment = ({ payments, clients, agencies, banks, sales }) => {
                 )}
               </TableBody>
             </Table>
-            {/* Ajoutez la pagination ici si votre backend la fournit */}
           </div>
         </div>
       </div>
@@ -344,7 +441,32 @@ const ComPayment = ({ payments, clients, agencies, banks, sales }) => {
         onClose={closeNewPaymentModal}
         clients={clients}
         banks={banks}
-        sales={sales} // S'assurer que 'sales' est bien passé pour le filtre de la modale
+        sales={sales}
+      />
+
+      {/* Modale pour l'association de factures à un versement existant */}
+      <AssociatePaymentModal
+        isOpen={isAssociateModalOpen}
+        onClose={closeAssociateModal}
+        sales={sales}
+        selectedPayment={selectedPaymentForAssociation}
+      />
+
+      {/* NOUVEAU : Modale pour la dissociation de factures */}
+      <DisassociatePaymentModal
+        isOpen={isDisassociateModalOpen}
+        onClose={closeDisassociateModal}
+        selectedPayment={selectedPaymentForDisassociation}
+      />
+
+      {/* NOUVEAU : Modale pour l'exportation PDF */}
+      <ExportPaymentPdfModal
+        isOpen={isExportPdfModalOpen}
+        onClose={closeExportPdfModal}
+        clients={clients} // Passer la liste des clients pour le filtre
+        paymentTypes={paymentTypeOptions} // Passer les types de versement
+        agencies={agencies}
+        banks={banks}
       />
     </>
   );

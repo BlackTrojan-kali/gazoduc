@@ -1,31 +1,48 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import Modal from '../Modal.jsx'; // Assurez-vous que le chemin est correct
+import Modal from '../Modal.jsx';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner } from '@fortawesome/free-solid-svg-icons';
 import Swal from 'sweetalert2';
 
-const SalesSelectionModal = ({ isOpen, onClose, sales, onSave, processing }) => {
+/**
+ * Composant de modale pour sélectionner des factures à associer à un versement.
+ *
+ * @param {boolean} isOpen - État de l'ouverture de la modale.
+ * @param {function} onClose - Fonction pour fermer la modale.
+ * @param {array} sales - Liste complète de toutes les factures.
+ * @param {function} onSave - Fonction à appeler lors de la soumission.
+ * @param {boolean} processing - Indique si la soumission est en cours.
+ * @param {string} paymentType - Le type de versement ('sale' ou 'consignment').
+ */
+const SalesSelectionModal = ({ isOpen, onClose, sales, onSave, processing, paymentType }) => {
+  // État local pour stocker les factures sélectionnées
   const [selectedSales, setSelectedSales] = useState([]);
-  console.log(selectedSales)
-  // Utiliser useMemo pour filtrer les ventes par statut "pending"
-  // Cela garantit que le filtrage ne se refait que si la prop 'sales' change
-  const pendingSales = useMemo(() => {
-    return Array.isArray(sales) ? sales.filter(sale => sale.status === 'pending') : [];
-  }, [sales]);
 
-  // Réinitialiser les sélections quand la modale s'ouvre ou que les ventes changent
+  // Utiliser useMemo pour filtrer les ventes par statut "pending" ET par type
+  const pendingSales = useMemo(() => {
+    // S'assurer que 'sales' est un tableau et que 'paymentType' est défini
+    if (!Array.isArray(sales) || !paymentType) {
+      return [];
+    }
+    // Filtrer les factures pour qu'elles correspondent au statut 'pending' et au type de versement
+    return sales.filter(sale => sale.status === 'pending' && sale.invoice_type === paymentType);
+  }, [sales, paymentType]); // Les dépendances incluent 'paymentType'
+
+  // Réinitialiser les sélections quand la modale s'ouvre
   useEffect(() => {
     if (isOpen) {
       setSelectedSales([]);
     }
-  }, [isOpen, pendingSales]);
+  }, [isOpen]);
 
   // Gérer la sélection/désélection d'une seule facture
   const handleCheckboxChange = (sale) => {
     setSelectedSales(prevSelected => {
+      // Si la facture est déjà sélectionnée, on la retire de la liste
       if (prevSelected.some(s => s.id === sale.id)) {
         return prevSelected.filter(s => s.id !== sale.id);
       } else {
+        // Sinon, on l'ajoute à la liste
         return [...prevSelected, sale];
       }
     });
@@ -53,7 +70,7 @@ const SalesSelectionModal = ({ isOpen, onClose, sales, onSave, processing }) => 
     onSave(selectedSales);
   };
 
-  // La case "Tout sélectionner" est-elle cochée ?
+  // Vérifier si la case "Tout sélectionner" doit être cochée
   const isSelectAllChecked = selectedSales.length === pendingSales.length && pendingSales.length > 0;
   
   return (
@@ -61,13 +78,15 @@ const SalesSelectionModal = ({ isOpen, onClose, sales, onSave, processing }) => 
       isOpen={isOpen}
       onClose={onClose}
       title="Sélectionner les Factures"
-      modalWidth="max-w-3xl" // Permet de rendre la modale plus large
+      modalWidth="max-w-3xl"
     >
       <div className="space-y-4">
         <p className="text-gray-600 dark:text-gray-300">
           Veuillez sélectionner les factures en attente de paiement auxquelles ce versement doit être associé, monsieur.
-        <span className='text-red-500'>vous devez selectionner au moins une</span>
         </p>
+        <span className='text-red-500 font-semibold'>
+          Vous devez sélectionner au moins une facture.
+        </span>
 
         {pendingSales.length > 0 ? (
           <div className="max-h-60 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg">
@@ -129,7 +148,7 @@ const SalesSelectionModal = ({ isOpen, onClose, sales, onSave, processing }) => 
           </div>
         ) : (
           <p className="text-center text-gray-500 dark:text-gray-400">
-            Aucune facture en attente de paiement pour ce client.
+            Aucune facture en attente de paiement pour ce client avec ce type de versement.
           </p>
         )}
       </div>

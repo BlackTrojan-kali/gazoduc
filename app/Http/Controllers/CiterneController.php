@@ -87,7 +87,7 @@ class CiterneController extends Controller
             "current_product_id"=>"required",
             "agency_id"=>"required",
         ]);
-        $article = Article::where("id",$request->current_product_id)->first();
+        $article = Article::where("id",$request->current_product_id)->with("stock")->first();
         if(!$article){
             return back()->with("error","this article was not found");
         }else{
@@ -96,6 +96,8 @@ class CiterneController extends Controller
             $citerne =Citerne::where("id",$idCit)->first();
             $citerne->name = $request->name;
             $citerne->type = $request->type;
+            $citerne->stock->storage_type = $request->product_type;
+            $citerne->stock->save();
             $citerne->product_type = $request->product_type;
             $citerne->capacity_liter= $request->capacity_liter;
             $citerne->capacity_kg = $request->capacity_kg;
