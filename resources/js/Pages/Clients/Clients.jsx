@@ -10,9 +10,10 @@ import Button from '../../components/ui/button/Button';
 // Vous devrez créer cette modale, nommée ClientFormModal.jsx
 import ClientFormModal from "../../components/Modals/Clients/ClientModal";
 import RegLayout from '../../layout/RegLayout/RegLayout';
+import ComLayout from '../../layout/ComLayout/ComLayout';
 
 
-const ClientIndex = ({ clients, clientCategories }) => { // Ajoutez clientCategories comme prop pour le filtre/select dans la modale
+const PageContent = ({ clients, clientCategories }) => { // Ajoutez clientCategories comme prop pour le filtre/select dans la modale
   // --- États pour contrôler l'ouverture de la modale unique ---
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null); // Pour stocker le client à modifier
@@ -225,6 +226,22 @@ const ClientIndex = ({ clients, clientCategories }) => { // Ajoutez clientCatego
     </>
   );
 };
+const ClientIndex = ({clients,clientCategories})=>{
+  const {auth}= usePage().props
+  if(auth.user.role =="controleur"){
+    return (
+      <RegLayout>
+        <PageContent clients={clients} clientCategories={clientCategories}/>
+      </RegLayout>
+    )
+  }
+  if(auth.user.role == "commercial"){
+    return(
+      <ComLayout>
 
-ClientIndex.layout = page => <RegLayout children={page} />;
+        <PageContent clients={clients} clientCategories={clientCategories}/>
+      </ComLayout>
+    )
+  }
+}
 export default ClientIndex;

@@ -36,7 +36,7 @@ const othersItems= [
   { icon:  <FontAwesomeIcon icon={faUser} />,
     name: "Clients",
     subItems: [
-      { name: "Clients", path: "/regional", pro: false },
+      { name: "Clients", path: "/client-index", pro: false },
     ],
   }
 ];
