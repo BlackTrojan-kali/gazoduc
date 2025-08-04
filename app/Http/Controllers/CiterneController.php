@@ -60,7 +60,7 @@ class CiterneController extends Controller
             Stock::create([
                 "article_id"=> $article->id,
                 "agency_id"=>$request->agency_id,
-                "storage_type"=>"citerne ".$request->product_type,
+                "storage_type"=>$request->product_type,
                 "quantity"=>0,
                 "citerne_id"=>$citerne->id,
                 "entreprise_id"=>Auth::user()->entreprise_id,
