@@ -222,16 +222,17 @@ class MouvementController extends Controller
             return back()->with("error","le mouvement n'a pas ete supprime veillez reesayer");
         }
     }
- public function generateReport(Request $request)
+ 
+    public function generateReport(Request $request)
     {
-        // dd($request->all()); // Gardez ceci pour débugger si nécessaire, puis supprimez-le en production
+        // dd($request->all()); // Ligne de débogage, à commenter ou supprimer en production
 
         // 1. Validation des paramètres de la requête
         $request->validate([
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
             'agency_id' => 'nullable|exists:agencies,id',
-            'service_id' => 'nullable|exists:roles,id', // Assurez-vous que 'roles' est la bonne table et 'id' la colonne
+            'service_id' => 'nullable|exists:roles,id',
             'type_mouvement' => 'nullable|in:entree,sortie,global',
             'article_id' => 'nullable|exists:articles,id',
             'file_type' => 'required|in:pdf,excel',
@@ -241,10 +242,6 @@ class MouvementController extends Controller
         $startDate = Carbon::parse($request->input('start_date'))->startOfDay();
         $endDate = Carbon::parse($request->input('end_date'))->endOfDay();
         $agencyId = $request->input('agency_id');
-        // MODIFICATION ICI : Récupère serviceId depuis la requête, si non fourni, peut-être laisser vide ou par défaut
-        // Si l'utilisateur a un rôle spécifique pour générer un rapport le concernant,
-        // vous pouvez ajouter une logique conditionnelle.
-        // Pour l'instant, nous privilégions le filtre utilisateur.
         $serviceId = $request->input('service_id');
         $movementType = $request->input('type_mouvement');
         $articleId = $request->input('article_id');
@@ -268,7 +265,7 @@ class MouvementController extends Controller
         $query = Mouvement::query()
                           ->whereBetween("created_at", [$startDate, $endDate])
                           ->orderBy('created_at', 'asc')
-                          ->with("article", "agency", "user"); // Assurez-vous que 'sourceService' est la relation correcte dans votre modèle Mouvement vers le modèle Role/Service
+                          ->with("article", "agency", "user");
 
         // 5. Application des filtres conditionnels
         $query->when($agencyId, function ($q) use ($agencyId) {
@@ -279,26 +276,13 @@ class MouvementController extends Controller
             $q->where('article_id', $articleId);
         });
 
-        // Filtrer par le type de mouvement si ce n'est pas 'global'
         $query->when($movementType && $movementType !== 'global', function ($q) use ($movementType) {
-            $q->where('movement_type', $movementType); // Assurez-vous que le champ est 'type' dans votre table de mouvements
+            $q->where('movement_type', $movementType);
         });
 
-        // Filtrer par service (rôle) si serviceId est fourni.
-        // IMPORTANT : Vérifiez la colonne que vous utilisez pour stocker l'ID ou le nom du service/rôle.
-        // Si 'source_location' stocke le NOM du service/rôle :
         $query->when($serviceId, function ($q) use ($serviceName) {
             $q->where('source_location', $serviceName);
         });
-        // Si 'source_location' stocke l'ID du service/rôle :
-        // $query->when($serviceId, function ($q) use ($serviceId) {
-        //     $q->where('source_location', $serviceId); // Ou la colonne réelle
-        // });
-        // Si vous avez une relation directe dans le modèle Mouvement vers Role:
-        // $query->when($serviceId, function ($q) use ($serviceId) {
-        //     $q->whereHas('sourceService', fn($s) => $s->where('id', $serviceId));
-        // });
-
 
         $movements = $query->get();
 
@@ -326,11 +310,22 @@ class MouvementController extends Controller
             $pdf = Pdf::loadView($pdfView, $reportData);
             return $pdf->download($fileName . '.pdf');
         } elseif ($fileType === "excel") {
-            // APPEL DE L'EXPORT EXCEL ICI
-            return Excel::download(new MovementsExport($reportData), $fileName . '.xlsx');
+            // CORRECTION: On passe les arguments un par un, comme l'attend le constructeur
+            return Excel::download(
+                new MovementsExport(
+                    $reportData['movements'],
+                    $reportData['startDate'],
+                    $reportData['endDate'],
+                    $reportData['agencyName'],
+                    $reportData['serviceName'],
+                    $movementType, // On utilise la variable non formatée pour la logique interne de la classe
+                    $reportData['articleName']
+                ),
+                $fileName . '.xlsx'
+            );
         }
 
-        // Cas de fallback (ne devrait normalement pas être atteint grâce à la validation)
+        // Cas de fallback
         return back()->with('error', 'Type de fichier non supporté ou une erreur inattendue est survenue.');
     }
 }

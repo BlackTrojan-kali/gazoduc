@@ -132,7 +132,7 @@ class CommercialController extends Controller
             // La méthode 'get()' retourne une collection, ce qui est cohérent avec 'Agency::all()'.
             $agencies = Agency::where('id', Auth::user()->agency_id)->get();
         }
-
+ 
         // Retourne la vue Inertia avec toutes les données
         return inertia("Commercial/ComSales", compact("factures", "articles", "clients", "agencies"));
     }
@@ -224,4 +224,6 @@ class CommercialController extends Controller
             return back()->with('error' , 'Impossible d\'enregistrer la vente. ' . $e->getMessage());
         }
     }
+
+  
 }

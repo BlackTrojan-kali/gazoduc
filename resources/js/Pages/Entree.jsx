@@ -25,8 +25,8 @@ const PageContent = ({ movements, articles, agencies, services }) => {
   const [filterMovementType, setFilterMovementType] = useState('');
   const [filterArticle, setFilterArticle] = useState(null);
   const [filterQualification, setFilterQualification] = useState('');
-  // CHANGEMENT : Remplacer l'ID de l'agence par un objet pour le Select
   const [filterAgency, setFilterAgency] = useState(null);
+  const [filterService, setFilterService] = useState(null);
 
   // --- Filtrage des mouvements selon les filtres (optimisé avec useMemo) ---
   const filteredMovements = useMemo(() => {
@@ -46,12 +46,14 @@ const PageContent = ({ movements, articles, agencies, services }) => {
         (movement.qualification && movement.qualification.toLowerCase() === filterQualification.toLowerCase());
 
       // 4. Filtrer par agence
-      // CHANGEMENT : Utiliser l'ID de l'agence du Select
       const matchesAgency = !filterAgency || String(movement.agency_id) === filterAgency.value;
 
-      return matchesType && matchesArticle && matchesQualification && matchesAgency;
+      // 5. Filtrer par service (source_location)
+      const matchesService = !filterService || (movement.source_location && movement.source_location.toLowerCase() === filterService.value.toLowerCase());
+
+      return matchesType && matchesArticle && matchesQualification && matchesAgency && matchesService;
     });
-  }, [movements.data, filterMovementType, filterArticle, filterQualification, filterAgency]);
+  }, [movements.data, filterMovementType, filterArticle, filterQualification, filterAgency, filterService]);
 
   // --- useForm d'Inertia pour la suppression ---
   const { delete: inertiaDelete, processing } = useForm();
@@ -100,6 +102,13 @@ const PageContent = ({ movements, articles, agencies, services }) => {
   const agencyOptions = Array.isArray(agencies)
     ? agencies.map(agency => ({ value: String(agency.id), label: agency.name }))
     : [];
+  
+  // Options pour le sélecteur de services
+  const serviceOptions = [
+    { value: 'magasin', label: 'Magasin' },
+    { value: 'production', label: 'Production' },
+    { value: 'commercial', label: 'Commercial' },
+  ];
 
   // Définition des variables CSS pour les couleurs en fonction du thème
   const colors = {
@@ -118,6 +127,7 @@ const PageContent = ({ movements, articles, agencies, services }) => {
   }
 
   // Styles personnalisés pour react-select, utilisant les variables CSS
+  // MODIFICATION : Réduction de la taille de la police pour un meilleur ajustement.
   const selectStyles = {
     control: (baseStyles, state) => ({
       ...baseStyles,
@@ -126,18 +136,20 @@ const PageContent = ({ movements, articles, agencies, services }) => {
       borderColor: state.isFocused ? '#3B82F6' : 'var(--border-color)',
       backgroundColor: 'transparent',
       boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
+      fontSize: '0.875rem', // Taille de police réduite
       '&:hover': {
         borderColor: state.isFocused ? '#3B82F6' : '#9CA3AF',
       },
     }),
-    singleValue: (baseStyles) => ({ ...baseStyles, color: 'var(--text-color)' }),
-    placeholder: (baseStyles) => ({ ...baseStyles, color: 'var(--placeholder-color)' }),
-    input: (baseStyles) => ({ ...baseStyles, color: 'var(--text-color)' }),
+    singleValue: (baseStyles) => ({ ...baseStyles, color: 'var(--text-color)', fontSize: '0.875rem' }), // Taille de police réduite
+    placeholder: (baseStyles) => ({ ...baseStyles, color: 'var(--placeholder-color)', fontSize: '0.875rem' }), // Taille de police réduite
+    input: (baseStyles) => ({ ...baseStyles, color: 'var(--text-color)', fontSize: '0.875rem' }), // Taille de police réduite
     menu: (baseStyles) => ({ ...baseStyles, backgroundColor: 'var(--bg-menu)', zIndex: 9999 }),
     option: (baseStyles, state) => ({
       ...baseStyles,
       backgroundColor: state.isSelected ? '#2563EB' : state.isFocused ? 'var(--bg-option-hover)' : 'var(--bg-menu)',
       color: state.isSelected ? 'white' : 'var(--text-color)',
+      fontSize: '0.875rem', // Taille de police réduite
       '&:hover': { backgroundColor: 'var(--bg-option-hover)', color: 'var(--text-color)' },
     }),
     indicatorSeparator: (baseStyles) => ({ ...baseStyles, backgroundColor: 'var(--border-color)' }),
@@ -174,7 +186,7 @@ const PageContent = ({ movements, articles, agencies, services }) => {
               <FontAwesomeIcon icon={faFilter} className="mr-2 text-blue-500" />
               Filtres
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4"> 
               {/* Filtre par type de mouvement */}
               <div>
                 <label htmlFor="filterMovementType" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -240,6 +252,23 @@ const PageContent = ({ movements, articles, agencies, services }) => {
                   onChange={setFilterAgency}
                   isClearable={true}
                   placeholder="Toutes les agences"
+                  classNamePrefix="react-select"
+                  styles={selectStyles}
+                />
+              </div>
+              
+              {/* Filtre par service */}
+              <div>
+                <label htmlFor="filterService" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Service
+                </label>
+                <Select
+                  id="filterService"
+                  options={serviceOptions}
+                  value={filterService}
+                  onChange={setFilterService}
+                  isClearable={true}
+                  placeholder="Tous les services"
                   classNamePrefix="react-select"
                   styles={selectStyles}
                 />

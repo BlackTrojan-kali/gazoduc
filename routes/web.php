@@ -202,6 +202,9 @@ Route::middleware(IsAdminMiddleware::class)->group(function(){
 Route::middleware(RegionaMiddleware::class)->group(function(){
     Route::get("/controlleur-index",[RegionalController::class,"index"])->name("controlleur.index");
     Route::get("/controlleur-citerne",[RegionalController::class,"citerne_index"])->name("controlleur.citerne");
+    Route::get("/controlleur-sales",[RegionalController::class,"sales"])->name("controlleu.sales");
+    Route::get("/controlleur-payment",[RegionalController::class,"payments"])->name("controlleur.payments");
+    Route::get("/controlleur-factures",[RegionalController::class,"factures"])->name("controlleur.factures");
 });
 //production middleware
 Route::middleware(ProductionMiddleware::class)->group(function(){

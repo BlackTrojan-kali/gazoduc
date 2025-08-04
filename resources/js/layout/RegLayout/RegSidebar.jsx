@@ -45,9 +45,9 @@ const navItems = [
     icon:  <FontAwesomeIcon icon={faMoneyBill} />,
     name: "Commercial",
     subItems: [
-      { name: "Ventes", path: "/magasin-route", pro: false },
-      { name: "Versements", path: "/magasin-route", pro: false },
-      { name: "Consignes", path: "/magasin-route", pro: false },
+      { name: "Ventes", path: "/controlleur-sales", pro: false },
+      { name: "Versements", path: "/controlleur-payment", pro: false },
+      { name: "Factures", path: "/controlleur-factures", pro: false },
     ],
   },
  

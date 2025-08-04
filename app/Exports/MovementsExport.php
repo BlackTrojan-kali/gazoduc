@@ -5,8 +5,6 @@ namespace App\Exports;
 use App\Models\Mouvement;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
-// WithHeadings est retiré car les en-têtes sont construits manuellement dans collection()
-// use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
 use Maatwebsite\Excel\Concerns\WithTitle;
@@ -58,6 +56,7 @@ class MovementsExport implements FromCollection, ShouldAutoSize, WithStrictNullC
         $dataRows->push(['Filtres Appliqués:']);
         $dataRows->push(['Période: Du ' . $this->startDate . ' au ' . $this->endDate]);
         $dataRows->push(['Agence: ' . $this->agencyName]);
+        // Correction: Le service est maintenant affiché correctement en tant que filtre
         $dataRows->push(['Service: ' . $this->serviceName]);
         $dataRows->push(['Type de mouvement: ' . ($this->movementType === 'global' ? 'Entrée / Sortie' : ucfirst($this->movementType))]);
         $dataRows->push(['Article: ' . $this->articleName]);
@@ -67,19 +66,21 @@ class MovementsExport implements FromCollection, ShouldAutoSize, WithStrictNullC
         // La structure des en-têtes dépend du type de rapport (global ou simple)
         if ($this->movementType === 'global') {
             // En-têtes pour le rapport global (comme PDF.MovesGlobalPDFView)
+            // Correction: Ajout de la colonne 'Service' pour refléter le filtre
             $dataRows->push([
-                'Date', 'Article', 'Agence', 'Flux', '', 'Qualification', '', '', '', 'Stock Actuel', 'Infos.'
+                'Date', 'Article', 'Agence', 'Service', 'Flux', '', 'Qualification', '', '', '', 'Stock Actuel', 'Infos.'
             ]);
             $dataRows->push([
-                '', '', '', 'Entrée', 'Sortie', 'Perte', 'Achat', 'Repreuve', 'Consigne', '', ''
+                '', '', '', '', 'Entrée', 'Sortie', 'Perte', 'Achat', 'Repreuve', 'Consigne', '', ''
             ]);
         } else {
             // En-têtes pour le rapport simple (comme PDF.MovesPDFView)
+            // Correction: Ajout de la colonne 'Service'
             $dataRows->push([
-                'Date', 'Description', 'MVT du Stock Total', '', '', '', 'MVT de l\'Article : ' . $this->articleName, '', '', 'Enregistré par'
+                'Date', 'Description', 'Service', 'MVT du Stock Total', '', '', '', 'MVT de l\'Article : ' . $this->articleName, '', '', 'Enregistré par'
             ]);
             $dataRows->push([
-                '', '', 'Achat', 'Consigne', 'Perte', 'Repreuve', 'Entrée', 'Sortie', 'Stock', ''
+                '', '', '', 'Achat', 'Consigne', 'Perte', 'Repreuve', 'Entrée', 'Sortie', 'Stock', ''
             ]);
         }
 
@@ -103,13 +104,15 @@ class MovementsExport implements FromCollection, ShouldAutoSize, WithStrictNullC
                 $sortie = ($movement->movement_type === 'sortie') ? $movement->quantity : 0;
                 $perte = ($movement->qualification === 'perte') ? $movement->quantity : 0;
                 $achat = ($movement->qualification === 'achat') ? $movement->quantity : 0;
-                $repreuve = ($movement->qualification === 'repreuve') ? $movement->quantity : 0;
+                $repreuve = ($movement->qualification === 'reepreuve') ? $movement->quantity : 0;
                 $consigne = ($movement->qualification === 'consigne') ? $movement->quantity : 0;
 
+                // Correction: Ajout de la valeur de la colonne 'Service'
                 $row = [
                     Carbon::parse($movement->created_at)->format('d/m/Y H:i'),
                     $movement->article->name ?? 'N/A',
                     $movement->agency->name ?? 'N/A',
+                    $movement->source_location ?? 'N/A', // Nouvelle colonne pour le service
                     $entree,
                     $sortie,
                     $perte,
@@ -133,13 +136,15 @@ class MovementsExport implements FromCollection, ShouldAutoSize, WithStrictNullC
                 $achat = ($movement->qualification === 'achat') ? $movement->quantity : 0;
                 $consigne = ($movement->qualification === 'consigne') ? $movement->quantity : 0;
                 $perte = ($movement->qualification === 'perte') ? $movement->quantity : 0;
-                $repreuve = ($movement->qualification === 'repreuve') ? $movement->quantity : 0;
+                $repreuve = ($movement->qualification === 'reepreuve') ? $movement->quantity : 0;
                 $entreeArticle = ($movement->movement_type === 'entree') ? $movement->quantity : 0;
                 $sortieArticle = ($movement->movement_type === 'sortie') ? $movement->quantity : 0;
 
+                // Correction: Ajout de la valeur de la colonne 'Service'
                 $row = [
                     Carbon::parse($movement->created_at)->format('d/m/Y H:i'),
                     $movement->description ?? 'Aucune',
+                    $movement->source_location ?? 'N/A', // Nouvelle colonne pour le service
                     $achat,
                     $consigne,
                     $perte,
@@ -166,7 +171,7 @@ class MovementsExport implements FromCollection, ShouldAutoSize, WithStrictNullC
         if ($this->movementType === 'global') {
             // Ligne de total pour le rapport global
             $dataRows->push([
-                'Total :', '', '', // Simule colspan 3 pour Date, Article, Agence
+                'Total :', '', '', '', // Simule colspan 4 pour Date, Article, Agence, Service
                 $totalEntree,
                 $totalSortie,
                 $totalPerte,
@@ -179,7 +184,7 @@ class MovementsExport implements FromCollection, ShouldAutoSize, WithStrictNullC
         } else {
             // Ligne de total pour le rapport simple
             $dataRows->push([
-                'Total :', '', // Simule colspan 2 pour Date, Description
+                'Total :', '', '', // Simule colspan 3 pour Date, Description, Service
                 $totalAchat,
                 $totalConsigne,
                 $totalPerte,
