@@ -25,4 +25,7 @@ class RegionalController extends Controller
 
         return inertia("Regional/RegCiterne",compact("stocks"));
     }
+    public function sales(){
+        
+    }
 }

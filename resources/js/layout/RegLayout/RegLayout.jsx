@@ -6,7 +6,7 @@ import RegBackdrop from "./RegBackdrop";
 import RegHeader from "./RegHeader";
 const LayoutContent = ({children}) => {
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
-
+ 
   return (
     <div className="min-h-screen xl:flex">
       <div>

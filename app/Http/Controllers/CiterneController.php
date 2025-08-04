@@ -96,8 +96,10 @@ class CiterneController extends Controller
             $citerne =Citerne::where("id",$idCit)->first();
             $citerne->name = $request->name;
             $citerne->type = $request->type;
+            if($citerne->type=="fixe"){
             $citerne->stock->storage_type = $request->product_type;
             $citerne->stock->save();
+            }
             $citerne->product_type = $request->product_type;
             $citerne->capacity_liter= $request->capacity_liter;
             $citerne->capacity_kg = $request->capacity_kg;
