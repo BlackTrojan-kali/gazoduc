@@ -9,6 +9,7 @@ use App\Models\Chauffeur;
 use App\Models\Stock;
 use App\Models\Vehicule;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -190,6 +191,64 @@ class BrouteController extends Controller
             // Log::error("Erreur lors de la validation du bordereau : " . $e->getMessage());
 
             return back()->with('error', 'Une erreur est survenue lors de la validation du bordereau.'.$e->getMessage());
+        }
+    }
+
+   public function export(Request $request)
+    {
+        // 1. Récupération et validation des paramètres de filtre
+        $startDate = $request->input('startDate');
+        $endDate = $request->input('endDate');
+        $departureAgency = $request->input('departureAgency');
+        $arrivalAgency = $request->input('arrivalAgency');
+        $articleId = $request->input('article');
+        // 2. Construction de la requête de base pour les bordereaux de route
+        // Utilisation du modèle Bordereau_route et des noms de relations corrects
+        $query = Bordereau_route::with('articles', 'vehicule', 'chauffeur', 'co_chauffeur', 'departure', 'arrival');
+
+        // Application des filtres
+        // Utilisation de Carbon pour gérer les dates et heures de manière précise
+        if ($startDate) {
+            $query->whereBetween('created_at',[ Carbon::parse($startDate)->startOfDay(),Carbon::parse($endDate)->endOfDay()]);
+        }
+        if ($departureAgency) {
+            $query->where('departure_location_id', $departureAgency);
+        }
+        if ($arrivalAgency) {
+            $query->where('arrival_location_id', $arrivalAgency);
+        }
+
+        $roadbills = $query->get();
+        // 3. Vérification si un article spécifique a été sélectionné
+        if ($articleId) {
+            // Logique pour un article spécifique
+            $totalQuantity = 0;
+            $filteredRoadbills = [];
+
+            foreach ($roadbills as $roadbill) {
+                foreach ($roadbill->articles as $article) {
+                    if ($article->id == $articleId) {
+                        $filteredRoadbills[] = [
+                            'roadbill' => $roadbill,
+                            'article' => $article,
+                        ];
+                        $totalQuantity += $article->pivot->qty;
+                        // On sort de la boucle interne pour éviter de compter plusieurs fois le même bordereau
+                        // si l'article y apparaît plusieurs fois (ce qui est rare, mais par sécurité).
+                        break;
+                    }
+                }
+            }
+
+            // Génération du PDF pour un article spécifique
+            $article = Article::find($articleId); // Pour récupérer le nom de l'article
+            $pdf = Pdf::loadView('PDF.filtered_roadbills_by_article', compact('filteredRoadbills', 'article', 'totalQuantity', 'startDate', 'endDate'));
+            return $pdf->download('bordereaux-par-article.pdf');
+
+        } else {
+            // Logique pour tous les articles (bordereaux de route uniquement)
+            $pdf = Pdf::loadView('PDF.general_roadbills', compact('roadbills', 'startDate', 'endDate'));
+            return $pdf->download('bordereaux-generaux.pdf');
         }
     }
 }

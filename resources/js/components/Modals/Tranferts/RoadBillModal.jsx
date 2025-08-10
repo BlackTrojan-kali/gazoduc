@@ -1,5 +1,3 @@
-// resources/js/components/Modals/Tranferts/RoadBillModal.jsx
-
 import React, { useEffect, useState } from 'react';
 import { useForm, usePage } from '@inertiajs/react';
 import Modal from '../Modal';
@@ -149,7 +147,7 @@ const RoadbillFormModal = ({ isOpen, onClose, roadbill, routeName, vehicles, dri
     }
   };
 
-  // Styles personnalisés pour React Select (inchangés)
+  // Styles personnalisés pour React Select (mis à jour)
   const customStyles = {
     control: (provided, state) => ({
       ...provided,
@@ -199,25 +197,22 @@ const RoadbillFormModal = ({ isOpen, onClose, roadbill, routeName, vehicles, dri
       borderRadius: '0.375rem',
       boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)',
       zIndex: 9999,
-
+      
       '.dark &': {
-        backgroundColor: '#374151',
+        backgroundColor: '#1f2937', // Fond du menu en dark mode
       },
     }),
     option: (provided, state) => ({
       ...provided,
-      backgroundColor: state.isFocused ? '#3b82f6' : 'transparent',
-      backgroundColor: state.isSelected ? '#2563eb' : provided.backgroundColor,
-      color: '#1f2937',
-      '&:active': {
-        backgroundColor: '#3b82f6',
-      },
+      // Styles par défaut pour le mode clair
+      backgroundColor: state.isSelected ? '#2563eb' : (state.isFocused ? '#3b82f6' : 'transparent'),
+      color: state.isSelected || state.isFocused ? '#ffffff' : '#1f2937', // Texte noir par défaut
+
+      // Styles pour le mode sombre
       '.dark &': {
-        color: '#ffffff',
-        backgroundColor: state.isFocused ? '#3b82f6' : 'transparent',
-        backgroundColor: state.isSelected ? '#2563eb' : provided.backgroundColor,
+        backgroundColor: state.isSelected ? '#2563eb' : (state.isFocused ? '#3b82f6' : 'transparent'),
+        color: state.isSelected || state.isFocused ? '#ffffff' : '#e5e7eb', // Texte blanc par défaut
       },
-      color: state.isFocused || state.isSelected ? '#ffffff' : provided.color,
     }),
     indicatorSeparator: (provided) => ({
       ...provided,

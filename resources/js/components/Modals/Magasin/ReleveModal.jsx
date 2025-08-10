@@ -86,6 +86,7 @@ const EditCiterneStockModal = ({ isOpen, onClose, stockToEdit }) => {
             onChange={handleChange}
             error={errors.theorical_quantity}
             placeholder="Ex: 5000"
+            disabled
             required
           />
 

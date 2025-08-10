@@ -181,6 +181,7 @@ Route::middleware(isAuthenticatedMiddleware::class)->group(function(){
     Route::get('/broute/{id}/download-pdf', [BrouteController::class, 'downloadPdf'])->name('broutes.download-pdf');
     Route::delete('/roadbills/{id}', [BrouteController::class, 'destroy'])->name('broutes.destroy');
     Route::post('/roadbills/{roadbill}/validate',[BrouteController::class, 'validateRoadbill'])->name('broutes.validate');
+    Route::get('/roadbills/export',[BrouteController::class, 'export'])->name('broutes.export');
 });
 Route::middleware(CommercialMiddleware::class)->group(function(){
     //commercial routes
