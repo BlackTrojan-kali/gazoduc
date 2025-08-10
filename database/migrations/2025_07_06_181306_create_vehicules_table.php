@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string("type");
             $table->decimal("capacity_liters")->nullable();
             $table->string("owner_type")->nullable();
-            $table->boolean("archived");
+            $table->boolean("archived")->default(false);
             $table->timestamps();
         });
     }

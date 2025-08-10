@@ -1,0 +1,140 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Agency;
+use App\Models\Article;
+use App\Models\Bordereau_route;
+use App\Models\Chauffeur;
+use App\Models\Stock;
+use App\Models\Vehicule;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+
+class BrouteController extends Controller
+{
+    //
+    public function index(){
+        $vehicles = Vehicule::all();
+        $drivers = Chauffeur::all();
+        $agencies = Agency::all();
+        $articles = Article::all();
+        $broutes = Bordereau_route::paginate(15);
+        if(Auth::user()->role->name != "direction"){
+
+        $roadbills = Bordereau_route::where("departure_location_id",Auth::user()->agency_id)->orWhere("arrival_location_id",Auth::user()->agency_id)->with("departure","arrival","chauffeur","co_chauffeur","vehicule")->paginate(15);
+        }
+        return inertia("Transferts/Broute",compact("roadbills","agencies","drivers","agencies","vehicles","articles"));
+    }
+     
+    public function store(Request $request)
+    {
+        // Validation des données entrantes
+        $request->validate([
+            'vehicle_id' => ['required', 'exists:vehicules,id'],
+            'driver_id' => ['required', 'exists:chauffeurs,id'],
+            'co_driver_id' => ['nullable', 'exists:chauffeurs,id'],
+            'arrival_location_id' => ['required', 'exists:agencies,id'],
+            'departure_date' => ['required', 'date'],
+            'arrival_date' => ['nullable', 'date', 'after_or_equal:departure_date'],
+            'type' => ['required', 'string', 'in:ramassage,livraison,transit'],
+            'note' => ['nullable', 'string'],
+        ]);
+
+        // Utilisation d'une transaction pour garantir l'atomicité
+        DB::beginTransaction();
+
+        try {
+            // Création du bordereau de route
+            $roadbill = new Bordereau_route();
+            
+            // Affectation des attributs un par un
+            $roadbill->vehicule_id = $request->input('vehicle_id');
+            $roadbill->chauffeur_id = $request->input('driver_id'); // Correction du nom de l'input
+            $roadbill->co_chauffeur_id = $request->input('co_driver_id'); // Correction du nom de l'input
+            $roadbill->departure_location_id = Auth::user()->agency_id;
+            $roadbill->arrival_location_id = $request->input('arrival_location_id');
+            $roadbill->departure_date = $request->input('departure_date');
+            $roadbill->arrival_date = $request->input('arrival_date');
+            $roadbill->types = $request->input('type');
+            $roadbill->notes = $request->input('note');
+            $roadbill->status = 'en_cours'; // Statut par défaut
+            
+            $roadbill->save();
+
+            // Attachement des articles au bordereau de route et décrémentation des stocks
+            $articlesToAttach = [];
+            foreach ($request->articles as $articleData) {
+                // Recherche du stock correspondant
+                $stock = Stock::where('article_id', $articleData['article_id'])
+                    ->where('agency_id', Auth::user()->agency_id)
+                    ->where('storage_type', 'magasin')
+                    ->first();
+
+                // Vérification et décrémentation du stock
+                if (!$stock || $stock->quantity < $articleData['quantity']) {
+                    DB::rollBack();
+                    return back()->with('error','Stock insuffisant pour l\'article ' . $articleData['id']);
+                }
+
+                $stock->quantity -= $articleData['quantity'];
+                $stock->save();
+
+                $articlesToAttach[$articleData['article_id']] = ['qty' => $articleData['quantity']];
+            }
+
+            $roadbill->articles()->attach($articlesToAttach);
+
+            DB::commit();
+
+            return back()->with('success', 'Bordereau de route créé avec succès.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error','Une erreur est survenue lors de la création du bordereau : ' . $e->getMessage());
+        }
+    }
+     public function downloadPdf($id)
+    {
+        $roadbill = Bordereau_route::with(['vehicule', 'chauffeur', 'co_chauffeur', 'articles',"departure","arrival"])
+            ->findOrFail($id);
+
+        $pdf = Pdf::loadView('PDF.BroutePdfView', compact('roadbill'));
+        
+        return $pdf->download('bordereau_route_' . $roadbill->id . '.pdf');
+    }
+     
+    public function destroy($id)
+    {
+        DB::beginTransaction();
+
+        try {
+            $roadbill = Bordereau_route::with('articles')->findOrFail($id);
+
+            // Réintégrer les articles dans le stock
+            foreach ($roadbill->articles as $article) {
+                $stock = Stock::where('article_id', $article->id)
+                    ->where('agency_id', $roadbill->departure_location_id)
+                    ->where('storage_type', 'magasin')
+                    ->first();
+                
+                if ($stock) {
+                    $stock->quantity += $article->pivot->qty;
+                    $stock->save();
+                }
+            }
+
+            // Supprimer les relations et le bordereau
+            $roadbill->articles()->detach();
+            $roadbill->delete();
+
+            DB::commit();
+
+            return back()->with('success', 'Bordereau de route supprimé et stock réintégré avec succès.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Erreur lors de la suppression du bordereau : ' . $e->getMessage());
+        }
+    }
+}

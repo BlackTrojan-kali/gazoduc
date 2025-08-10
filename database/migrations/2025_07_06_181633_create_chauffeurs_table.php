@@ -13,13 +13,12 @@ return new class extends Migration
     {
         Schema::create('chauffeurs', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger("user_id")->unique();
-            $table->foreign("user_id")->on("users")->references("id")->onDelete("CASCADE");
+            $table->string("name");
             $table->string("licence_number");
             $table->date("licence_expiry")->nullable();
             $table->string("phone_number")->nullable();
             $table->string("address")->nullable();
-            $table->boolean("archived");
+            $table->boolean("archived")->default(false);
             $table->timestamps();
         });
     }

@@ -37,8 +37,8 @@ const navItems = [
     name: "Bordereaux de Route",
     subItems: [
       { name: "liste", path: "/magasin-route", pro: false },
-      { name: "chauffeurs", path: "/magasin-route", pro: false },
-      { name: "vehicules", path: "/magasin-route", pro: false },
+      { name: "chauffeurs", path: "/drivers-index", pro: false },
+      { name: "vehicules", path: "/vehicules-index", pro: false },
     ],
   },
   {

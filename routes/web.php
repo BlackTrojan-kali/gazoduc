@@ -4,6 +4,7 @@ use App\Http\Controllers\AgencyController;
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\bankController;
+use App\Http\Controllers\BrouteController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CiterneController;
 use App\Http\Controllers\CityController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\ClientController;
 use App\Http\Controllers\CommercialController;
 use App\Http\Controllers\DepotageController;
 use App\Http\Controllers\DirectionController;
+use App\Http\Controllers\DriverController;
 use App\Http\Controllers\SuperAdminController;
 use App\Http\Middleware\SuperAdminMiddleWare;
 use Illuminate\Support\Facades\Route;
@@ -30,6 +32,7 @@ use App\Http\Controllers\ReleveController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\SubController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\VehiculeController;
 use App\Http\Middleware\CommercialMiddleware;
 use App\Http\Middleware\DirectionMiddleware;
 use App\Http\Middleware\IsAdminMiddleware;
@@ -162,6 +165,21 @@ Route::middleware(isAuthenticatedMiddleware::class)->group(function(){
     //payment routes
     Route::get("/payment-index",[PaymentController::class,"index"])->name("payment.index");
     Route::get("/payment-export",[PaymentController::class,"exportPaymentsToPdf"])->name("payments.export");
+  //vehicules routes
+    Route::get("/vehicules-index",[VehiculeController::class,"index"])->name("vehicule.index");
+    Route::post("/vehicles-store",[VehiculeController::class,"store"])->name("vehicle.store");
+    Route::put("/vehicles-update/{Vid}",[VehiculeController::class,"update"])->name("vehicle.update");
+    Route::put("/vehicles-archive/{Vid}",[VehiculeController::class,"archive"])->name("vehicle.archive");
+  //drivers routes
+    Route::get("/drivers-index",[DriverController::class,"index"])->name("driver.index");
+    Route::post("/drivers-store",[DriverController::class,"store"])->name("drivers.store");
+    Route::put("/drivers-update/{Cid}",[DriverController::class,"update"])->name("drivers.update");
+    Route::put("/drivers-archive/{Cid}",[DriverController::class,"archive"])->name("drivers.archive");
+    //roadbill routes
+    Route::get("/broute-index",[BrouteController::class,"index"])->name("broutes.index");
+    Route::post("/broute-store",[BrouteController::class,"store"])->name("broutes.store");
+    Route::get('/broute/{id}/download-pdf', [BrouteController::class, 'downloadPdf'])->name('broutes.download-pdf');
+    Route::delete('/roadbills/{id}', [BrouteController::class, 'destroy'])->name('broutes.destroy');
 });
 Route::middleware(CommercialMiddleware::class)->group(function(){
     //commercial routes
@@ -196,7 +214,6 @@ Route::middleware(IsAdminMiddleware::class)->group(function(){
     Route::post("/store-commercial",[UserController::class,"store_commercial"])->name("commercial.store");
     Route::put("/update-production/{idceo}",[UserController::class,"update_commercial"])->name("commercial.update");
     Route::put("/archived-commercial/{idceo}",[UserController::class,"archive_commercial"])->name("commercial.archive");
-
   
 });
 Route::middleware(RegionaMiddleware::class)->group(function(){

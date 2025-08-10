@@ -19,14 +19,15 @@ return new class extends Migration
             $table->foreign("chauffeur_id")->on("chauffeurs")->references("id")->onDelete("cascade");
             $table->unsignedBigInteger("co_chauffeur_id")->nullable();
             $table->foreign("co_chauffeur_id")->on("chauffeurs")->references("id");
-            $table->unsignedBigInteger("agency_id")->nullable();
-            $table->foreign("agency_id")->on("agencies")->references("id");
-            $table->string("departure_location");
-            $table->string("arrival_location");
-            $table->dateTime("arrival_date");
+            $table->unsignedBigInteger("departure_location_id");
+            $table->foreign("departure_location_id")->on("agencies")->references("id");
+            $table->unsignedBigInteger("arrival_location_id");
+            $table->foreign("arrival_location_id")->on("agencies")->references("id")->onDelete("cascade");
+            $table->dateTime("arrival_date")->nullable();
             $table->dateTime("departure_date");
             $table->string("status");
-            $table->Text("notes");
+            $table->string("types")->nullable();
+            $table->Text("notes")->nullable();
             $table->timestamps();
         });
     }
