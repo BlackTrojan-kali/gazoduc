@@ -111,7 +111,9 @@ class BrouteController extends Controller
 
         try {
             $roadbill = Bordereau_route::with('articles')->findOrFail($id);
-
+       if ($roadbill->status !== 'en_cours') {
+            return back()->with('error', 'Le bordereau ne peut pas être supprime car il n\'est pas en cours.');
+        }
             // Réintégrer les articles dans le stock
             foreach ($roadbill->articles as $article) {
                 $stock = Stock::where('article_id', $article->id)
@@ -135,6 +137,59 @@ class BrouteController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Erreur lors de la suppression du bordereau : ' . $e->getMessage());
+        }
+    }
+      public function validateRoadbill(Request $request, Bordereau_route $roadbill)
+    {
+        // 1. Validation de la requête
+        $request->validate([
+            'note' => ['nullable', 'string', 'max:500'],
+        ]);
+        
+        // Vérification des conditions de validation pour des raisons de sécurité
+        // S'assurer que le bordereau n'est pas déjà validé
+        if ($roadbill->status !== 'en_cours') {
+            return back()->with('error', 'Le bordereau ne peut pas être validé car il n\'est pas en cours.');
+            
+            // 2. Utilisation d'une transaction pour garantir l'intégrité des données
+        }
+        try {
+            DB::beginTransaction();
+
+            // 3. Mise à jour du bordereau
+            $roadbill->notes = $request->input('note');
+            $roadbill->status = 'termine';
+            $roadbill->arrival_date = now(); // Enregistrer la date de validation
+            $roadbill->save();
+
+            // 4. Boucle sur les articles du bordereau pour mettre à jour le stock
+            foreach ($roadbill->articles as $article) {
+                // Récupérer la quantité transférée depuis la table pivot
+                $quantity = $article->pivot->qty;
+
+                // Trouver ou créer l'entrée de stock pour l'article à l'agence de destination
+                $stockEntry = Stock::where('agency_id',$roadbill->arrival_location_id)
+                    ->where('article_id',$article->id)->where("storage_type","magasin")->first();
+            
+
+                // Mettre à jour la quantité en stock
+                $stockEntry->quantity += $quantity;
+                $stockEntry->save();
+            }
+
+            // 5. Commit de la transaction
+            DB::commit();
+
+            return back()->with('success', 'Le bordereau a été validé et le stock mis à jour.');
+
+        } catch (\Exception $e) {
+            // 6. Rollback en cas d'erreur
+            DB::rollBack();
+
+            // Journaliser l'erreur pour le débogage
+            // Log::error("Erreur lors de la validation du bordereau : " . $e->getMessage());
+
+            return back()->with('error', 'Une erreur est survenue lors de la validation du bordereau.'.$e->getMessage());
         }
     }
 }

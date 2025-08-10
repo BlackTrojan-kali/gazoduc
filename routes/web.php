@@ -180,6 +180,7 @@ Route::middleware(isAuthenticatedMiddleware::class)->group(function(){
     Route::post("/broute-store",[BrouteController::class,"store"])->name("broutes.store");
     Route::get('/broute/{id}/download-pdf', [BrouteController::class, 'downloadPdf'])->name('broutes.download-pdf');
     Route::delete('/roadbills/{id}', [BrouteController::class, 'destroy'])->name('broutes.destroy');
+    Route::post('/roadbills/{roadbill}/validate',[BrouteController::class, 'validateRoadbill'])->name('broutes.validate');
 });
 Route::middleware(CommercialMiddleware::class)->group(function(){
     //commercial routes

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faPrint, faRoute, faInfoCircle, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faPrint, faRoute, faInfoCircle, faTrash, faCheck } from '@fortawesome/free-solid-svg-icons';
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '../../components/ui/table';
 import Swal from 'sweetalert2';
 import Button from '../../components/ui/button/Button';
@@ -9,29 +9,31 @@ import Button from '../../components/ui/button/Button';
 import RoadbillFormModal from "../../components/Modals/Tranferts/RoadBillModal";
 import MagLayout from '../../layout/MagLayout/MagLayout';
 
-const Broute = ({ roadbills, vehicles, drivers, agencies, articles, userAgencyId }) => {
+const Broute = ({ roadbills, vehicles, drivers, agencies, articles }) => {
+  // Récupération de l'utilisateur connecté via Inertia
+  const { auth } = usePage().props;
+
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [selectedRoadbill, setSelectedRoadbill] = useState(null);
-  const {auth} = usePage().props;
+
+  // Nouvel état pour la modale de validation
+  const [isValidationModalOpen, setIsValidationModalOpen] = useState(false);
+  const [validationData, setValidationData] = useState({
+    roadbillId: null,
+    comment: ''
+  });
+
   const openCreateModal = () => {
     setSelectedRoadbill(null);
     setIsFormModalOpen(true);
   };
-  
-  // Cette fonction n'est plus appelée par un bouton cliquable
-  // mais nous la gardons pour la logique de la modale au cas où
-  const openEditModal = (roadbill) => {
-    setSelectedRoadbill(roadbill);
-    setIsFormModalOpen(true);
-  };
-  
+
   const closeFormModal = () => {
     setSelectedRoadbill(null);
     setIsFormModalOpen(false);
   };
 
   const handlePrintToPdf = (roadbill) => {
-    // Redirection vers l'URL de téléchargement du PDF
     window.location.href = route('broutes.download-pdf', { id: roadbill.id });
   };
 
@@ -47,8 +49,22 @@ const Broute = ({ roadbills, vehicles, drivers, agencies, articles, userAgencyId
       cancelButtonText: 'Annuler'
     }).then((result) => {
       if (result.isConfirmed) {
-        // Envoi de la requête de suppression via Inertia
         router.delete(route('broutes.destroy', { id: roadbill.id }));
+      }
+    });
+  };
+
+  // Nouvelle fonction pour gérer la validation
+  const handleValidate = () => {
+    router.post(route('broutes.validate', { id: validationData.roadbillId }), {
+      note: validationData.comment,
+    }, {
+      onSuccess: () => {
+        setIsValidationModalOpen(false);
+        setValidationData({ roadbillId: null, comment: '' });
+      },
+      onError: () => {
+        // Gérer les erreurs si nécessaire
       }
     });
   };
@@ -141,13 +157,14 @@ const Broute = ({ roadbills, vehicles, drivers, agencies, articles, userAgencyId
                     <TableRow key={roadbill.id}>
                       <TableCell className="py-3">
                         <p className="font-medium text-gray-800 text-theme-sm dark:text-white/90">
-                          {roadbill.vehicule? roadbill.vehicule.licence_plate : "N/A"}
+                          {roadbill.vehicule ? roadbill.vehicule.licence_plate : "N/A"}
                         </p>
                       </TableCell>
                       <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                    {roadbill.chauffeur? roadbill.chauffeur.name : "N/A"}                      </TableCell>
+                        {roadbill.chauffeur ? roadbill.chauffeur.name : "N/A"}
+                      </TableCell>
                       <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                         {roadbill.co_chauffeur? roadbill.co_chauffeur.name : "N/A"}
+                        {roadbill.co_chauffeur ? roadbill.co_chauffeur.name : "N/A"}
                       </TableCell>
                       <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
                         {findNameById(roadbill.departure_location_id, agencies)}
@@ -182,39 +199,50 @@ const Broute = ({ roadbills, vehicles, drivers, agencies, articles, userAgencyId
                       <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
                         {roadbill.note || 'Aucune'}
                       </TableCell>
-                      <TableCell className="py-3 text-gray-500 text-theme-sm gap-2 flex items-center dark:text-gray-400">
-                        {/* NOUVEAUTÉ : Bouton pour imprimer en PDF */}
-                        <Button
-                          onClick={() => handlePrintToPdf(roadbill)}
-                          variant="secondary"
-                          className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
-                        >
-                          <FontAwesomeIcon icon={faPrint} /> Imprimer en PDF
-                        </Button>
-                        {roadbill.articles && roadbill.articles.length > 0 && (
+                      <TableCell className="py-3 text-gray-500 text-theme-sm">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button
+                            onClick={() => handlePrintToPdf(roadbill)}
+                            variant="secondary"
+                            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
+                          >
+                            <FontAwesomeIcon icon={faPrint} /> Imprimer en PDF
+                          </Button>
+                          {roadbill.articles && roadbill.articles.length > 0 && (
                             <Button
-                                onClick={() => Swal.fire({
-                                    title: 'Articles Transférés',
-                                    html: roadbill.articles.map(item => `<p>${item.name}: ${item.pivot.quantity} ${item.unit}</p>`).join(''),
-                                    icon: 'info',
-                                    confirmButtonText: 'Fermer'
-                                })}
-                                variant="secondary"
-                                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
+                              onClick={() => Swal.fire({
+                                title: 'Articles Transférés',
+                                html: roadbill.articles.map(item => `<p>${item.name}: ${item.pivot.quantity} ${item.unit}</p>`).join(''),
+                                icon: 'info',
+                                confirmButtonText: 'Fermer'
+                              })}
+                              variant="secondary"
+                              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
                             >
-                                <FontAwesomeIcon icon={faInfoCircle} /> Articles
+                              <FontAwesomeIcon icon={faInfoCircle} /> Articles
                             </Button>
-                        )}
-                        {/* Condition pour afficher le bouton de suppression */}
-                        {roadbill.departure_location_id === auth.user.agency.id && (
-                           <Button
-                             onClick={() => handleDelete(roadbill)}
-                             variant="danger"
-                             className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-red-500 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-red-600 dark:border-red-600"
-                           >
-                             <FontAwesomeIcon icon={faTrash} /> Supprimer
-                           </Button>
-                        )}
+                          )}
+                          {roadbill.arrival_location_id === auth.user.agency.id && roadbill.status !== 'termine' && (
+                            <Button
+                              onClick={() => {
+                                setIsValidationModalOpen(true);
+                                setValidationData({ ...validationData, roadbillId: roadbill.id });
+                              }}
+                              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-green-500 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-green-600 dark:border-green-600"
+                            >
+                              <FontAwesomeIcon icon={faCheck} /> Valider
+                            </Button>
+                          )}
+                          {roadbill.departure_location_id === auth.user.agency.id && roadbill.status !== 'termine' && (
+                            <Button
+                              onClick={() => handleDelete(roadbill)}
+                              variant="danger"
+                              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-red-500 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-red-600 dark:border-red-600"
+                            >
+                              <FontAwesomeIcon icon={faTrash} /> Supprimer
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -271,6 +299,39 @@ const Broute = ({ roadbills, vehicles, drivers, agencies, articles, userAgencyId
         agencies={agencies}
         articles={articles}
       />
+
+      {/* Modale de validation */}
+      {isValidationModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/10 dark:bg-white/10 ">
+          <div className="rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800">
+            <h4 className="text-lg font-semibold text-gray-800 dark:text-white">Ajouter une note</h4>
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              Veuillez ajouter un commentaire si nécessaire pour la validation du bordereau.
+            </p>
+            <textarea
+              className="mt-4 w-full rounded-md border border-gray-300 p-2 text-gray-700 focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              rows="4"
+              value={validationData.comment}
+              onChange={(e) => setValidationData({ ...validationData, comment: e.target.value })}
+            ></textarea>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button
+                onClick={() => setIsValidationModalOpen(false)}
+                variant="secondary"
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600"
+              >
+                Annuler
+              </Button>
+              <Button
+                onClick={handleValidate}
+                className="rounded-lg bg-green-500 px-4 py-2 text-sm font-medium text-white hover:bg-green-600"
+              >
+                Valider
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
