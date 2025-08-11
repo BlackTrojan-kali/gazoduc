@@ -1,9 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Select from 'react-select';
 import Swal from 'sweetalert2';
 import Modal from '../Modal'; // Import du composant Modal
+import { usePage } from '@inertiajs/react'; // Import de usePage pour accéder à l'objet de page
 
 const ExportRoadbillsModal = ({ isOpen, onClose, agencies, articles }) => {
+  const { auth } = usePage().props; // Accès aux données de l'utilisateur
+  const userAgencyId = auth.user.agency?.id;
+  const isDirection = auth.user.role === 'direction';
+
   // État local pour gérer les données du formulaire
   const [formData, setFormData] = useState({
     startDate: '',
@@ -12,6 +17,20 @@ const ExportRoadbillsModal = ({ isOpen, onClose, agencies, articles }) => {
     arrivalAgency: null,
     article: null,
   });
+
+  // Utilisation de useEffect pour initialiser l'agence de départ
+  useEffect(() => {
+    if (userAgencyId && !isDirection) {
+      // Si l'utilisateur n'est pas de la direction, pré-sélectionner son agence
+      const userAgency = agencies.find(agency => agency.id === userAgencyId);
+      if (userAgency) {
+        setFormData(prevData => ({
+          ...prevData,
+          departureAgency: { value: userAgency.id, label: userAgency.name }
+        }));
+      }
+    }
+  }, [userAgencyId, isDirection, agencies]);
 
   // Styles personnalisés pour React Select avec gestion du mode sombre
   const customStyles = useMemo(() => {
@@ -140,7 +159,9 @@ const ExportRoadbillsModal = ({ isOpen, onClose, agencies, articles }) => {
       </p>
       <div className="mt-4 space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Date de début</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Date de début
+          </label>
           <input
             type="date"
             name="startDate"
@@ -150,7 +171,9 @@ const ExportRoadbillsModal = ({ isOpen, onClose, agencies, articles }) => {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Date de fin</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Date de fin
+          </label>
           <input
             type="date"
             name="endDate"
@@ -172,10 +195,13 @@ const ExportRoadbillsModal = ({ isOpen, onClose, agencies, articles }) => {
             placeholder="Sélectionner une agence..."
             isClearable={false}
             styles={customStyles}
+            isDisabled={!isDirection} // Le champ est désactivé si le rôle n'est pas "direction"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Agence de destination</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Agence de destination
+          </label>
           <Select
             name="arrivalAgency"
             options={agencyOptions}
@@ -187,7 +213,9 @@ const ExportRoadbillsModal = ({ isOpen, onClose, agencies, articles }) => {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Article transféré</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Article transféré
+          </label>
           <Select
             name="article"
             options={articleOptions}
@@ -208,7 +236,7 @@ const ExportRoadbillsModal = ({ isOpen, onClose, agencies, articles }) => {
           Annuler
         </button>
         <button
-          type="button" // Changé en type="button" pour éviter de soumettre le formulaire
+          type="button"
           className="bg-blue-500 text-white active:bg-blue-600 font-bold uppercase text-sm px-6 py-3 rounded shadow hover:shadow-lg outline-none focus:outline-none ease-linear transition-all duration-150"
           onClick={handleExport}
         >

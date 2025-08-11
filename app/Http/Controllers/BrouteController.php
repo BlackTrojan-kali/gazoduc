@@ -6,6 +6,7 @@ use App\Models\Agency;
 use App\Models\Article;
 use App\Models\Bordereau_route;
 use App\Models\Chauffeur;
+use App\Models\Mouvement;
 use App\Models\Stock;
 use App\Models\Vehicule;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -22,7 +23,7 @@ class BrouteController extends Controller
         $drivers = Chauffeur::all();
         $agencies = Agency::all();
         $articles = Article::all();
-        $broutes = Bordereau_route::paginate(15);
+        $broutes = Bordereau_route::with("departure","arrival","chauffeur","co_chauffeur","vehicule")->paginate(15);
         if(Auth::user()->role->name != "direction"){
 
         $roadbills = Bordereau_route::where("departure_location_id",Auth::user()->agency_id)->orWhere("arrival_location_id",Auth::user()->agency_id)->with("departure","arrival","chauffeur","co_chauffeur","vehicule")->paginate(15);
@@ -73,7 +74,7 @@ class BrouteController extends Controller
                     ->where('agency_id', Auth::user()->agency_id)
                     ->where('storage_type', 'magasin')
                     ->first();
-
+                
                 // Vérification et décrémentation du stock
                 if (!$stock || $stock->quantity < $articleData['quantity']) {
                     DB::rollBack();
@@ -81,6 +82,22 @@ class BrouteController extends Controller
                 }
 
                 $stock->quantity -= $articleData['quantity'];
+
+                  $movement = new Mouvement();
+                $movement->article_id = $articleData["article_id"];
+                $movement->agency_id = Auth::user()->agency_id;
+                $movement->entreprise_id = Auth::user()->entreprise_id;
+                $movement->recorded_by_user_id = Auth::user()->id;
+                $movement->movement_type = "sortie";
+                $movement->qualification = "tranfert";
+                $movement->quantity =  $articleData["quantity"];
+                $movement->stock = $stock->quantity;
+                $movement->source_location = Auth::user()->role->name;
+                $movement->destination_location = "confert bordereau de route";
+                $movement->description = "sortie transfert automatique #".$roadbill->id;
+                
+
+                $movement->save();
                 $stock->save();
 
                 $articlesToAttach[$articleData['article_id']] = ['qty' => $articleData['quantity']];
@@ -106,15 +123,18 @@ class BrouteController extends Controller
         return $pdf->download('bordereau_route_' . $roadbill->id . '.pdf');
     }
      
-    public function destroy($id)
+  public function destroy($id)
     {
         DB::beginTransaction();
 
         try {
             $roadbill = Bordereau_route::with('articles')->findOrFail($id);
-       if ($roadbill->status !== 'en_cours') {
-            return back()->with('error', 'Le bordereau ne peut pas être supprime car il n\'est pas en cours.');
-        }
+            
+            // Vérification du statut avant de procéder à la suppression
+            if ($roadbill->status !== 'en_cours') {
+                return back()->with('error', 'Le bordereau ne peut pas être supprimé car il n\'est pas en cours.');
+            }
+
             // Réintégrer les articles dans le stock
             foreach ($roadbill->articles as $article) {
                 $stock = Stock::where('article_id', $article->id)
@@ -128,13 +148,17 @@ class BrouteController extends Controller
                 }
             }
 
+            // Supprimer les mouvements associés au bordereau avec une description exacte
+            $description = "sortie transfert automatique #" . $roadbill->id;
+            Mouvement::where('description', $description)->delete();
+
             // Supprimer les relations et le bordereau
             $roadbill->articles()->detach();
             $roadbill->delete();
 
             DB::commit();
 
-            return back()->with('success', 'Bordereau de route supprimé et stock réintégré avec succès.');
+            return back()->with('success', 'Bordereau de route et mouvements associés supprimés avec succès.');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Erreur lors de la suppression du bordereau : ' . $e->getMessage());
@@ -175,6 +199,21 @@ class BrouteController extends Controller
 
                 // Mettre à jour la quantité en stock
                 $stockEntry->quantity += $quantity;
+                  $movement = new Mouvement();
+                $movement->article_id = $article->id;
+                $movement->agency_id = Auth::user()->agency_id;
+                $movement->entreprise_id = Auth::user()->entreprise_id;
+                $movement->recorded_by_user_id = Auth::user()->id;
+                $movement->movement_type = "entree";
+                $movement->qualification = "tranfert";
+                $movement->quantity =  $article->pivot->qty;
+                $movement->stock = $stockEntry->quantity;
+                $movement->source_location = Auth::user()->role->name;
+                $movement->destination_location = Auth::user()->agency->name;
+                $movement->description = "tranfert automatique apres validation";
+                
+
+                $movement->save();
                 $stockEntry->save();
             }
 

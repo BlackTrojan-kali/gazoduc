@@ -11,6 +11,7 @@ import Select from 'react-select';
 import ExportRoadbillsModal from "../../components/Modals/Tranferts/ExportBrouteModal";
 import MagLayout from '../../layout/MagLayout/MagLayout';
 import RoadbillFormModal from '../../components/Modals/Tranferts/RoadBillModal';
+import RegLayout from '../../layout/RegLayout/RegLayout';
 
 // Composant pour remplacer la fonction alert()
 const MessageModal = ({ isOpen, onClose, message }) => {
@@ -231,7 +232,7 @@ const ExportRoadbillsModalWithAlert = ({ isOpen, onClose, agencies, articles }) 
   );
 };
 
-const Broute = ({ roadbills, vehicles, drivers, agencies, articles }) => {
+const PageContent = ({ roadbills, vehicles, drivers, agencies, articles }) => {
   const { auth } = usePage().props;
 
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -798,6 +799,22 @@ const Broute = ({ roadbills, vehicles, drivers, agencies, articles }) => {
     </>
   );
 };
+const Broute = ({ roadbills, vehicles, drivers, agencies, articles })=>{
+  const {auth} = usePage().props
+  if(auth.user.role == "controleur"){
+    return (
+      <RegLayout>
+        <PageContent roadbills={roadbills} vehicles={vehicles} drivers={drivers} agencies={agencies} articles={articles}/>
+      </RegLayout>
+    )
+  }
 
-Broute.layout = page => <MagLayout children={page} />;
+  if(auth.user.role == "magasin"){
+    return (
+      <MagLayout>
+        <PageContent roadbills={roadbills} vehicles={vehicles} drivers={drivers} agencies={agencies} articles={articles}/>
+      </MagLayout>
+    )
+  }
+}
 export default Broute;

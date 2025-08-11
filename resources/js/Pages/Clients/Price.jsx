@@ -1,35 +1,32 @@
 import React, { useState } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEdit, faPlus, faTrash, faDollarSign } from '@fortawesome/free-solid-svg-icons';
+import { faEdit, faPlus, faTrash, faDollarSign, faFileCsv } from '@fortawesome/free-solid-svg-icons';
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '../../components/ui/table';
 import Swal from 'sweetalert2';
 import Button from '../../components/ui/button/Button';
-
-// --- Importez la modale unifiée pour le formulaire de prix ---
-import PriceFormModal from "../../components/Modals/Clients/PriceModal"; // Chemin corrigé pour la modale
+import PriceFormModal from "../../components/Modals/Clients/PriceModal";
 import RegLayout from '../../layout/RegLayout/RegLayout';
 
-
-const Price = ({ prices, clientCategories, articles, agencies }) => { // Props nécessaires
+const Price = ({ prices, clientCategories, articles, agencies }) => {
   // --- États pour contrôler l'ouverture de la modale unique ---
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-  const [selectedPrice, setSelectedPrice] = useState(null); // Pour stocker le prix à modifier
+  const [selectedPrice, setSelectedPrice] = useState(null);
 
   // --- useForm d'Inertia pour la suppression ---
   const { delete: inertiaDelete, processing } = useForm();
 
   // --- Fonctions pour ouvrir/fermer la modale de formulaire ---
   const openCreateModal = () => {
-    setSelectedPrice(null); // S'assure que nous sommes en mode création
+    setSelectedPrice(null);
     setIsFormModalOpen(true);
   };
   const openEditModal = (price) => {
-    setSelectedPrice(price); // Définit le prix à éditer
+    setSelectedPrice(price);
     setIsFormModalOpen(true);
   };
   const closeFormModal = () => {
-    setSelectedPrice(null); // Réinitialise le prix sélectionné
+    setSelectedPrice(null);
     setIsFormModalOpen(false);
   };
 
@@ -46,7 +43,6 @@ const Price = ({ prices, clientCategories, articles, agencies }) => { // Props n
       cancelButtonText: 'Annuler'
     }).then((result) => {
       if (result.isConfirmed) {
-        // Assurez-vous que la route 'price.delete' est bien définie dans votre web.php
         inertiaDelete(route('price.delete', priceId), {
           preserveScroll: true,
           onSuccess: () => {
@@ -69,6 +65,49 @@ const Price = ({ prices, clientCategories, articles, agencies }) => { // Props n
     });
   };
 
+  // --- Nouvelle fonction pour l'exportation CSV ---
+  const handleExportCsv = () => {
+    if (!prices.data || prices.data.length === 0) {
+      Swal.fire('Information', 'Aucune donnée de prix à exporter.', 'info');
+      return;
+    }
+
+    // Définir les en-têtes du fichier CSV
+    const headers = ["Article", "Catégorie Client", "Agence", "Prix Principal", "Prix Consigne", "Date de Création"];
+    // Formater les données
+    const csvContent = prices.data.map(price => {
+      const articleName = price.article ? price.article.name : 'N/A';
+      const categoryName = price.category ? price.category.name : 'N/A';
+      const agencyName = price.agency ? price.agency.name : 'N/A';
+      const priceValue = price.price ? new Intl.NumberFormat('fr-CM').format(price.price) : 'N/A';
+      const consignePriceValue = price.consigne_price !== null && price.consigne_price !== undefined ? new Intl.NumberFormat('fr-CM').format(price.consigne_price) : 'N/A';
+      const creationDate = new Date(price.created_at).toLocaleString('fr-FR');
+      
+      // Utiliser des guillemets pour les champs pour gérer les virgules
+      return `"${articleName}","${categoryName}","${agencyName}","${priceValue}","${consignePriceValue}","${creationDate}"`;
+    });
+
+    // Créer la chaîne CSV complète
+    const csvString = [
+      headers.join(';'), // Utilisation du point-virgule comme séparateur pour un meilleur support Excel en français
+      ...csvContent
+    ].join('\n');
+
+    // Créer un lien de téléchargement
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'prix_par_categories.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    Swal.fire('Succès', 'Les données ont été exportées en CSV.', 'success');
+  };
+
   return (
     <>
       <Head title='Prix par Catégories' />
@@ -84,8 +123,15 @@ const Price = ({ prices, clientCategories, articles, agencies }) => { // Props n
 
             <div className="flex items-center gap-3">
               <Button
-                onClick={openCreateModal} // Ouvre la modale en mode création
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-300  px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
+                onClick={handleExportCsv}
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
+              >
+                <FontAwesomeIcon icon={faFileCsv} />
+                Exporter CSV
+              </Button>
+              <Button
+                onClick={openCreateModal}
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
               >
                 <FontAwesomeIcon icon={faPlus} />
                 Créer un Prix
@@ -109,11 +155,9 @@ const Price = ({ prices, clientCategories, articles, agencies }) => { // Props n
                   <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
                     Prix Principal
                   </TableCell>
-                  {/* NOUVELLE COLONNE : Prix de la Consigne */}
                   <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
                     Prix Consigne
                   </TableCell>
-                  {/* FIN NOUVELLE COLONNE */}
                   <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
                     Date de Création
                   </TableCell>
@@ -141,13 +185,11 @@ const Price = ({ prices, clientCategories, articles, agencies }) => { // Props n
                       <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
                         {new Intl.NumberFormat('fr-CM', { style: 'currency', currency: 'XAF' }).format(price.price)}
                       </TableCell>
-                      {/* AFFICHAGE DU PRIX DE LA CONSIGNE */}
                       <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
                         {price.consigne_price !== null && price.consigne_price !== undefined
                           ? new Intl.NumberFormat('fr-CM', { style: 'currency', currency: 'XAF' }).format(price.consigne_price)
-                          : 'N/A'} {/* Ou "Non applicable", "0 XAF", selon votre préférence */}
+                          : 'N/A'}
                       </TableCell>
-                      {/* FIN AFFICHAGE PRIX CONSIGNE */}
                       <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
                         {new Date(price.created_at).toLocaleDateString('fr-FR', {
                           year: 'numeric',
@@ -159,7 +201,7 @@ const Price = ({ prices, clientCategories, articles, agencies }) => { // Props n
                       </TableCell>
                       <TableCell className="py-3 text-gray-500 text-theme-sm gap-2 flex dark:text-gray-400">
                         <Button
-                          onClick={() => openEditModal(price)} // Ouvre la modale en mode édition
+                          onClick={() => openEditModal(price)}
                           variant="secondary"
                           className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
                         >
@@ -224,9 +266,9 @@ const Price = ({ prices, clientCategories, articles, agencies }) => { // Props n
         isOpen={isFormModalOpen}
         onClose={closeFormModal}
         price={selectedPrice}
-        clientCategories={clientCategories} // Passer .data si c'est un objet paginé ou collection
-        articles={articles} // Passer .data si c'est un objet paginé ou collection
-        agencies={agencies} // Passer .data si c'est un objet paginé ou collection
+        clientCategories={clientCategories}
+        articles={articles}
+        agencies={agencies}
         routeName={selectedPrice ? "price.update" : "price.store"}
       />
       {/* --------------- */}

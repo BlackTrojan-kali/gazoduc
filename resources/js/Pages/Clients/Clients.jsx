@@ -1,40 +1,32 @@
 import React, { useState } from 'react';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEdit, faPlus, faTrash, faUsers } from '@fortawesome/free-solid-svg-icons'; // Nouvelle icône pour les clients
+import { faEdit, faPlus, faTrash, faUsers, faFileCsv } from '@fortawesome/free-solid-svg-icons';
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '../../components/ui/table';
 import Swal from 'sweetalert2';
 import Button from '../../components/ui/button/Button';
-
-// --- Importez la modale unifiée pour le formulaire client ---
-// Vous devrez créer cette modale, nommée ClientFormModal.jsx
 import ClientFormModal from "../../components/Modals/Clients/ClientModal";
 import RegLayout from '../../layout/RegLayout/RegLayout';
 import ComLayout from '../../layout/ComLayout/ComLayout';
 
-
-const PageContent = ({ clients, clientCategories }) => { // Ajoutez clientCategories comme prop pour le filtre/select dans la modale
-  // --- États pour contrôler l'ouverture de la modale unique ---
+const PageContent = ({ clients, clientCategories }) => {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-  const [selectedClient, setSelectedClient] = useState(null); // Pour stocker le client à modifier
-  // --- useForm d'Inertia pour la suppression ---
+  const [selectedClient, setSelectedClient] = useState(null);
   const { delete: inertiaDelete, processing } = useForm();
 
-  // --- Fonctions pour ouvrir/fermer la modale de formulaire ---
   const openCreateModal = () => {
-    setSelectedClient(null); // S'assure que nous sommes en mode création
+    setSelectedClient(null);
     setIsFormModalOpen(true);
   };
   const openEditModal = (client) => {
-    setSelectedClient(client); // Définit le client à éditer
+    setSelectedClient(client);
     setIsFormModalOpen(true);
   };
   const closeFormModal = () => {
-    setSelectedClient(null); // Réinitialise le client sélectionné
+    setSelectedClient(null);
     setIsFormModalOpen(false);
   };
 
-  // --- Fonction pour gérer la suppression d'un client avec SweetAlert2 ---
   const handleDelete = (clientId) => {
     Swal.fire({
       title: 'Êtes-vous sûr, monsieur ?',
@@ -47,7 +39,6 @@ const PageContent = ({ clients, clientCategories }) => { // Ajoutez clientCatego
       cancelButtonText: 'Annuler'
     }).then((result) => {
       if (result.isConfirmed) {
-        // Assurez-vous que la route 'client.delete' est bien définie dans votre web.php
         inertiaDelete(route('client.destroy', clientId), {
           preserveScroll: true,
           onSuccess: () => {
@@ -70,6 +61,42 @@ const PageContent = ({ clients, clientCategories }) => { // Ajoutez clientCatego
     });
   };
 
+  // Nouvelle fonction pour l'exportation CSV
+  const handleExportCsv = () => {
+    if (!clients.data || clients.data.length === 0) {
+      Swal.fire('Information', 'Aucune donnée client à exporter.', 'info');
+      return;
+    }
+
+    // Définir les en-têtes du fichier CSV
+    const headers = ["Nom", "Type de Client", "Catégorie", "Téléphone", "Email", "Adresse", "NUI"];
+    // Formater les données
+    const csvContent = clients.data.map(client => {
+      const categoryName = client.category ? client.category.name : 'N/A';
+      return `"${client.name}","${client.client_type || 'N/A'}","${categoryName}","${client.phone_number || 'N/A'}","${client.email_address || 'N/A'}","${client.address || 'N/A'}","${client.NUI || 'N/A'}"`;
+    });
+
+    // Créer la chaîne CSV complète
+    const csvString = [
+      headers.join(','),
+      ...csvContent
+    ].join('\n');
+
+    // Créer un lien de téléchargement
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'clients.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    Swal.fire('Succès', 'Les données ont été exportées en CSV.', 'success');
+  };
+
   return (
     <>
       <Head title='Clients' />
@@ -85,7 +112,14 @@ const PageContent = ({ clients, clientCategories }) => { // Ajoutez clientCatego
 
             <div className="flex items-center gap-3">
               <Button
-                onClick={openCreateModal} // Ouvre la modale en mode création
+                onClick={handleExportCsv}
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
+              >
+                <FontAwesomeIcon icon={faFileCsv} />
+                Exporter CSV
+              </Button>
+              <Button
+                onClick={openCreateModal}
                 className="inline-flex items-center gap-2 rounded-lg border border-gray-300  px-4 py-2.5 text-theme-sm font-medium  shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
               >
                 <FontAwesomeIcon icon={faPlus} />
@@ -154,7 +188,7 @@ const PageContent = ({ clients, clientCategories }) => { // Ajoutez clientCatego
                       </TableCell>
                       <TableCell className="py-3 text-gray-500 text-theme-sm gap-2 flex dark:text-gray-400">
                         <Button
-                          onClick={() => openEditModal(client)} // Ouvre la modale en mode édition
+                          onClick={() => openEditModal(client)}
                           variant="secondary"
                           className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
                         >
@@ -199,7 +233,7 @@ const PageContent = ({ clients, clientCategories }) => { // Ajoutez clientCatego
                         }`}
                       preserveState
                       preserveScroll
-                      only={['clients']} // N'actualiser que la prop clients
+                      only={['clients']}
                       onClick={(e) => {
                         if (!link.url) e.preventDefault();
                       }}
@@ -218,9 +252,9 @@ const PageContent = ({ clients, clientCategories }) => { // Ajoutez clientCatego
       <ClientFormModal
         isOpen={isFormModalOpen}
         onClose={closeFormModal}
-        client={selectedClient} // Passe le client (sera null pour la création)
-        clientCategories={clientCategories} // Passe les catégories pour le select
-        routeName={selectedClient ? "client.update" : "client.store"} // Adapte la route
+        client={selectedClient}
+        clientCategories={clientCategories}
+        routeName={selectedClient ? "client.update" : "client.store"}
       />
       {/* --------------- */}
     </>
