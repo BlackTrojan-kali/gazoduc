@@ -8,6 +8,7 @@ import Button from '../components/ui/button/Button';
 import Input from '../components/form/input/InputField';
 import ReleveHistoryPDFExcelModal from '../components/Modals/ReleveHistModal';
 import RegLayout from '../layout/RegLayout/RegLayout';
+import DirLayout from '../layout/DirLayout/DirLayout';
 
 const PageContent = ({ releves: initialReleves, agencies }) => { // 'filters' est retiré des props
   // --- États pour la modale d'exportation ---
@@ -275,6 +276,13 @@ const Releve =({releves,agencies})=>{
       <RegLayout title="releves">
         <PageContent releves={releves} agencies={agencies}/>
       </RegLayout>
+    )
+  }
+   if(auth.user.role == "direction"){
+    return (
+      <DirLayout title="releves">
+        <PageContent releves={releves} agencies={agencies}/>
+      </DirLayout>
     )
   }
 }

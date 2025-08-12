@@ -9,9 +9,10 @@ import Button from '../../components/ui/button/Button';
 // --- Importez la modale unifiée ---
 import ClientCategoryFormModal from "../../components/Modals/Clients/CategoryModal";
 import RegLayout from '../../layout/RegLayout/RegLayout';
+import DirLayout from '../../layout/DirLayout/DirLayout';
 
 
-const ClientCategoryIndex = ({ clientCategories }) => {
+const PageContent = ({ clientCategories }) => {
   // --- États pour contrôler l'ouverture de la modale unique ---
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null); // Pour stocker la catégorie à modifier
@@ -207,5 +208,21 @@ const ClientCategoryIndex = ({ clientCategories }) => {
   );
 };
 
-ClientCategoryIndex.layout = page => <RegLayout children={page} />;
+const ClientCategoryIndex=({ clientCategories }) =>{ 
+const {auth} = usePage().props
+if(auth.user.role == "controler"){
+  return(
+      <RegLayout>
+        <PageContent clientCategories={clientCategories}/>
+      </RegLayout>
+  )
+}
+if(auth.user.role == "direction"){
+   return(
+   <DirLayout>
+        <PageContent clientCategories={clientCategories}/>
+      </DirLayout>
+   )
+}
+}
 export default ClientCategoryIndex;

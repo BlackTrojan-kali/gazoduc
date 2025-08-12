@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faEdit, faTruck } from '@fortawesome/free-solid-svg-icons'; // faTrash n'est plus nécessaire ici
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '../../components/ui/table';
@@ -12,9 +12,10 @@ import RegLayout from '../../layout/RegLayout/RegLayout';
 
 // --- Importez votre composant Switch ---
 import Switch from '../../components/form/switch/Switch'; // Ajustez ce chemin si nécessaire
+import DirLayout from '../../layout/DirLayout/DirLayout';
 
 
-const Vehicle = ({ vehicles }) => {
+const PageContent = ({ vehicles }) => {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
 
@@ -236,5 +237,20 @@ const Vehicle = ({ vehicles }) => {
   );
 };
 
-Vehicle.layout = page => <RegLayout children={page} />;
+const Vehicle = ({ vehicles }) =>{ 
+    const {auth} = usePage().props
+    if(auth.user.role == "controler"){
+      return(
+        <RegLayout>
+          <PageContent vehicles={vehicles}/>
+        </RegLayout>
+  )
+}
+    if(auth.user.role == "direction"){
+       return(
+       <DirLayout>
+          <PageContent vehicles={vehicles}/>
+        </DirLayout>
+        )};
+  }
 export default Vehicle;

@@ -16,8 +16,8 @@ class receptionController extends Controller
 {
     //
     public function index(){
-        $receptions = [];
-        $agencies = [];
+            $receptions = Reception::with("agency","citerne","article","user")->paginate();
+            $agencies = Agency::all();
         if(Auth::user()->role->name != "direction"){
             $receptions = Reception::where("destination_agency_id",Auth::user()->agency_id)->with("agency","citerne","article","user")->paginate();
             $agencies = Agency::where("id",Auth::user()->agency_id)->get();

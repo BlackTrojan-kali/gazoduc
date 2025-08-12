@@ -7,8 +7,9 @@ import Swal from 'sweetalert2';
 import Button from '../../components/ui/button/Button';
 import PriceFormModal from "../../components/Modals/Clients/PriceModal";
 import RegLayout from '../../layout/RegLayout/RegLayout';
+import DirLayout from '../../layout/DirLayout/DirLayout';
 
-const Price = ({ prices, clientCategories, articles, agencies }) => {
+const PageContent = ({ prices, clientCategories, articles, agencies }) => {
   // --- États pour contrôler l'ouverture de la modale unique ---
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [selectedPrice, setSelectedPrice] = useState(null);
@@ -287,5 +288,22 @@ const Price = ({ prices, clientCategories, articles, agencies }) => {
   );
 };
 
-Price.layout = page => <RegLayout children={page} />;
+
+const Price =({ prices, clientCategories, articles, agencies })=>{
+  const {auth} = usePage().props
+  if(auth.user.role == "controler"){
+    return(
+      <RegLayout>
+        <PageContent prices={prices} clientCategories={clientCategories} articles={articles} agencies={agencies}/>
+      </RegLayout>
+    )
+  }
+  if(auth.user.role == "direction"){
+    return(
+      <DirLayout>
+        <PageContent prices={prices} clientCategories={clientCategories} articles={articles} agencies={agencies}/>
+      </DirLayout>
+    )
+  }
+}
 export default Price;

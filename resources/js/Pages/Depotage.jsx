@@ -11,6 +11,7 @@ import Button from '../components/ui/button/Button';
 import Input from '../components/form/input/InputField';
 import DepotageHistoryPDFExcelModal from '../components/Modals/DepHistModal';
 import RegLayout from '../layout/RegLayout/RegLayout';
+import DirLayout from '../layout/DirLayout/DirLayout';
 
 const PageContent = ({ depotages: initialDepotages, agencies }) => {
   const { delete: inertiaDelete, processing } = useForm();
@@ -377,6 +378,13 @@ const Depotage = ({depotages,agencies})=>{
       <RegLayout>
         <PageContent depotages={depotages} agencies={agencies}/>
       </RegLayout>
+    )
+  }
+  if(auth.user.role == "direction"){
+    return (
+      <DirLayout>
+        <PageContent depotages={depotages} agencies={agencies}/>
+      </DirLayout>
     )
   }
 }

@@ -14,10 +14,10 @@ class PriceController extends Controller
     //
     public function index(){
 
-        $prices= [];
-        $clientCategories = [];
-        $articles = [];
-        $agencies = [];
+        $prices= ArticleCategoryPrice::with("article","agency","category")->paginate(15);;
+        $clientCategories =  ClientCategory::get();
+        $articles = Article::where("type","!=","matiere_premiere")->get();
+        $agencies = Agency::all();
         if(Auth::user()->role->name != "direction"){
         $prices= ArticleCategoryPrice::with("article","agency","category")->where("agency_id",Auth::user()->agency_id)->paginate(15);
 

@@ -3,7 +3,7 @@ import { Link, usePage } from "@inertiajs/react"; // <--- IMPORT usePage HERE
 
 import { useSidebar } from "../../context/SidebarContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronDown, faCoins, faDashboard, faDotCircle, faDriversLicense, faGlobe,  faUser,  } from "@fortawesome/free-solid-svg-icons";
+import { faChevronDown, faCoins, faDashboard, faDotCircle, faDriversLicense, faGlobe,  faIndustry,  faMoneyBill,  faSave,  faUser, faUserAlt, faUserFriends,  } from "@fortawesome/free-solid-svg-icons";
 
 
 const navItems = [
@@ -21,28 +21,62 @@ const navItems = [
     name: "Banks",
       subItems: [
       { name: "banks", path: "/banks/index", pro: false },
-      { name: "villes", path: "/cities", pro: false },
     ],
   },
-  {
-    icon:  <FontAwesomeIcon icon={faDriversLicense} />,
-    name: "Licences",
-    subItems: [
-      { name: "licences", path: "/licences", pro: false },
-      { name: "Souscriptions", path: "/subs", pro: false },
-    ],
-  },
+    {
+      icon:  <FontAwesomeIcon icon={faSave} />,
+      name: "Magasins",
+        subItems: [
+        { name: "mouvements", path: "/magasin-moves/entree", pro: false },
+        { name: "releves", path: "/releves", pro: false },
+        { name: "depotages", path: "/depotages", pro: false },
+        { name: "reception", path: "/receptions", pro: false },
+      ],
+    },
+    {
+      icon:  <FontAwesomeIcon icon={faIndustry} />,
+      name: "Production",
+        subItems: [
+        { name: "production historique", path: "/prod-history", pro: false },
+      ],
+    },
+    {
+      icon:  <FontAwesomeIcon icon={faDriversLicense} />,
+      name: "Bordereaux de Route",
+      subItems: [
+        { name: "liste", path: "/broute-index", pro: false },
+        { name: "chauffeurs", path: "/drivers-index", pro: false },
+        { name: "vehicules", path: "/vehicules-index", pro: false },
+      ],
+    },
+    {
+      icon:  <FontAwesomeIcon icon={faMoneyBill} />,
+      name: "Commercial",
+      subItems: [
+        { name: "Ventes", path: "/controlleur-sales", pro: false },
+        { name: "Versements", path: "/controlleur-payment", pro: false },
+        { name: "Factures", path: "/controlleur-factures", pro: false },
+      ],
+    },
+  
  
 ];
 
 const othersItems= [
   { icon:  <FontAwesomeIcon icon={faUser} />,
     name: "Users",
-    subItems: [-
+    subItems: [
       { name: "Regional", path: "/regional", pro: false },
       { name: "Magasin", path: "/magasin", pro: false },
       { name: "Production", path: "/production", pro: false },
       { name: "Commercial", path: "/commercial", pro: false },
+    ],
+  }, { icon:  <FontAwesomeIcon icon={faUserFriends} />,
+    name: "Clients",
+   subItems: [
+      { name: "Clients", path: "/client-index", pro: false },
+      { name: "Categories Clients", path: "/client-cat", pro: false },
+      { name: "Prix par category", path: "/client-price", pro: false },
     ],
   }
 ];

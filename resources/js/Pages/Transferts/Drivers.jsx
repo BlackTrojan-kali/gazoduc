@@ -1,7 +1,7 @@
 // resources/js/Pages/Driver.jsx
 
 import React, { useState } from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faEdit, faUserTie } from '@fortawesome/free-solid-svg-icons'; // Icône pour les chauffeurs
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '../../components/ui/table';
@@ -14,9 +14,10 @@ import RegLayout from '../../layout/RegLayout/RegLayout';
 
 // --- Importez votre composant Switch ---
 import Switch from '../../components/form/switch/Switch'; // Ajustez ce chemin si nécessaire
+import DirLayout from '../../layout/DirLayout/DirLayout';
 
 
-const Driver = ({ drivers }) => { // La prop 'drivers' contiendra la liste des chauffeurs paginée
+const PageContent = ({ drivers }) => { // La prop 'drivers' contiendra la liste des chauffeurs paginée
   // --- États pour contrôler l'ouverture de la modale unique ---
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState(null); // Pour stocker le chauffeur à modifier
@@ -230,5 +231,21 @@ const Driver = ({ drivers }) => { // La prop 'drivers' contiendra la liste des c
   );
 };
 
-Driver.layout = page => <RegLayout children={page} />;
+ const Driver=({drivers}) =>{ 
+    const {auth} = usePage().props;
+    if(auth.user.role == "controler"){
+      return(
+        <RegLayout>
+            <PageContent drivers={drivers}/>
+        </RegLayout>
+      )  
+}
+    if(auth.user.role == "direction"){
+       return(
+       <DirLayout>
+            <PageContent drivers={drivers}/>
+        </DirLayout>
+       )  
+}
+  }
 export default Driver;

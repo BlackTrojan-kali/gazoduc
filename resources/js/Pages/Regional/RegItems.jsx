@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
 import ComLayout from '../../layout/ComLayout/ComLayout';
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '../../components/ui/table';
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFilePdf } from '@fortawesome/free-solid-svg-icons';
 import ExportItemsModal from '../../components/Modals/Sales/ExportItemModal'; // Import de la modale d'exportation
 import RegLayout from '../../layout/RegLayout/RegLayout';
+import DirLayout from '../../layout/DirLayout/DirLayout';
 
 // Fonction utilitaire pour le formatage des nombres
 const number_format = (number, decimals, decPoint, thousandsSep) => {
@@ -32,7 +33,7 @@ const number_format = (number, decimals, decPoint, thousandsSep) => {
     return s.join(dec);
 };
 
-const RegItems = ({ factureItems, articles, agencies, onPageChange, onFilterChange }) => {
+const PageContent = ({ factureItems, articles, agencies, onPageChange, onFilterChange }) => {
  // Utilisation d'un seul objet d'état pour tous les filtres
     const [filters, setFilters] = useState({
         selectedArticle: '',
@@ -302,5 +303,23 @@ const RegItems = ({ factureItems, articles, agencies, onPageChange, onFilterChan
     );
 };
 
-RegItems.layout = page => <RegLayout children={page} />;
+const RegItems = ({ factureItems, articles, agencies, onPageChange, onFilterChange }) => {
+ const {auth} = usePage().props
+ 
+    if(auth.user.role=="controler"){
+        return(
+        <RegLayout>
+            <PageContent factureItems={factureItems} articles={articles} agencies={agencies} onPageChange={onPageChange} onFilterChange={onFilterChange}/>
+        </RegLayout>
+        )
+    }
+ 
+    if(auth.user.role=="direction"){
+        return(
+        <DirLayout>
+            <PageContent factureItems={factureItems} articles={articles} agencies={agencies} onPageChange={onPageChange} onFilterChange={onFilterChange}/>
+        </DirLayout>
+        )
+    }
+}
 export default RegItems;

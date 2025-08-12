@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import ComLayout from '../../layout/ComLayout/ComLayout';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '../../components/ui/table';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faPrint, faTrash, faPlus, faFilter, faFilePdf } from '@fortawesome/free-solid-svg-icons';
@@ -12,8 +12,9 @@ import InvoiceDetailsModal from '../../components/Modals/Sales/InvoiceDetailModa
 import NewSaleModal from '../../components/Modals/Sales/NewSaleModal';
 import ExportSalesModal from '../../components/Modals/Sales/ExportSalesModal'; // Import de la nouvelle modale
 import RegLayout from '../../layout/RegLayout/RegLayout';
+import DirLayout from '../../layout/DirLayout/DirLayout';
 
-const RegSales = ({ factures, clients, articles, agencies }) => {
+const PageContent = ({ factures, clients, articles, agencies }) => {
 const { delete: inertiaDelete } = useForm();
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedFacture, setSelectedFacture] = useState(null);
@@ -416,5 +417,20 @@ const { delete: inertiaDelete } = useForm();
   );
 };
 
-RegSales.layout = page =><RegLayout children={page}/>
+const RegSales= ({ factures, clients, articles, agencies }) =>{
+  const {auth} =  usePage().props
+    if(auth.user.role == "direction"){
+     return(
+       <DirLayout>
+          <PageContent factures={factures} clients={clients} articles={articles} agencies={agencies}/>
+       </DirLayout>
+    )
+  }if(auth.user.role == "controler"){
+    return(
+       <RegLayout>
+          <PageContent factures={factures} clients={clients} articles={articles} agencies={agencies}/>
+       </RegLayout>
+    )
+  }
+        }
 export default RegSales

@@ -16,8 +16,8 @@ class DepotageController extends Controller
 {
     //
     public function index(){
-        $depotages = [];
-        $agencies = [];
+            $depotages = Depotage::with("agency","citerne_mobile","citerne_fixe","article","user")->paginate(15);
+            $agencies = Agency::all();
         if(Auth::user()->role->name != "direction"){
             $depotages = Depotage::where("agency_id",Auth::user()->agency_id)->with("agency","citerne_mobile","citerne_fixe","article","user")->paginate(15);
             $agencies = Agency::where("id",Auth::user()->agency_id)->get();

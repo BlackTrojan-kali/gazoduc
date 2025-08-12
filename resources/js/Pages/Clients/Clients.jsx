@@ -8,6 +8,7 @@ import Button from '../../components/ui/button/Button';
 import ClientFormModal from "../../components/Modals/Clients/ClientModal";
 import RegLayout from '../../layout/RegLayout/RegLayout';
 import ComLayout from '../../layout/ComLayout/ComLayout';
+import DirLayout from '../../layout/DirLayout/DirLayout';
 
 // Ajout de la prop 'userRole' pour gérer l'affichage conditionnel
 const PageContent = ({ clients, clientCategories, userRole }) => {
@@ -281,6 +282,15 @@ const ClientIndex = ({clients,clientCategories})=>{
         {/* Ajout de la prop userRole */}
         <PageContent clients={clients} clientCategories={clientCategories} userRole={auth.user.role}/>
       </ComLayout>
+    )
+  }
+
+  if(auth.user.role == "direction"){
+    return(
+      <DirLayout>
+        {/* Ajout de la prop userRole */}
+        <PageContent clients={clients} clientCategories={clientCategories} userRole={auth.user.role}/>
+      </DirLayout>
     )
   }
 }

@@ -15,7 +15,7 @@ import ArticlesSelectionModal from './ArticleSelectionModal';
 const RoadbillFormModal = ({ isOpen, onClose, roadbill, routeName, vehicles, drivers, agencies, articles }) => {
   const { auth } = usePage().props;
   const userAgencyId = auth.user.agency_id;
-  const userAgencyName = auth.user.agency.name;
+  const userAgencyName = auth.user.agency?.name;
 
   const { data, setData, post, put, processing, errors, reset, recentlySuccessful } = useForm({
     vehicle_id: '',

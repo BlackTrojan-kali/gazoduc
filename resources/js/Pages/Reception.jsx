@@ -12,6 +12,7 @@ import Input from '../components/form/input/InputField';
 import ReceptionHistoryPDFExcelModal from '../components/Modals/RecHistModal';
 import ProdLayout from '../layout/ProdLayout/ProdLayout';
 import RegLayout from '../layout/RegLayout/RegLayout';
+import DirLayout from '../layout/DirLayout/DirLayout';
 
 const PageContent = ({ receptions: initialReceptions, agencies }) => {
   const { delete: inertiaDelete, processing } = useForm();
@@ -370,12 +371,15 @@ const Reception = ({ receptions, agencies }) => {
     );
   }
 
-  // Fallback au cas où le rôle n'est pas reconnu
-  return (
-    <RegLayout>
-      <PageContent receptions={receptions} agencies={agencies} />
-    </RegLayout>
-  );
+  if (auth.user.role === "direction") {
+    return (
+      <DirLayout>
+        <PageContent receptions={receptions} agencies={agencies} />
+      </DirLayout>
+    );
+  }
+
+  
 };
 
 export default Reception;

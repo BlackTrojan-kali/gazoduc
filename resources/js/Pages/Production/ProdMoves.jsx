@@ -9,6 +9,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFilter, faTimes, faCalendarAlt, faSearch, faSpinner, faFileExport, faTrashAlt } from '@fortawesome/free-solid-svg-icons';
 import Swal from 'sweetalert2';
 import RegLayout from '../../layout/RegLayout/RegLayout';
+import DirLayout from '../../layout/DirLayout/DirLayout';
 
 const PageContent = ({ prodMoves, agencies, articles, citernes }) => {
   const { auth } = usePage().props;
@@ -452,6 +453,13 @@ const ProdMoves = ({ prodMoves, agencies, articles, citernes })=>{
       <RegLayout>
         <PageContent prodMoves={prodMoves} agencies={agencies} articles={articles} citernes={citernes}/>
       </RegLayout>
+    )
+  }
+  if(auth.user.role == "direction"){
+    return (
+      <DirLayout>
+        <PageContent prodMoves={prodMoves} agencies={agencies} articles={articles} citernes={citernes}/>
+      </DirLayout>
     )
   }
 }

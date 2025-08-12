@@ -35,6 +35,7 @@ class RegionalController extends Controller
         // 1. Récupérer l'utilisateur actuellement authentifié
         $user = Auth::user();
 
+         $agencies = Agency::all();
         // 2. Définir une requête de base pour les FactureItems en chargeant les relations
         $query = FactureItem::with(['facture.agency', 'article']);
 
@@ -44,23 +45,24 @@ class RegionalController extends Controller
             $query->whereHas('facture', function ($q) use ($user) {
                 $q->where('agency_id', $user->agency_id);
             });
-            $agencies = Agency::all();
+            $agencies = Agency::where("id",Auth::user()->agency_id)->get();
+        
         }
         
         // 4. Exécuter la requête et récupérer les résultats
         $factureItems = $query->paginate(15);
         $articles = Article::all();
-        $agencies = Agency::where("id",Auth::user()->agency_id)->get();
         // 5. Retourner les données en format JSON
         return inertia("Regional/RegItems",compact("factureItems","agencies","articles"));
     }
       //
     public function payments(){
 
-        $payments = Payment::paginate(15);
+        $payments = Payment::with("agency","bank","client","factures")->paginate(15);
         $clients = Client::all();
         $agencies = Agency::all();
         $banks = Bank::all();
+        $sales = Facture::where("status","pending")->with("client")->get();
         if(Auth::user()->role->name !="direction"){
             $payments = Payment::where("agency_id",Auth::user()->agency_id)->with("agency","bank","client","factures")->paginate(15);
             $agencies = Agency::where("id",Auth::user()->agency_id)->get();
@@ -82,6 +84,9 @@ class RegionalController extends Controller
         // Logique conditionnelle pour les agences
         // Assumons que vous avez une méthode 'hasRole' sur votre modèle User.
         if (Auth::user()->role->name == 'direction') {
+
+        $factures = Facture::with("client", "user", "items.article", "agency")
+            ->paginate(15);
             $agencies = Agency::all();
         } else {
             // Récupère uniquement l'agence de l'utilisateur connecté

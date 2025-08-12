@@ -12,6 +12,7 @@ import ExportRoadbillsModal from "../../components/Modals/Tranferts/ExportBroute
 import MagLayout from '../../layout/MagLayout/MagLayout';
 import RoadbillFormModal from '../../components/Modals/Tranferts/RoadBillModal';
 import RegLayout from '../../layout/RegLayout/RegLayout';
+import DirLayout from '../../layout/DirLayout/DirLayout';
 
 // Composant pour remplacer la fonction alert()
 const MessageModal = ({ isOpen, onClose, message }) => {
@@ -515,13 +516,14 @@ const PageContent = ({ roadbills, vehicles, drivers, agencies, articles }) => {
                 Exporter en CSV
               </Button>
               {/* Le bouton Ajouter existant */}
+              {auth.user.role != "direction" &&
               <Button
                 onClick={openCreateModal}
                 className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
               >
                 <FontAwesomeIcon icon={faPlus} />
                 Ajouter un Bordereau
-              </Button>
+              </Button>}
             </div>
           </div>
 
@@ -700,7 +702,7 @@ const PageContent = ({ roadbills, vehicles, drivers, agencies, articles }) => {
                               <FontAwesomeIcon icon={faInfoCircle} /> Articles
                             </Button>
                           )}
-                          {roadbill.arrival_location_id === auth.user.agency.id && roadbill.status !== 'termine' && (
+                          {roadbill.arrival_location_id === auth.user.agency?.id && roadbill.status !== 'termine' && (
                             <Button
                               onClick={() => {
                                 setIsValidationModalOpen(true);
@@ -711,7 +713,7 @@ const PageContent = ({ roadbills, vehicles, drivers, agencies, articles }) => {
                               <FontAwesomeIcon icon={faCheck} /> Valider
                             </Button>
                           )}
-                          {roadbill.departure_location_id === auth.user.agency.id && roadbill.status !== 'termine' && (
+                          {roadbill.departure_location_id === auth.user.agency?.id && roadbill.status !== 'termine' && (
                             <button
                               disabled={!canDelete(roadbill.created_at, roadbill.status)}
                               onClick={() => handleDelete(roadbill)}
@@ -844,6 +846,13 @@ const Broute = ({ roadbills, vehicles, drivers, agencies, articles })=>{
       <MagLayout>
         <PageContent roadbills={roadbills} vehicles={vehicles} drivers={drivers} agencies={agencies} articles={articles}/>
       </MagLayout>
+    )
+  }
+  if(auth.user.role == "direction"){
+    return (
+      <DirLayout>
+        <PageContent roadbills={roadbills} vehicles={vehicles} drivers={drivers} agencies={agencies} articles={articles}/>
+      </DirLayout>
     )
   }
 }

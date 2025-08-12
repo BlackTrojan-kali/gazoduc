@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '../../components/ui/table';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faPrint, faTrash, faPlus, faFilter, faEraser, faLink, faUnlink, faFilePdf } from '@fortawesome/free-solid-svg-icons'; // <-- Ajout de faFilePdf
@@ -18,6 +18,7 @@ import DisassociatePaymentModal from '../../components/Modals/Payment/Dissociate
 // --- NOUVELLE IMPORTATION : Modale d'exportation PDF ---
 import ExportPaymentPdfModal from '../../components/Modals/Payment/ExportPaymentPdfModal'; // <-- Nouvelle importation
 import RegLayout from '../../layout/RegLayout/RegLayout';
+import DirLayout from '../../layout/DirLayout/DirLayout';
 
 
 // Styles personnalisés pour react-select, définis une seule fois
@@ -67,7 +68,7 @@ const getSelectStyles = () => {
 };
 
 
-const RegPayment = ({ payments, clients, agencies, banks, sales }) => {
+const PageContent = ({ payments, clients, agencies, banks, sales }) => {
  // --- États pour les modales ---
   const [isNewPaymentModalOpen, setIsNewPaymentModalOpen] = useState(false);
   const [isAssociateModalOpen, setIsAssociateModalOpen] = useState(false);
@@ -432,5 +433,23 @@ const RegPayment = ({ payments, clients, agencies, banks, sales }) => {
   );
 };
 
-RegPayment.layout = page =><RegLayout children={page}/>
+const RegPayment = ({ payments, clients, agencies, banks, sales })=>{
+  const {auth} = usePage().props
+  if(auth.user.role == "controler"){
+      return(
+
+   <RegLayout>
+    <PageContent payments={payments} clients={clients} agencies={agencies} banks={banks} sales={sales}/>
+   </RegLayout>
+      )
+  }
+  if(auth.user.role == "direction"){
+      return(
+
+   <DirLayout>
+    <PageContent payments={payments} clients={clients} agencies={agencies} banks={banks} sales={sales}/>
+   </DirLayout>
+      )
+  }
+}
 export default RegPayment

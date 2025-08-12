@@ -17,8 +17,9 @@ class ReleveController extends Controller
 {
     //
     public function index(){
-        $releves = [];
-        $agencies = [];
+           $releves  = CiterneReading::orderBy("created_at","desc")->with("citerne","agency","user")
+            ->paginate(15);
+            $agencies = Agency::all();
         if(Auth::user()->role->name != "direction"){
            $releves  = CiterneReading::where("agency_id",Auth::user()->agency_id)->orderBy("created_at","desc")->with("citerne","agency","user")
             ->paginate(15);
