@@ -34,6 +34,28 @@
             margin: 0;
         }
 
+        /* Styles pour les lignes supprimées/modifiées pour la visualisation */
+        .removed-line {
+            background-color: #ffe6e6; /* Rouge très clair */
+            color: #cc0000; /* Rouge foncé */
+            text-decoration: line-through;
+        }
+        .added-line {
+            background-color: #e6ffe6; /* Vert très clair */
+            color: #008000; /* Vert foncé */
+        }
+        .modified-line {
+            background-color: #fff0e6; /* Orange très clair */
+            color: #e67300; /* Orange foncé */
+        }
+        
+        /* NOUVEAU STYLE: Mise en évidence des lignes supprimées */
+        .deleted-row {
+            background-color: #fcebeb !important; /* Rouge très clair pour le fond */
+            color: #990000; /* Texte rouge foncé pour plus de visibilité */
+        }
+
+
         /* Tableau des mouvements */
         .movements-table {
             width: 100%;
@@ -130,11 +152,23 @@
 <body>
     <div class="header">
         <h1>Rapport Global d'Historique des Mouvements</h1>
-        <p>
-            @if(isset($role) && $role->name)
-                Service: {{ $role->name }} |
+        <p class="modified-line">
+            @if(isset($agencyName) && $agencyName !== 'Toutes les agences')
+                Agence: {{ $agencyName }} |
             @endif
+            @if(isset($articleName) && $articleName !== 'Tous les articles')
+                Article: {{ $articleName }} |
+            @endif
+            @if(isset($serviceName) && $serviceName !== 'Tous les services')
+                Service: {{ $serviceName }} |
+            @endif
+            Type de Mouvement: {{ $movementTypeName }}
+        </p>
+        <p class="removed-line">
             Période: Toutes les dates (rapport global)
+        </p>
+        <p class="added-line">
+            Période: Du {{ $startDate }} au {{ $endDate }}
         </p>
         <p>Généré le {{ now()->format('d/m/Y à H:i:s') }}</p>
     </div>
@@ -174,7 +208,8 @@
                     $totalConsigne = 0;
                 @endphp
                 @foreach($movements as $movement)
-                <tr>
+                {{-- Ajout d'une classe conditionnelle pour les lignes supprimées --}}
+                <tr class="{{ $movement->deleted_at ? 'deleted-row' : '' }}">
                     <td>{{ \Carbon\Carbon::parse($movement->created_at)->format('d/m/Y H:i') }}</td>
                     <td>{{ $movement->article->name ?? 'N/A' }}</td>
                     <td>{{ $movement->agency->name ?? 'N/A' }}</td>

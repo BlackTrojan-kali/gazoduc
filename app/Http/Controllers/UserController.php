@@ -64,6 +64,7 @@ class UserController extends Controller
         $user->password = $user->password;
         $user->role_id = $request->role_id;
         $user->entreprise_id = $request->entreprise_id;
+    
         $user->save();
         return back()->with("info","user updated succesfully");
         
@@ -115,6 +116,7 @@ class UserController extends Controller
             "code"=>"required|string|min:4",
             "role_id"=>"required",
             "entreprise_id"=>"required",
+            "modif_days"=>"required | numeric"
         ]);
         $user = User::where('id',$idceo)->first();
         $user->first_name = $request->first_name;
@@ -125,6 +127,7 @@ class UserController extends Controller
         $user->password = $user->password;
         $user->role_id = $request->role_id;
         $user->entreprise_id = $request->entreprise_id;
+        $user->modif_days = $request->modif_days;
         $user->save();
         return back()->with("info","user updated succesfully");
         
@@ -196,6 +199,7 @@ class UserController extends Controller
             "code"=>"required|string|min:4",
             "role_id"=>"required",
             "entreprise_id"=>"required",
+            "modif_days"=>"required | numeric"
         ]);
         $user = User::where('id',$idceo)->first();
         $user->first_name = $request->first_name;
@@ -207,6 +211,7 @@ class UserController extends Controller
         $user->role_id = $request->role_id;
         $user->agency_id =$request->agency_id;
         $user->entreprise_id = $request->entreprise_id;
+        $user->modif_days = $request->modif_days;
         $user->save();
         return back()->with("info","user updated succesfully");
         
@@ -277,6 +282,7 @@ class UserController extends Controller
             "code"=>"required|string|min:4",
             "role_id"=>"required",
             "entreprise_id"=>"required",
+            "modif_days"=>"required | numeric"
         ]);
         $user = User::where('id',$idceo)->first();
         $user->first_name = $request->first_name;
@@ -288,6 +294,7 @@ class UserController extends Controller
         $user->role_id = $request->role_id;
         $user->agency_id =$request->agency_id;
         $user->entreprise_id = $request->entreprise_id;
+        $user->modif_days = $request->modif_days;
         $user->save();
         return back()->with("info","user updated succesfully");
         
@@ -359,6 +366,7 @@ class UserController extends Controller
             "code"=>"required|string|min:4",
             "role_id"=>"required",
             "entreprise_id"=>"required",
+            "modif_days"=>"required | numeric"
         ]);
         $user = User::where('id',$idceo)->first();
         $user->first_name = $request->first_name;
@@ -370,6 +378,7 @@ class UserController extends Controller
         $user->role_id = $request->role_id;
         $user->agency_id =$request->agency_id;
         $user->entreprise_id = $request->entreprise_id;
+        $user->modif_days = $request->modif_days;
         $user->save();
         return back()->with("info","user updated succesfully");
         
@@ -442,6 +451,7 @@ class UserController extends Controller
             "code"=>"required|string|min:4",
             "role_id"=>"required",
             "entreprise_id"=>"required",
+            "modif_days"=>"required | numeric"
         ]);
         $user = User::where('id',$idceo)->first();
         $user->first_name = $request->first_name;
@@ -453,6 +463,7 @@ class UserController extends Controller
         $user->role_id = $request->role_id;
         $user->agency_id =$request->agency_id;
         $user->entreprise_id = $request->entreprise_id;
+        $user->modif_days = $request->modif_days;
         $user->save();
         return back()->with("info","user updated succesfully");
         

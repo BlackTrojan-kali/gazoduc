@@ -1,18 +1,19 @@
 // resources/js/components/Modals/ReceptionHistoryPDFExcelModal.jsx
 import React from 'react';
 import { useForm } from '@inertiajs/react';
-import Modal from './Modal'; // Assurez-vous d'avoir un composant Modal générique
-import Button from '../ui/button/Button'; // Votre composant Button
-import Input from '../form/input/InputField'; // Votre composant InputField
+import Modal from './Modal';
+import Button from '../ui/button/Button';
+import Input from '../form/input/InputField';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faFileExport } from '@fortawesome/free-solid-svg-icons'; // Utilisez une icône générique d'exportation
+import { faFileExport } from '@fortawesome/free-solid-svg-icons';
 
 const ReceptionHistoryPDFExcelModal = ({ isOpen, onClose, agencies, currentFilters }) => {
   const { data, setData, post, processing, errors } = useForm({
     agency_id: currentFilters?.agency_id || '',
     start_date: currentFilters?.start_date || '',
     end_date: currentFilters?.end_date || '',
-    export_format: 'pdf', // Ajout du champ pour le type d'exportation, par défaut PDF
+    // La valeur par défaut est mise à jour pour refléter le choix initial
+    export_format: 'pdf',
   });
 
   const handleChange = (e) => {
@@ -30,17 +31,28 @@ const ReceptionHistoryPDFExcelModal = ({ isOpen, onClose, agencies, currentFilte
     if (data.end_date) {
       params.append('end_date', data.end_date);
     }
+    
+    // --- NOUVELLE LOGIQUE DE DÉTECTION DU TYPE D'EXPORTATION ---
+    let fileType = 'pdf'; // Défaut
+    let movementType = 'global_no_delete'; // Défaut
+    
+    // On décompose la valeur de la liste déroulante pour déterminer les paramètres
+    if (data.export_format === 'pdf_with_delete') {
+      fileType = 'pdf';
+      movementType = 'global_with_delete';
+    } else if (data.export_format === 'excel') {
+      fileType = 'excel';
+    }
 
-    // --- CORRECTION CLÉ ICI : Ajoutez le format d'exportation aux paramètres ---
-    // C'est ce paramètre que votre fonction Laravel 'exportReceptions' lira.
-    params.append('export_format', data.export_format);
+    // Ajout des paramètres déterminés
+    params.append('file_type', fileType);
+    params.append('type_mouvement', movementType);
 
     // La route 'receptions.export' est celle qui gère les deux types d'exportation.
     // L'URL est construite en ajoutant les paramètres de recherche.
     const exportUrl = route('receptions.export') + '?' + params.toString();
 
-    // Ouvre le téléchargement dans un nouvel onglet, ce qui permet au navigateur
-    // de gérer le téléchargement du fichier (PDF ou Excel) et garde la modal ouverte ou la ferme.
+    // Ouvre le téléchargement dans un nouvel onglet
     window.open(exportUrl, '_blank');
     onClose(); // Ferme la modal après avoir déclenché le téléchargement
   };
@@ -93,10 +105,10 @@ const ReceptionHistoryPDFExcelModal = ({ isOpen, onClose, agencies, currentFilte
             />
         </div>
 
-        {/* Nouveau champ pour le type de fichier à exporter */}
+        {/* Champ pour le type de fichier à exporter, avec la nouvelle option */}
         <div className="mb-6">
           <label htmlFor="export_format" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Type de fichier
+            Type de rapport
           </label>
           <select
             id="export_format"
@@ -104,8 +116,9 @@ const ReceptionHistoryPDFExcelModal = ({ isOpen, onClose, agencies, currentFilte
             value={data.export_format}
             onChange={handleChange}
           >
-            <option value="pdf">PDF</option>
-            <option value="excel">Excel (XLSX)</option> {/* Maintenez XLSX pour Maatwebsite/Excel */}
+            <option value="pdf">PDF (mouvements actuels)</option>
+            <option value="pdf_with_delete">PDF (mouvements actuels et supprimés)</option>
+            <option value="excel">Excel (XLSX)</option>
           </select>
           {errors.export_format && <div className="text-red-500 text-sm mt-1">{errors.export_format}</div>}
         </div>

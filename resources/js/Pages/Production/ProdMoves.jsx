@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Head, usePage, Link, useForm } from '@inertiajs/react';
 import ProdLayout from '../../layout/ProdLayout/ProdLayout';
 import InputField from '../../components/form/input/InputField';
@@ -6,14 +6,14 @@ import Button from '../../components/ui/button/Button';
 import Select from 'react-select';
 import ExportProductionModal from '../../components/Modals/ProdPdfModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faFilter, faTimes, faCalendarAlt, faSearch, faChevronLeft, faChevronRight, faTrashAlt, faSpinner, faFileExport } from '@fortawesome/free-solid-svg-icons';
+import { faFilter, faTimes, faCalendarAlt, faSearch, faSpinner, faFileExport, faTrashAlt } from '@fortawesome/free-solid-svg-icons';
 import Swal from 'sweetalert2';
 import RegLayout from '../../layout/RegLayout/RegLayout';
 
 const PageContent = ({ prodMoves, agencies, articles, citernes }) => {
-  const { url } = usePage();
+  const { auth } = usePage().props;
   const { delete: inertiaDelete, processing } = useForm();
-
+  
   const initialMoves = prodMoves.data;
 
   const [filteredMoves, setFilteredMoves] = useState(initialMoves);
@@ -26,15 +26,17 @@ const PageContent = ({ prodMoves, agencies, articles, citernes }) => {
 
   const [showExportModal, setShowExportModal] = useState(false);
 
-  const agencyOptions = Array.isArray(agencies)
+  const agencyOptions = useMemo(() => Array.isArray(agencies)
     ? agencies.map(agency => ({ value: String(agency.id), label: agency.name }))
-    : [];
-  const articleOptions = Array.isArray(articles)
+    : [], [agencies]);
+
+  const articleOptions = useMemo(() => Array.isArray(articles)
     ? articles.map(article => ({ value: String(article.id), label: article.name }))
-    : [];
-  const citerneOptions = Array.isArray(citernes)
+    : [], [articles]);
+
+  const citerneOptions = useMemo(() => Array.isArray(citernes)
     ? citernes.map(citerne => ({ value: String(citerne.id), label: citerne.name }))
-    : [];
+    : [], [citernes]);
 
   const applyFilters = () => {
     let tempMoves = initialMoves;
@@ -84,25 +86,21 @@ const PageContent = ({ prodMoves, agencies, articles, citernes }) => {
   };
 
   useEffect(() => {
-    setFilteredMoves(prodMoves.data);
+    // Re-appliquer les filtres si les données initiales changent
     applyFilters();
-  }, [searchTerm, selectedAgency, selectedArticle, selectedCiterne, startDate, endDate, prodMoves]);
+  }, [searchTerm, selectedAgency, selectedArticle, selectedCiterne, startDate, endDate, prodMoves.data]);
 
   // Définition des variables CSS pour les couleurs en fonction du thème
-  const colors = {
-    '--text-color': 'rgb(31 41 55)',
-    '--placeholder-color': 'rgb(107 114 128)',
-    '--border-color': 'rgb(209 213 219)',
-    '--bg-menu': 'rgb(255 255 255)',
-    '--bg-option-hover': 'rgb(243 244 246)',
-  };
-  if (document.documentElement.classList.contains('dark')) {
-    colors['--text-color'] = 'rgb(249 250 251 / 0.9)';
-    colors['--placeholder-color'] = 'rgb(156 163 175)';
-    colors['--border-color'] = 'rgb(75 85 99)';
-    colors['--bg-menu'] = 'rgb(31 41 55)';
-    colors['--bg-option-hover'] = 'rgb(55 65 81)';
-  }
+  const colors = useMemo(() => {
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    return {
+      '--text-color': isDarkMode ? 'rgb(249 250 251 / 0.9)' : 'rgb(31 41 55)',
+      '--placeholder-color': isDarkMode ? 'rgb(156 163 175)' : 'rgb(107 114 128)',
+      '--border-color': isDarkMode ? 'rgb(75 85 99)' : 'rgb(209 213 219)',
+      '--bg-menu': isDarkMode ? 'rgb(31 41 55)' : 'rgb(255 255 255)',
+      '--bg-option-hover': isDarkMode ? 'rgb(55 65 81)' : 'rgb(243 244 246)',
+    };
+  }, []);
 
   // Styles personnalisés pour react-select, utilisant les variables CSS
   const selectStyles = {
@@ -110,26 +108,43 @@ const PageContent = ({ prodMoves, agencies, articles, citernes }) => {
       ...baseStyles,
       height: '44px',
       minHeight: '44px',
-      borderColor: state.isFocused ? '#3B82F6' : 'var(--border-color)',
+      borderColor: state.isFocused ? '#3B82F6' : colors['--border-color'],
       backgroundColor: 'transparent',
       boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
       '&:hover': {
         borderColor: state.isFocused ? '#3B82F6' : '#9CA3AF',
       },
     }),
-    singleValue: (baseStyles) => ({ ...baseStyles, color: 'var(--text-color)' }),
-    placeholder: (baseStyles) => ({ ...baseStyles, color: 'var(--placeholder-color)' }),
-    input: (baseStyles) => ({ ...baseStyles, color: 'var(--text-color)' }),
-    menu: (baseStyles) => ({ ...baseStyles, backgroundColor: 'var(--bg-menu)', zIndex: 9999 }),
+    singleValue: (baseStyles) => ({ ...baseStyles, color: colors['--text-color'] }),
+    placeholder: (baseStyles) => ({ ...baseStyles, color: colors['--placeholder-color'] }),
+    input: (baseStyles) => ({ ...baseStyles, color: colors['--text-color'] }),
+    menu: (baseStyles) => ({ ...baseStyles, backgroundColor: colors['--bg-menu'], zIndex: 9999 }),
     option: (baseStyles, state) => ({
       ...baseStyles,
-      backgroundColor: state.isSelected ? '#2563EB' : state.isFocused ? 'var(--bg-option-hover)' : 'var(--bg-menu)',
-      color: state.isSelected ? 'white' : 'var(--text-color)',
-      '&:hover': { backgroundColor: 'var(--bg-option-hover)', color: 'var(--text-color)' },
+      backgroundColor: state.isSelected ? '#2563EB' : state.isFocused ? colors['--bg-option-hover'] : colors['--bg-menu'],
+      color: state.isSelected ? 'white' : colors['--text-color'],
+      '&:hover': { backgroundColor: colors['--bg-option-hover'], color: colors['--text-color'] },
     }),
-    indicatorSeparator: (baseStyles) => ({ ...baseStyles, backgroundColor: 'var(--border-color)' }),
-    dropdownIndicator: (baseStyles) => ({ ...baseStyles, color: 'var(--placeholder-color)' }),
-    clearIndicator: (baseStyles) => ({ ...baseStyles, color: 'var(--placeholder-color)', '&:hover': { color: '#EF4444' } }),
+    indicatorSeparator: (baseStyles) => ({ ...baseStyles, backgroundColor: colors['--border-color'] }),
+    dropdownIndicator: (baseStyles) => ({ ...baseStyles, color: colors['--placeholder-color'] }),
+    clearIndicator: (baseStyles) => ({ ...baseStyles, color: colors['--placeholder-color'], '&:hover': { color: '#EF4444' } }),
+  };
+
+  // Fonction pour déterminer si une production peut être supprimée
+  const canDelete = (productionCreatedAt) => {
+    // Si l'utilisateur n'a pas de `modif_days` ou si c'est 0, la suppression n'est pas permise
+    if (!auth.user || !auth.user.modif_days || auth.user.modif_days <= 0) {
+      return false;
+    }
+
+    const today = new Date();
+    const creationDate = new Date(productionCreatedAt);
+    // Calculer la différence en jours
+    const diffTime = today.getTime() - creationDate.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    // Renvoyer vrai si la production a été créée dans la période autorisée
+    return diffDays <= auth.user.modif_days;
   };
 
   const handleDelete = (productionId) => {
@@ -170,7 +185,7 @@ const PageContent = ({ prodMoves, agencies, articles, citernes }) => {
   return (
     <>
       <Head title="Historique Productions" />
-      <div className="p-6" style={colors}>
+      <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-xl font-bold text-gray-900 dark:text-white/90">
             Historique des Productions de Bouteilles
@@ -350,9 +365,13 @@ const PageContent = ({ prodMoves, agencies, articles, citernes }) => {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
                         onClick={() => handleDelete(move.id)}
-                        disabled={processing}
+                        disabled={processing || !canDelete(move.created_at)}
                         className="text-red-600 hover:text-red-900 dark:text-red-500 dark:hover:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="Supprimer cette production"
+                        title={
+                          canDelete(move.created_at)
+                          ? "Supprimer cette production"
+                          : `Suppression non autorisée après ${auth.user.modif_days} jour(s)`
+                        }
                       >
                         {processing ? (
                             <FontAwesomeIcon icon={faSpinner} spin />

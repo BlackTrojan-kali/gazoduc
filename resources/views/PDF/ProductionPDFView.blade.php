@@ -93,6 +93,12 @@
         tbody tr:hover {
             background-color: #f5f5f5; /* Effet hover léger */
         }
+        /* Nouvelle classe pour les lignes supprimées */
+        .deleted-row {
+            background-color: #fcebeb; /* Fond rouge très clair */
+            text-decoration: line-through; /* Optionnel : barrer le texte */
+            color: #a0a0a0; /* Optionnel : griser le texte */
+        }
         .no-data {
             text-align: center;
             padding: 30px;
@@ -176,11 +182,12 @@
                 <th>Quantité</th>
                 <th>Agence</th>
                 <th>Enregistré par</th>
+                <th>Statut</th>
             </tr>
         </thead>
         <tbody>
             @forelse($prodMoves as $move)
-                <tr>
+                <tr @if($move->deleted_at) class="deleted-row" @endif>
                     <td>{{ $move->id }}</td>
                     <td>{{ \Carbon\Carbon::parse($move->created_at)->format('d/m/Y H:i') }}</td>
                     <td>{{ $move->citerne->name ?? 'N/A' }}</td>
@@ -189,10 +196,17 @@
                     <td>{{ $move->agency->name ?? 'N/A' }}</td>
                     {{-- Assurez-vous que la relation est bien 'user' et non 'recorded_by_user' si le modèle est ProductionHistory --}}
                     <td>{{ $move->user->first_name ?? 'N/A' }}</td>
+                    <td>
+                        @if($move->deleted_at)
+                            <span style="color: red; font-weight: bold;">Supprimé</span>
+                        @else
+                            <span>Actif</span>
+                        @endif
+                    </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="7" class="no-data">Aucune production trouvée pour les critères sélectionnés.</td>
+                    <td colspan="8" class="no-data">Aucune production trouvée pour les critères sélectionnés.</td>
                 </tr>
             @endforelse
         </tbody>
@@ -200,7 +214,7 @@
             <tr>
                 <td colspan="4" class="table-footer total-label">Total des quantités produites :</td>
                 <td class="table-footer total-value">{{ $prodMoves->sum('quantity_produced') }}</td>
-                <td colspan="2" class="table-footer"></td> {{-- Colonnes vides pour alignement --}}
+                <td colspan="3" class="table-footer"></td> {{-- Colonnes vides pour alignement --}}
             </tr>
         </tfoot>
     </table>

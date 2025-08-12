@@ -36,13 +36,14 @@ class DepotageController extends Controller
         $depotage->delete();
         return back()->with("warning","le depotage a ete supprime");
     }
-    public function export(Request $request)
+  public function export(Request $request)
     {
         // 1. Récupération et validation des paramètres de la requête
         $startDate = Carbon::parse($request->input('start_date'))->startOfDay();
         $endDate = Carbon::parse($request->input('end_date'))->endOfDay();
-        $agencyId = $request->input('agency_id'); // L'ID d'agence sélectionné dans la modale
-        $fileType = $request->input('file_type', 'pdf'); // Type de fichier demandé (pdf ou excel)
+        $agencyId = $request->input('agency_id');
+        $format = $request->input('format', 'pdf'); // Utiliser 'format' pour être plus générique
+        $isWithDeleted = filter_var($request->input('isWithDeleted'), FILTER_VALIDATE_BOOLEAN); // Gérer le paramètre pour les soft deletes
 
         // Validation de base des dates
         if (empty($startDate) || empty($endDate)) {
@@ -50,10 +51,15 @@ class DepotageController extends Controller
         }
 
         // 2. Construction de la requête pour récupérer les dépotages
-        $query = Depotage::query()
-            // Charger toutes les relations spécifiées
-            ->with(['agency', 'citerne_mobile', 'citerne_fixe', 'article', 'user']) // Utilisez 'recordedByUser' si c'est le nom de la relation pour l'utilisateur
-            ->whereBetween('created_at', [$startDate, $endDate]); // Filtrer par la date de dépotage
+        $query = Depotage::query();
+
+        // Appliquer withTrashed() si l'option est activée
+        if ($isWithDeleted) {
+            $query->withTrashed();
+        }
+
+        $query->with(['agency', 'citerne_mobile', 'citerne_fixe', 'article', 'user'])
+              ->whereBetween('created_at', [$startDate, $endDate]);
 
         // Filtrage par l'agence de l'utilisateur si ce n'est pas la direction
         if (Auth::check() && Auth::user()->role !== "direction") {
@@ -63,7 +69,6 @@ class DepotageController extends Controller
         }
 
         // Filtrage par agence si un agency_id est fourni ET que l'utilisateur est "direction"
-        // Ou si un agencyId est déjà défini par la restriction ci-dessus.
         if ($agencyId) {
             $query->where('agency_id', $agencyId);
         }
@@ -71,12 +76,12 @@ class DepotageController extends Controller
         // Récupération des données finales, triées par date de dépotage
         $depotages = $query->orderBy('created_at', 'asc')->get();
 
-        // 3. Génération du rapport selon le type demandé
-        if ($fileType === 'excel') {
-            // Utilisation de l'exportateur Excel
+        // 3. Génération du rapport selon le format demandé
+        if ($format === 'excel') {
+            // Assurez-vous que votre exportateur Excel gère la collection de modèles, y compris les soft deletes.
             return Excel::download(new DepotagesExport($depotages), 'historique_depotages_' . now()->format('Ymd_His') . '.xlsx');
 
-        } elseif ($fileType === 'pdf') {
+        } elseif ($format === 'pdf') {
             // Préparation des données pour la vue PDF
             $data = [
                 'depotages' => $depotages,
@@ -84,6 +89,7 @@ class DepotageController extends Controller
                 'end_date' => $endDate,
                 // Récupérer l'objet Agence pour afficher son nom dans le PDF si un ID est fourni
                 'selectedAgency' => $agencyId ? Agency::find($agencyId) : null,
+                'isWithDeleted' => $isWithDeleted, // Passer l'état de l'option soft delete à la vue
             ];
 
             // Chargement de la vue Blade et génération du PDF

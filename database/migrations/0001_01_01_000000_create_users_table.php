@@ -24,6 +24,7 @@ return new class extends Migration
             $table->integer("modif_days")->default(2);//jours pour modifier des element dans les mouvements
             $table->rememberToken(); 
             $table->timestamps();
+            $table->softDeletes();
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

@@ -223,17 +223,15 @@ class MouvementController extends Controller
         }
     }
  
-    public function generateReport(Request $request)
+  public function generateReport(Request $request)
     {
-        // dd($request->all()); // Ligne de débogage, à commenter ou supprimer en production
-
         // 1. Validation des paramètres de la requête
         $request->validate([
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
             'agency_id' => 'nullable|exists:agencies,id',
             'service_id' => 'nullable|exists:roles,id',
-            'type_mouvement' => 'nullable|in:entree,sortie,global',
+            'type_mouvement' => 'nullable|in:entree,sortie,global_no_delete,global_with_delete',
             'article_id' => 'nullable|exists:articles,id',
             'file_type' => 'required|in:pdf,excel',
         ]);
@@ -253,12 +251,20 @@ class MouvementController extends Controller
         $serviceName = $serviceId ? Role::find($serviceId)?->name : 'Tous les services';
         
         $movementTypeName = '';
-        if ($movementType === 'entree') {
-            $movementTypeName = 'Entrée';
-        } elseif ($movementType === 'sortie') {
-            $movementTypeName = 'Sortie';
-        } else { // 'global' ou vide
-            $movementTypeName = 'Global (Entrées & Sorties)';
+        switch ($movementType) {
+            case 'entree':
+                $movementTypeName = 'Entrée';
+                break;
+            case 'sortie':
+                $movementTypeName = 'Sortie';
+                break;
+            case 'global_no_delete':
+                $movementTypeName = 'Global (Entrées & Sorties)';
+                break;
+            case 'global_with_delete':
+            default:
+                $movementTypeName = 'Global (Entrées, Sorties & Suppressions)';
+                break;
         }
 
         // 4. Construction de la requête de base pour les mouvements
@@ -266,8 +272,13 @@ class MouvementController extends Controller
                           ->whereBetween("created_at", [$startDate, $endDate])
                           ->orderBy('created_at', 'asc')
                           ->with("article", "agency", "user");
-
+        
         // 5. Application des filtres conditionnels
+        // Inclure les mouvements supprimés si le type de rapport est 'global_with_delete'
+        $query->when($movementType === 'global_with_delete', function ($q) {
+            $q->withTrashed();
+        });
+
         $query->when($agencyId, function ($q) use ($agencyId) {
             $q->where('agency_id', $agencyId);
         });
@@ -276,10 +287,12 @@ class MouvementController extends Controller
             $q->where('article_id', $articleId);
         });
 
-        $query->when($movementType && $movementType !== 'global', function ($q) use ($movementType) {
-            $q->where('movement_type', $movementType);
-        });
-
+        if ($movementType === 'entree' || $movementType === 'sortie') {
+            $query->where('movement_type', $movementType);
+        } elseif ($movementType === 'global_no_delete') {
+            $query->whereIn('movement_type', ['entree', 'sortie']);
+        }
+        
         $query->when($serviceId, function ($q) use ($serviceName) {
             $q->where('source_location', $serviceName);
         });
@@ -306,11 +319,11 @@ class MouvementController extends Controller
 
         // 8. Génération du rapport selon le type de fichier
         if ($fileType === "pdf") {
-            $pdfView = ($movementType === "global") ? "PDF.MovesGlobalPDFView" : "PDF.MovesPDFView";
+            $isGlobal = in_array($movementType, ['global_no_delete', 'global_with_delete']);
+            $pdfView = $isGlobal ? "PDF.MovesGlobalPDFView" : "PDF.MovesPDFView";
             $pdf = Pdf::loadView($pdfView, $reportData);
             return $pdf->download($fileName . '.pdf');
         } elseif ($fileType === "excel") {
-            // CORRECTION: On passe les arguments un par un, comme l'attend le constructeur
             return Excel::download(
                 new MovementsExport(
                     $reportData['movements'],
@@ -318,7 +331,7 @@ class MouvementController extends Controller
                     $reportData['endDate'],
                     $reportData['agencyName'],
                     $reportData['serviceName'],
-                    $movementType, // On utilise la variable non formatée pour la logique interne de la classe
+                    $movementType,
                     $reportData['articleName']
                 ),
                 $fileName . '.xlsx'

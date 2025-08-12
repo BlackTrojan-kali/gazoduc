@@ -47,6 +47,7 @@ class HandleInertiaRequests extends Middleware
                     'role' => $request->user()->role->name ?? null, // Assuming a role relationship
                     "agency"=>$request->user()->agency ??null,
                     "entreprice"=>$request->user()->entreprise ?? null,
+                    "modif_days"=>$request->user()->modif_days,
                     ] : null,
             ],
 

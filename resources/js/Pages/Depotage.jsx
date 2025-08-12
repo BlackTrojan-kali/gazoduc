@@ -1,19 +1,20 @@
-import React, { useState, useMemo } from 'react'; // Importez useState et useMemo
+import React, { useState, useMemo } from 'react';
 import MagLayout from '../layout/MagLayout/MagLayout';
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react'; // Ajoutez usePage
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTrash, faFileExport, faSearch, faTimes } from '@fortawesome/free-solid-svg-icons'; // Ajoutez faSearch et faTimes
+import { faTrash, faFileExport, faSearch, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '../components/ui/table';
 import Swal from 'sweetalert2';
 
 // Importez vos composants personnalisés :
 import Button from '../components/ui/button/Button';
-import Input from '../components/form/input/InputField'; // Importez votre composant Input
-import DepotageHistoryPDFExcelModal from '../components/Modals/DepHistModal'; // Assurez-vous que le chemin est correct
+import Input from '../components/form/input/InputField';
+import DepotageHistoryPDFExcelModal from '../components/Modals/DepHistModal';
 import RegLayout from '../layout/RegLayout/RegLayout';
 
-const PageContent = ({ depotages: initialDepotages, agencies }) => { // 'filters' a été retiré des props
+const PageContent = ({ depotages: initialDepotages, agencies }) => {
   const { delete: inertiaDelete, processing } = useForm();
+  const { props: { auth } } = usePage(); // Ajoutez la récupération de l'utilisateur authentifié
 
   // --- États et fonctions pour la modale d'exportation ---
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -44,9 +45,25 @@ const PageContent = ({ depotages: initialDepotages, agencies }) => { // 'filters
     });
   };
 
+  // --- Fonction pour déterminer si un dépotage peut être supprimé ---
+  const canDelete = (depotageCreatedAt) => {
+    // Si l'utilisateur n'a pas de `modification_days` défini ou s'il est 0, la suppression n'est pas permise.
+    if (!auth.user || !auth.user.modif_days || auth.user.modif_days <= 0) {
+      return false;
+    }
+    const today = new Date();
+    const creationDate = new Date(depotageCreatedAt);
+    // Calculer la différence en jours
+    const diffTime = today.getTime() - creationDate.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Renvoyer vrai si le dépotage a été créé dans la période autorisée
+    return diffDays <= auth.user.modif_days;
+  };
+
   // --- Filtrage côté frontend des données de dépotages ---
   const filteredDepotages = useMemo(() => {
-    let currentDepotages = initialDepotages.data; // Utiliser les données brutes paginées
+    let currentDepotages = initialDepotages.data;
 
     // Filtrer par agence (si sélectionnée)
     if (filterState.agency_id) {
@@ -57,8 +74,8 @@ const PageContent = ({ depotages: initialDepotages, agencies }) => { // 'filters
 
     // Filtrer par dates (si sélectionnées)
     if (filterState.start_date && filterState.end_date) {
-      const startDate = new Date(filterState.start_date + 'T00:00:00'); // Assurez-vous d'avoir l'heure de début du jour
-      const endDate = new Date(filterState.end_date + 'T23:59:59');     // Assurez-vous d'avoir l'heure de fin du jour
+      const startDate = new Date(filterState.start_date + 'T00:00:00');
+      const endDate = new Date(filterState.end_date + 'T23:59:59');
       currentDepotages = currentDepotages.filter(depotage => {
         const depotageDate = new Date(depotage.depotage_date);
         return depotageDate >= startDate && depotageDate <= endDate;
@@ -93,14 +110,11 @@ const PageContent = ({ depotages: initialDepotages, agencies }) => { // 'filters
     }
 
     return currentDepotages;
-  }, [initialDepotages.data, filterState]); // Recalcule quand les données initiales ou les filtres changent
+  }, [initialDepotages.data, filterState]);
 
-  // Fonction pour gérer la pagination après une suppression si nécessaire
-  // Note: Cette fonction est pour la suppression et recharge la page via Inertia.
-  // Les filtres frontend ne seront pas persistés dans l'URL par cette fonction.
   const applyPaginationAfterDelete = (params = {}) => {
     const currentParams = {
-      page: initialDepotages.current_page, // Utilisez la pagination de Inertia
+      page: initialDepotages.current_page,
       per_page: initialDepotages.per_page,
       ...params,
     };
@@ -111,13 +125,10 @@ const PageContent = ({ depotages: initialDepotages, agencies }) => { // 'filters
       }
     });
 
-    // Assurez-vous d'avoir 'Inertia' importé ou défini globalement si vous l'utilisez
-    // Si ce n'est pas le cas, vous devrez l'importer explicitement :
-    // import { Inertia } from '@inertiajs/inertia'; // ou '@inertiajs/react' si vous l'utilisez comme ça
     window.Inertia.get(route('depotages.index'), currentParams, {
       preserveState: true,
       preserveScroll: true,
-      only: ['depotages'], // Ne demande que la prop 'depotages'
+      only: ['depotages'],
     });
   };
 
@@ -133,7 +144,7 @@ const PageContent = ({ depotages: initialDepotages, agencies }) => { // 'filters
       cancelButtonText: 'Annuler'
     }).then((result) => {
       if (result.isConfirmed) {
-        inertiaDelete(route('depotages.destroy', depotageId), {
+        inertiaDelete(route('depotages.delete', depotageId), {
           preserveScroll: true,
           onSuccess: () => {
             Swal.fire(
@@ -263,14 +274,13 @@ const PageContent = ({ depotages: initialDepotages, agencies }) => { // 'filters
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredDepotages.length === 0 ? ( // Utiliser filteredDepotages ici
+                {filteredDepotages.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={10} className="py-6 text-center text-gray-400">Aucun dépotage trouvé avec ces filtres, monsieur.</TableCell>
                   </TableRow>
                 ) : (
-                  filteredDepotages.map(depotage => ( // Itérer sur filteredDepotages
+                  filteredDepotages.map(depotage => (
                     <TableRow key={depotage.id}>
-                      {/* Appliquer py-4 à chaque TableCell pour plus d'espace */}
                       <TableCell className="py-4">{depotage.id}</TableCell>
                       <TableCell className="py-4">{depotage.citerne_mobile ? depotage.citerne_mobile.name : '—'}</TableCell>
                       <TableCell className="py-4">{depotage.citerne_fixe ? depotage.citerne_fixe.name : '—'}</TableCell>
@@ -289,10 +299,14 @@ const PageContent = ({ depotages: initialDepotages, agencies }) => { // 'filters
                       <TableCell className="py-4">
                         <div className="flex gap-2 justify-center">
                           <button
-                            disabled={processing}
+                            disabled={processing || !canDelete(depotage.created_at)}
                             onClick={() => handleDelete(depotage.id)}
-                            title="Supprimer ce dépotage"
-                            className="text-red-600 hover:text-red-800 transition-colors"
+                            title={
+                              canDelete(depotage.created_at)
+                                ? "Supprimer ce dépotage"
+                                : `Suppression non autorisée après ${auth.user.modif_days} jour(s) `
+                            }
+                            className="text-red-600 hover:text-red-800 transition-colors disabled:text-gray-400 disabled:cursor-not-allowed"
                             type="button"
                           >
                             <FontAwesomeIcon icon={faTrash} />
@@ -343,7 +357,7 @@ const PageContent = ({ depotages: initialDepotages, agencies }) => { // 'filters
         onClose={closeExportModal}
         agencies={agencies}
         // Passez les données de filtre actuelles à la modale
-        currentFilters={filterState} // Passez filterState
+        currentFilters={filterState}
       />
     </>
   );

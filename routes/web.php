@@ -100,6 +100,7 @@ Route::middleware(DirectionMiddleware::class)->group(function(){
     //citernes routes
     Route::get('/citernes/index', [CiterneController::class, 'index'])->name('citernes.index');
     Route::post('/citernes/store', [CiterneController::class, 'store'])->name('citernes.store');
+    Route::post('/citernes/generate-stock', [CiterneController::class, 'generateStock'])->name('citernes.generate-stock');
     Route::put('/citernes/uptate/{idCit}', [CiterneController::class, 'update'])->name('citernes.update');
     //banks routes
     Route::get("/banks/index",[bankController::class,"index"])->name("banks.index");

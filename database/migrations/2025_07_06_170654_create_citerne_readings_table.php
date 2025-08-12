@@ -27,6 +27,7 @@ return new class extends Migration
             $table->foreign("citerne_id")->on("citernes")->references("id");
             $table->foreign("agency_id")->on("agencies")->references("id")->onDelete("cascade");
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

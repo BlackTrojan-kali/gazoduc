@@ -11,22 +11,20 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner } from '@fortawesome/free-solid-svg-icons';
 import Swal from 'sweetalert2';
 
-const EditUserModal = ({ isOpen, onClose, user , roles, entreprises, agencies,routeName}) => {
-  // Récupérer les props nécessaires (roles, entreprises, agences)
-  
-
+const EditUserModal = ({ isOpen, onClose, user, roles, entreprises, agencies, routeName }) => {
   // Initialise le formulaire avec les données de l'utilisateur passées, ou des valeurs vides
   const { data, setData, put, processing, errors, reset, recentlySuccessful } = useForm({
     first_name: user?.first_name || '',
     last_name: user?.last_name || '',
     email: user?.email || '',
-    password: '', // Le mot de passe est géré séparément pour la modification
+    password: '',
     password_confirmation: '',
     phone_number: user?.phone_number || '',
     code: user?.code || '',
     role_id: user?.role_id || '',
     entreprise_id: user?.entreprise_id || '',
-    agency_id: user?.agence_id || '', // Champ optionnel
+    agency_id: user?.agence_id || '',
+    modif_days: user?.modif_days || '', // <-- NOUVEAU CHAMP : Nombre de jours de modification
   });
 
   // Met à jour les données du formulaire lorsque la prop 'user' change
@@ -41,7 +39,8 @@ const EditUserModal = ({ isOpen, onClose, user , roles, entreprises, agencies,ro
         role_id: user.role_id,
         entreprise_id: user.entreprise_id,
         agency_id: user.agence_id,
-        password: "", // Réinitialise les champs de mot de passe à chaque ouverture
+        modif_days: user.modif_days, // <-- Mise à jour du nouveau champ
+        password: "",
         password_confirmation: "",
       });
     } else {
@@ -52,7 +51,7 @@ const EditUserModal = ({ isOpen, onClose, user , roles, entreprises, agencies,ro
   // Gérer la réinitialisation du formulaire après une soumission réussie et fermer la modale
   useEffect(() => {
     if (recentlySuccessful) {
-      reset(); // Réinitialise les champs (y compris le mot de passe)
+      reset();
       onClose();
       Swal.fire({
         title: 'Succès !',
@@ -78,8 +77,6 @@ const EditUserModal = ({ isOpen, onClose, user , roles, entreprises, agencies,ro
     }
     console.log(`Données du formulaire utilisateur ${user.id} avant modification, monsieur:`, data);
 
-    // Utilise la méthode PUT d'Inertia pour la mise à jour
-    // Assurez-vous que la route 'users.update' est définie dans Laravel
     put(route(routeName, user.id), {
       preserveScroll: true,
       onError: (validationErrors) => {
@@ -94,11 +91,8 @@ const EditUserModal = ({ isOpen, onClose, user , roles, entreprises, agencies,ro
     });
   };
 
-  // Filtrer les agences en fonction de l'entreprise sélectionnée
   const filteredAgencies = agencies.filter(agence => agence.entreprise_id == data.entreprise_id);
-
-  // Déterminer si le champ agence_id doit être affiché
-  const isAgenceIdRequired = data.role_id && (roles.find(r => r.id == data.role_id)?.name !== 'DG'); // Adapter la condition
+  const isAgenceIdRequired = data.role_id && (roles.find(r => r.id == data.role_id)?.name !== 'DG');
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Modifier l'Utilisateur : ${user?.first_name || ''} ${user?.last_name || ''}`}>
@@ -208,6 +202,25 @@ const EditUserModal = ({ isOpen, onClose, user , roles, entreprises, agencies,ro
             hint={errors.code}
           />
         </div>
+        
+        {/* NOUVEAU CHAMP : modif_days */}
+        <div>
+          <Label htmlFor="edit-user-modif_days">Jours de modification</Label>
+          <Input
+            type="number"
+            id="edit-user-modif_days"
+            name="modif_days"
+            value={data.modif_days}
+            onChange={(e) => setData('modif_days', e.target.value)}
+            disabled={processing}
+            error={!!errors.modif_days}
+            hint={errors.modif_days}
+            min="0"
+          />
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Nombre de jours pendant lesquels l'utilisateur peut modifier/supprimer une valeur. Mettre 0 pour désactiver.
+          </p>
+        </div>
 
         {/* Champ Rôle */}
         <div>
@@ -237,7 +250,7 @@ const EditUserModal = ({ isOpen, onClose, user , roles, entreprises, agencies,ro
             value={data.entreprise_id}
             onChange={(e) => {
               setData('entreprise_id', e.target.value);
-              setData('agence_id', ''); // Réinitialise l'agence quand l'entreprise change
+              setData('agency_id', ''); // Réinitialise l'agence quand l'entreprise change
             }}
             disabled={processing}
             className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.entreprise_id ? 'border-red-500' : ''}`}
@@ -262,7 +275,7 @@ const EditUserModal = ({ isOpen, onClose, user , roles, entreprises, agencies,ro
               onChange={(e) => setData('agency_id', e.target.value)}
               disabled={processing || !data.entreprise_id || filteredAgencies.length === 0}
               className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.agence_id ? 'border-red-500' : ''}`}
-            >
+              >
               <option value="">Sélectionner une agence (Optionnel)</option>
               {filteredAgencies.map((agence) => (
                 <option key={agence.id} value={agence.id}>

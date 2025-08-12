@@ -25,6 +25,7 @@ return new class extends Migration
             $table->foreign("destination_agency_id")->on("agencies")->references("id");
             $table->foreign("recorded_id_user")->on("users")->references("id");
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

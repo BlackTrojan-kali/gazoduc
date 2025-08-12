@@ -75,12 +75,9 @@ const Citernes = ({ citernes, entreprises, products, agencies }) => {
   };
 
   // --- Fonction pour gérer la création de stocks pour une citerne ---
-  const handleCreateCiterneStock = (citerneId, citerneName, currentProductId = null) => {
-    const userEntrepriseId = auth.user.entreprise_id;
-    if (!userEntrepriseId) {
-      Swal.fire('Erreur', 'Impossible de déterminer l\'entreprise de l\'utilisateur connecté, monsieur.', 'error');
-      return;
-    }
+  const handleCreateCiterneStock = (citerneId, citerneName, currentProductId) => {
+ 
+  
 
     Swal.fire({
       title: 'Confirmer l\'initialisation du stock de citerne, monsieur ?',
@@ -93,11 +90,10 @@ const Citernes = ({ citernes, entreprises, products, agencies }) => {
       cancelButtonText: 'Annuler'
     }).then((result) => {
       if (result.isConfirmed) {
-        inertiaPost(route('citerne_stocks.create'), {
+        inertiaPost(route('citernes.generate-stock', {
           citerne_id: citerneId,
           article_id: currentProductId,
-          entreprise_id: userEntrepriseId,
-        }, {
+        },), {
           preserveScroll: true,
           onSuccess: () => {
             Swal.fire(
@@ -105,7 +101,7 @@ const Citernes = ({ citernes, entreprises, products, agencies }) => {
               `Le stock pour la citerne "${citerneName}" a été initialisé.`,
               'success'
             );
-            window.location.reload(); // Recharger après initialisation du stock
+            //window.location.reload(); // Recharger après initialisation du stock
           },
           onError: (errors) => {
             console.error('Erreur de création de stock de citerne:', errors);
@@ -175,7 +171,7 @@ const Citernes = ({ citernes, entreprises, products, agencies }) => {
                       <TableCell>{citerne.product_type}</TableCell>
                       <TableCell>{citerne.capacity_liter} L</TableCell>
                       <TableCell>{citerne.capacity_kg} kg</TableCell>
-                      <TableCell>{citerne.article? citerne.article.name : 'N/A'}</TableCell>
+                      <TableCell>{citerne.article ? citerne.article.name : 'N/A'}</TableCell>
                       <TableCell>{citerne.agency ? citerne.agency.name : 'N/A'}</TableCell>
                       <TableCell>{citerne.entreprise ? citerne.entreprise.name : 'N/A'}</TableCell>
                       <TableCell className="py-3 text-gray-500 text-theme-sm gap-2 flex dark:text-gray-400">
@@ -186,6 +182,16 @@ const Citernes = ({ citernes, entreprises, products, agencies }) => {
                         >
                           <FontAwesomeIcon icon={faEdit} /> Modifier
                         </button>
+                        
+                        {/* Bouton pour générer le stock, affiché seulement pour les citernes fixes */}
+                        {citerne.type === 'fixed' && (
+                          <button
+                            onClick={() => handleCreateCiterneStock(citerne.id, citerne.name, citerne.current_product_id)}
+                            className="inline-flex items-center gap-2 rounded-lg border border-green-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-green-700 shadow-theme-xs hover:bg-green-50 hover:text-green-800 dark:border-green-700 dark:bg-green-800 dark:text-green-400 dark:hover:bg-white/[0.03] dark:hover:text-green-200"
+                          >
+                            <FontAwesomeIcon icon={faBoxesStacked} /> Générer Stock
+                          </button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))

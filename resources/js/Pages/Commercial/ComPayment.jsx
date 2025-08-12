@@ -3,7 +3,7 @@ import ComLayout from '../../layout/ComLayout/ComLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '../../components/ui/table';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEye, faPrint, faTrash, faPlus, faFilter, faEraser, faLink, faUnlink, faFilePdf } from '@fortawesome/free-solid-svg-icons'; // <-- Ajout de faFilePdf
+import { faEye, faPrint, faTrash, faPlus, faFilter, faEraser, faLink, faUnlink, faFilePdf } from '@fortawesome/free-solid-svg-icons';
 import Swal from 'sweetalert2';
 import Select from 'react-select';
 
@@ -17,7 +17,7 @@ import AssociatePaymentModal from '../../components/Modals/Payment/AssociateModa
 import DisassociatePaymentModal from '../../components/Modals/Payment/DissociateModal';
 
 // --- NOUVELLE IMPORTATION : Modale d'exportation PDF ---
-import ExportPaymentPdfModal from '../../components/Modals/Payment/ExportPaymentPdfModal'; // <-- Nouvelle importation
+import ExportPaymentPdfModal from '../../components/Modals/Payment/ExportPaymentPdfModal';
 
 // Styles personnalisés pour react-select, définis une seule fois
 const getSelectStyles = () => {
@@ -76,7 +76,7 @@ const ComPayment = ({ payments, clients, agencies, banks, sales }) => {
   const [selectedPaymentForDisassociation, setSelectedPaymentForDisassociation] = useState(null);
 
   // NOUVEAU : État pour la modale d'exportation PDF
-  const [isExportPdfModalOpen, setIsExportPdfModalOpen] = useState(false); // <-- Nouvel état
+  const [isExportPdfModalOpen, setIsExportPdfModalOpen] = useState(false);
 
   // --- États pour les filtres frontend ---
   const [filterClient, setFilterClient] = useState(null);
@@ -87,6 +87,12 @@ const ComPayment = ({ payments, clients, agencies, banks, sales }) => {
 
   // Utilisation de useForm pour la suppression
   const { delete: inertiaDelete } = useForm({});
+
+  // --- Fonction pour déterminer si un versement peut être supprimé ---
+  const canDelete = (payment) => {
+    // Un versement ne peut pas être supprimé s'il est associé à des factures
+    return !payment.factures || payment.factures.length === 0;
+  };
 
   // --- Filtrage des paiements selon les filtres (optimisé avec useMemo) ---
   const filteredPayments = useMemo(() => {
@@ -136,8 +142,8 @@ const ComPayment = ({ payments, clients, agencies, banks, sales }) => {
   };
 
   // NOUVEAU : Fonctions pour la modale d'exportation PDF
-  const openExportPdfModal = () => setIsExportPdfModalOpen(true); // <-- Nouvelle fonction
-  const closeExportPdfModal = () => setIsExportPdfModalOpen(false); // <-- Nouvelle fonction
+  const openExportPdfModal = () => setIsExportPdfModalOpen(true);
+  const closeExportPdfModal = () => setIsExportPdfModalOpen(false);
 
   const handleDeletePayment = (paymentId) => {
     Swal.fire({
@@ -151,7 +157,7 @@ const ComPayment = ({ payments, clients, agencies, banks, sales }) => {
       cancelButtonText: 'Annuler',
     }).then((result) => {
       if (result.isConfirmed) {
-        inertiaDelete(route('payments.destroy', paymentId), { // Assurez-vous que cette route existe
+        inertiaDelete(route('payments.destroy', paymentId), {
           onSuccess: () => {
             Swal.fire(
               'Supprimé !',
@@ -218,7 +224,7 @@ const ComPayment = ({ payments, clients, agencies, banks, sales }) => {
           <div className="flex gap-2">
             {/* NOUVEAU BOUTON : Exporter PDF */}
             <button
-              onClick={openExportPdfModal} // <-- Appel de la nouvelle fonction
+              onClick={openExportPdfModal}
               className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-red-600 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-red-700 dark:border-red-700 dark:bg-red-700 dark:hover:bg-red-600"
             >
               <FontAwesomeIcon icon={faFilePdf} /> Exporter PDF
@@ -402,20 +408,25 @@ const ComPayment = ({ payments, clients, agencies, banks, sales }) => {
                         >
                           <FontAwesomeIcon icon={faLink} />
                         </button>
-                        {/* NOUVEAU BOUTON : Dissocier les factures */}
+                        {/* Bouton pour dissocier les factures, désactivé si aucune facture n'est associée */}
                         <button
                           className="p-2 rounded-lg text-yellow-600 hover:bg-yellow-100 dark:hover:bg-yellow-900 transition-colors"
                           title="Dissocier des factures"
                           onClick={() => openDisassociateModal(payment)}
-                          // Le bouton est désactivé si aucune facture n'est associée
                           disabled={!payment.factures || payment.factures.length === 0}
                         >
                           <FontAwesomeIcon icon={faUnlink} />
                         </button>
+                        {/* Bouton de suppression, désactivé si le versement est associé à des factures */}
                         <button
-                          className="p-2 rounded-lg text-red-600 hover:bg-red-100 dark:hover:bg-red-900 transition-colors"
-                          title="Supprimer le versement"
-                          onClick={() => handleDeletePayment(payment.id)}
+                          className={`p-2 rounded-lg transition-colors ${
+                            canDelete(payment)
+                              ? 'text-red-600 hover:bg-red-100 dark:hover:bg-red-900'
+                              : 'text-gray-400 cursor-not-allowed'
+                          }`}
+                          title={canDelete(payment) ? "Supprimer le versement" : "Impossible de supprimer, le versement est associé à des factures"}
+                          onClick={() => canDelete(payment) && handleDeletePayment(payment.id)}
+                          disabled={!canDelete(payment)}
                         >
                           <FontAwesomeIcon icon={faTrash} />
                         </button>
@@ -463,8 +474,8 @@ const ComPayment = ({ payments, clients, agencies, banks, sales }) => {
       <ExportPaymentPdfModal
         isOpen={isExportPdfModalOpen}
         onClose={closeExportPdfModal}
-        clients={clients} // Passer la liste des clients pour le filtre
-        paymentTypes={paymentTypeOptions} // Passer les types de versement
+        clients={clients}
+        paymentTypes={paymentTypeOptions}
         agencies={agencies}
         banks={banks}
       />

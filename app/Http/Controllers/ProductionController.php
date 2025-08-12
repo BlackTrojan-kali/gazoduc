@@ -137,21 +137,26 @@ class ProductionController extends Controller
     }
     
 
-    public function export(Request $request)
+      public function export(Request $request)
     {
-
-        $agencyId = $request->agency_id;
-        $articleId = $request->article_id;
-        $citerneId = $request->citerne_id;
-        $startDate = $request->start_date;
-        $endDate = $request->end_date;
-        $format = $request->format;
+        // Récupération des paramètres de la requête
+        $agencyId = $request->input('agency_id');
+        $articleId = $request->input('article_id');
+        $citerneId = $request->input('citerne_id');
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+        $format = $request->input('format');
         $fileName = 'historique_productions_' . now()->format('Ymd_His');
+        // Définir la base de la requête
+        $query = ProductionHistory::query()->with(['agency', 'article', 'citerne', 'user']);
 
-        // Préparation de la requête pour les données (commune aux deux formats)
-        $query = ProductionHistory::query()
-            ->with(['agency', 'article', 'citerne', 'user']);
+        // Ajouter la clause withTrashed() si le format demandé inclut les enregistrements supprimés
+        $isWithDeleted = ($format === 'isWithDeleted=' );
+        if ($isWithDeleted) {
+            $query->withTrashed();
+        }
 
+        // Application des filtres de recherche
         if ($agencyId) {
             $query->where('agency_id', $agencyId);
         }
@@ -168,10 +173,10 @@ class ProductionController extends Controller
             $query->whereDate('created_at', '<=', $endDate);
         }
 
-        $prodMoves = $query->get(); // Récupère les données une seule fois
-        if ($format === "pdf=") {
-            
-            // Pour Dompdf, nous passons les données directement à la vue
+        $prodMoves = $query->get();
+
+        // Gestion de l'exportation selon le format demandé
+        if($format === "pdf=" || $format === "isWithDeleted=") {
             $data = [
                 'prodMoves' => $prodMoves,
                 'filters' => [
@@ -180,21 +185,20 @@ class ProductionController extends Controller
                     'citerne_id' => $citerneId,
                     'start_date' => $startDate,
                     'end_date' => $endDate,
-                ]
+                ],
+                'isWithDeleted' => $isWithDeleted, // Passer le flag à la vue PDF pour affichage
             ];
-            // Si vous voulez les noms des filtres dans le PDF sans faire de requêtes dans la vue
-            // $data['filters']['agency_name'] = $agencyId ? Agency::find($agencyId)->name : null;
-            // ... et ainsi de suite pour article et citerne
-
             $pdf = Pdf::loadView('PDF.ProductionPDFView', $data);
-
             return $pdf->download($fileName . '.pdf');
 
-        } else { 
+        } else if ($format === "excel=") {
+           // Passer le flag à la classe d'exportation pour l'Excel
            return Excel::download(
-                new ProductionHistoryExcelExport($agencyId, $articleId, $citerneId, $startDate, $endDate),
+                new ProductionHistoryExcelExport($agencyId, $articleId, $citerneId, $startDate, $endDate, $isWithDeleted),
                 $fileName . '.xlsx'
             );
         }
+
+        // Retour par défaut en cas de format inconnu
     }
 }

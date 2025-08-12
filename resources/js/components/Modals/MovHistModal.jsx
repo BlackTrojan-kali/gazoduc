@@ -14,7 +14,7 @@ import { faFileExport, faSpinner } from '@fortawesome/free-solid-svg-icons'; // 
 // title: string - titre de la modal (ex: "Exporter l'Historique des Mouvements")
 // articles: array - liste des articles au format { id: number, name: string } (pour le filtre)
 // agencies: array - liste des agences au format { id: number, name: string } (pour le filtre)
-// services: array - NOUVEAU ! Liste des services/rôles au format { id: number, name: string } (pour le filtre)
+// services: array - Liste des services/rôles au format { id: number, name: string } (pour le filtre)
 // currentFilters: object - filtres actuels pour pré-remplir le formulaire (optionnel)
 
 // Ajout d'une valeur par défaut pour le titre des props
@@ -24,9 +24,10 @@ const MovementHistoryPDFExcelModal = ({ isOpen, onClose, title = "Exporter l'His
         end_date: currentFilters?.end_date || '',
         article_id: currentFilters?.article_id || '',
         agency_id: currentFilters?.agency_id || '',
-        service_id: currentFilters?.service_id || '', // NOUVEAU : pour le filtre par service
-        type_mouvement: currentFilters?.type_mouvement || 'global', // Défaut à 'global'
-        file_type: 'pdf', // NOUVEAU : Ajout du champ pour le type de fichier, par défaut PDF
+        service_id: currentFilters?.service_id || '',
+        // Mise à jour de la valeur par défaut pour correspondre au nouveau menu
+        type_mouvement: currentFilters?.type_mouvement || 'global_with_delete',
+        file_type: 'pdf',
     });
 
     // Options pour react-select des articles
@@ -39,14 +40,15 @@ const MovementHistoryPDFExcelModal = ({ isOpen, onClose, title = "Exporter l'His
         ? agencies.map(agency => ({ value: String(agency.id), label: agency.name }))
         : [];
 
-    // Options pour react-select des services/rôles (NOUVEAU !)
+    // Options pour react-select des services/rôles
     const serviceOptions = Array.isArray(services)
         ? services.map(service => ({ value: String(service.id), label: service.name }))
         : [];
 
-    // Options pour le type de mouvement
+    // NOUVELLES options pour le type de mouvement selon votre demande
     const movementTypeOptions = [
-        { value: 'global', label: 'Global (Entrées & Sorties)' },
+        { value: 'global_no_delete', label: 'Global (Entrées & Sorties)' },
+        { value: 'global_with_delete', label: 'Global (Entrées, Sorties + Suppressions)' },
         { value: 'entree', label: 'Entrée' },
         { value: 'sortie', label: 'Sortie' },
     ];
@@ -60,18 +62,18 @@ const MovementHistoryPDFExcelModal = ({ isOpen, onClose, title = "Exporter l'His
     // Réinitialise le formulaire et définit les dates par défaut lors de l'ouverture de la modal
     useEffect(() => {
         if (isOpen) {
-            const today = new Date().toISOString().split('T')[0]; // Date du jour au format YYYY-MM-DD
+            const today = new Date().toISOString().split('T')[0];
             reset({
                 start_date: currentFilters?.start_date || today,
                 end_date: currentFilters?.end_date || today,
                 article_id: currentFilters?.article_id || '',
                 agency_id: currentFilters?.agency_id || '',
-                service_id: currentFilters?.service_id || '', // Réinitialise le service
-                type_mouvement: currentFilters?.type_mouvement || 'global',
-                file_type: 'pdf', // Réinitialise le type de fichier à PDF par défaut
+                service_id: currentFilters?.service_id || '',
+                type_mouvement: currentFilters?.type_mouvement || 'global_with_delete',
+                file_type: 'pdf',
             });
         }
-    }, [isOpen, reset, currentFilters]); // Dépend de isOpen, reset et currentFilters
+    }, [isOpen, reset, currentFilters]);
 
     // Gère les changements pour les champs InputField (date) et Select HTML natifs (file_type)
     const handleChange = (e) => {
@@ -181,15 +183,15 @@ const MovementHistoryPDFExcelModal = ({ isOpen, onClose, title = "Exporter l'His
 
     // Définition des variables CSS pour les couleurs
     const colors = {
-      '--text-color': 'rgb(31 41 55)', // Gris foncé pour le mode clair
-      '--placeholder-color': 'rgb(107 114 128)', // Gris moyen
+      '--text-color': 'rgb(31 41 55)',
+      '--placeholder-color': 'rgb(107 114 128)',
       '--border-color': 'rgb(209 213 219)',
       '--bg-menu': 'rgb(255 255 255)',
       '--bg-option-hover': 'rgb(243 244 246)',
     };
     if (document.documentElement.classList.contains('dark')) {
-      colors['--text-color'] = 'rgb(249 250 251 / 0.9)'; // Blanc cassé pour le mode sombre
-      colors['--placeholder-color'] = 'rgb(156 163 175)'; // Gris pour le placeholder
+      colors['--text-color'] = 'rgb(249 250 251 / 0.9)';
+      colors['--placeholder-color'] = 'rgb(156 163 175)';
       colors['--border-color'] = 'rgb(75 85 99)';
       colors['--bg-menu'] = 'rgb(31 41 55)';
       colors['--bg-option-hover'] = 'rgb(55 65 81)';
@@ -291,7 +293,7 @@ const MovementHistoryPDFExcelModal = ({ isOpen, onClose, title = "Exporter l'His
                         value={selectedMovementTypeOption || movementTypeOptions[0]}
                         onChange={handleSelectChange}
                         placeholder="Sélectionner un type de mouvement"
-                        isClearable={true}
+                        isClearable={false}
                         classNamePrefix="react-select"
                         styles={reactSelectStyles}
                     />
@@ -320,7 +322,6 @@ const MovementHistoryPDFExcelModal = ({ isOpen, onClose, title = "Exporter l'His
                             <option
                                 key={option.value}
                                 value={option.value}
-                                // La couleur de texte de l'option est héritée de la classe parente
                             >
                                 {option.label}
                             </option>

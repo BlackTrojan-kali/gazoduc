@@ -9,7 +9,8 @@ import ClientFormModal from "../../components/Modals/Clients/ClientModal";
 import RegLayout from '../../layout/RegLayout/RegLayout';
 import ComLayout from '../../layout/ComLayout/ComLayout';
 
-const PageContent = ({ clients, clientCategories }) => {
+// Ajout de la prop 'userRole' pour gérer l'affichage conditionnel
+const PageContent = ({ clients, clientCategories, userRole }) => {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
   const { delete: inertiaDelete, processing } = useForm();
@@ -27,6 +28,7 @@ const PageContent = ({ clients, clientCategories }) => {
     setIsFormModalOpen(false);
   };
 
+  // Remplacement de window.alert par Swal
   const handleDelete = (clientId) => {
     Swal.fire({
       title: 'Êtes-vous sûr, monsieur ?',
@@ -194,15 +196,18 @@ const PageContent = ({ clients, clientCategories }) => {
                         >
                           <FontAwesomeIcon icon={faEdit} /> Modifier
                         </Button>
-                        <button
-                          disabled={processing}
-                          onClick={() => handleDelete(client.id)}
-                          title="Supprimer ce client"
-                          className="text-red-600 hover:text-red-800 transition-colors"
-                          type="button"
-                        >
-                          <FontAwesomeIcon icon={faTrash} /> Supprimer
-                        </button>
+                        {/* Condition pour masquer le bouton de suppression si le rôle est 'commercial' */}
+                        {userRole !== "commercial" && (
+                          <button
+                            disabled={processing}
+                            onClick={() => handleDelete(client.id)}
+                            title="Supprimer ce client"
+                            className="text-red-600 hover:text-red-800 transition-colors"
+                            type="button"
+                          >
+                            <FontAwesomeIcon icon={faTrash} /> Supprimer
+                          </button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
@@ -265,15 +270,16 @@ const ClientIndex = ({clients,clientCategories})=>{
   if(auth.user.role =="controleur"){
     return (
       <RegLayout>
-        <PageContent clients={clients} clientCategories={clientCategories}/>
+        {/* Ajout de la prop userRole */}
+        <PageContent clients={clients} clientCategories={clientCategories} userRole={auth.user.role}/>
       </RegLayout>
     )
   }
   if(auth.user.role == "commercial"){
     return(
       <ComLayout>
-
-        <PageContent clients={clients} clientCategories={clientCategories}/>
+        {/* Ajout de la prop userRole */}
+        <PageContent clients={clients} clientCategories={clientCategories} userRole={auth.user.role}/>
       </ComLayout>
     )
   }

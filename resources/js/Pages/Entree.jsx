@@ -28,35 +28,25 @@ const PageContent = ({ movements, articles, agencies, services }) => {
   const [filterAgency, setFilterAgency] = useState(null);
   const [filterService, setFilterService] = useState(null);
 
-  // --- Filtrage des mouvements selon les filtres (optimisé avec useMemo) ---
-  const filteredMovements = useMemo(() => {
-    if (!movements || !movements.data) {
-      return [];
-    }
-
-    return movements.data.filter(movement => {
-      // 1. Filtrer par type de mouvement
-      const matchesType = filterMovementType === '' || movement.movement_type === filterMovementType;
-
-      // 2. Filtrer par article
-      const matchesArticle = !filterArticle || (movement.article && movement.article.id === parseInt(filterArticle.value));
-
-      // 3. Filtrer par qualification
-      const matchesQualification = filterQualification === '' ||
-        (movement.qualification && movement.qualification.toLowerCase() === filterQualification.toLowerCase());
-
-      // 4. Filtrer par agence
-      const matchesAgency = !filterAgency || String(movement.agency_id) === filterAgency.value;
-
-      // 5. Filtrer par service (source_location)
-      const matchesService = !filterService || (movement.source_location && movement.source_location.toLowerCase() === filterService.value.toLowerCase());
-
-      return matchesType && matchesArticle && matchesQualification && matchesAgency && matchesService;
-    });
-  }, [movements.data, filterMovementType, filterArticle, filterQualification, filterAgency, filterService]);
-
   // --- useForm d'Inertia pour la suppression ---
   const { delete: inertiaDelete, processing } = useForm();
+  const { props: { auth } } = usePage();
+console.log(auth);
+  // --- Fonction pour déterminer si un mouvement peut être supprimé ---
+  const canDelete = (movementCreatedAt) => {
+    // Si l'utilisateur n'a pas de `modification_days` défini ou s'il est 0, on ne permet pas la suppression.
+    if (!auth.user || !auth.user.modif_days || auth.user.modif_days <= 0) {
+      return false;
+    }
+    const today = new Date();
+    const creationDate = new Date(movementCreatedAt);
+    // Calculer la différence en jours
+    const diffTime = today.getTime() - creationDate.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Renvoyer vrai si le mouvement a été créé dans la période autorisée
+    return diffDays <= auth.user.modif_days;
+  };
 
   // --- Fonction pour gérer la suppression d'un mouvement avec SweetAlert2 ---
   const handleDelete = (movementId) => {
@@ -92,6 +82,33 @@ const PageContent = ({ movements, articles, agencies, services }) => {
       }
     });
   };
+  
+  // --- Filtrage des mouvements selon les filtres (optimisé avec useMemo) ---
+  const filteredMovements = useMemo(() => {
+    if (!movements || !movements.data) {
+      return [];
+    }
+
+    return movements.data.filter(movement => {
+      // 1. Filtrer par type de mouvement
+      const matchesType = filterMovementType === '' || movement.movement_type === filterMovementType;
+
+      // 2. Filtrer par article
+      const matchesArticle = !filterArticle || (movement.article && movement.article.id === parseInt(filterArticle.value));
+
+      // 3. Filtrer par qualification
+      const matchesQualification = filterQualification === '' ||
+        (movement.qualification && movement.qualification.toLowerCase() === filterQualification.toLowerCase());
+
+      // 4. Filtrer par agence
+      const matchesAgency = !filterAgency || String(movement.agency_id) === filterAgency.value;
+
+      // 5. Filtrer par service (source_location)
+      const matchesService = !filterService || (movement.source_location && movement.source_location.toLowerCase() === filterService.value.toLowerCase());
+
+      return matchesType && matchesArticle && matchesQualification && matchesAgency && matchesService;
+    });
+  }, [movements.data, filterMovementType, filterArticle, filterQualification, filterAgency, filterService]);
 
   // Options pour le sélecteur d'articles
   const articleOptions = Array.isArray(articles)
@@ -312,15 +329,17 @@ const PageContent = ({ movements, articles, agencies, services }) => {
                       </TableCell>
                       <TableCell>{movement.qualification || '—'}</TableCell>
                       <TableCell>
-                        <button
-                          disabled={processing}
-                          onClick={() => handleDelete(movement.id)}
-                          title="Supprimer ce mouvement"
-                          className="text-red-600 hover:text-red-800 transition-colors"
-                          type="button"
-                        >
-                          <FontAwesomeIcon icon={faTrash} />
-                        </button>
+                        {canDelete(movement.created_at) && (
+                          <button
+                            disabled={processing}
+                            onClick={() => handleDelete(movement.id)}
+                            title="Supprimer ce mouvement"
+                            className="text-red-600 hover:text-red-800 transition-colors"
+                            type="button"
+                          >
+                            <FontAwesomeIcon icon={faTrash} />
+                          </button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))

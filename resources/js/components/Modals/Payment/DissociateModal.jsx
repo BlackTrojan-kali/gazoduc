@@ -100,7 +100,7 @@ const DisassociatePaymentModal = ({ isOpen, onClose, selectedPayment }) => {
                     className="form-checkbox h-4 w-4 text-yellow-600 transition duration-150 ease-in-out border-gray-300 rounded focus:ring-yellow-500"
                   />
                   <span className="text-gray-700 dark:text-gray-300">
-                    Facture #{invoice.id} - Montant appliqué : {invoice.pivot?.amount_applied?.toLocaleString('fr-FR', { style: 'currency', currency: 'XAF' })}
+                    Facture #{invoice.id} - Montant appliqué : {invoice.pivot?.amount?.toLocaleString('fr-FR', { style: 'currency', currency: 'XAF' })}
                   </span>
                 </label>
               ))}

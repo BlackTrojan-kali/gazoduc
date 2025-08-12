@@ -23,6 +23,7 @@ return new class extends Migration
             $table->string("NUI")->unique()->nullable();
             $table->boolean("archived")->default(0);
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

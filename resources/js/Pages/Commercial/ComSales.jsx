@@ -1,135 +1,26 @@
 import React, { useState, useMemo } from 'react';
 import ComLayout from '../../layout/ComLayout/ComLayout';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '../../components/ui/table';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEye, faPrint, faTrash, faPlus, faFilter, faFilePdf } from '@fortawesome/free-solid-svg-icons';
+import { faEye, faPrint, faTrash, faPlus, faFilter, faEraser, faLink, faUnlink, faFilePdf } from '@fortawesome/free-solid-svg-icons';
 import Swal from 'sweetalert2';
 import Select from 'react-select';
 
-// Importez les modales
-import InvoiceDetailsModal from '../../components/Modals/Sales/InvoiceDetailModal';
-import NewSaleModal from '../../components/Modals/Sales/NewSaleModal';
-import ExportSalesModal from '../../components/Modals/Sales/ExportSalesModal'; // Import de la nouvelle modale
+// --- Importation de la modale de versement depuis le dossier 'modals' ---
+import NewPaymentModal from '../../components/Modals/Payment/NewPaymentModal';
 
-const ComSales = ({ factures, clients, articles, agencies }) => {
-  const { delete: inertiaDelete } = useForm();
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [selectedFacture, setSelectedFacture] = useState(null);
-  const [isNewSaleModalOpen, setIsNewSaleModalOpen] = useState(false);
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false); // État pour la modale d'export
+// --- IMPORTATION DE LA MODALE D'ASSOCIATION ---
+import AssociatePaymentModal from '../../components/Modals/Payment/AssociateModal';
 
-  // --- États pour les filtres frontend ---
-  const [filterClient, setFilterClient] = useState(null);
-  const [filterAgency, setFilterAgency] = useState(null);
-  const [filterStartDate, setFilterStartDate] = useState('');
-  const [filterEndDate, setFilterEndDate] = useState('');
+// --- IMPORTATION DE LA NOUVELLE MODALE DE DISSOCIATION ---
+import DisassociatePaymentModal from '../../components/Modals/Payment/DissociateModal';
 
-  // --- Filtrage des factures selon les filtres (optimisé avec useMemo) ---
-  const filteredFactures = useMemo(() => {
-    if (!factures || !factures.data) {
-      return [];
-    }
-    
-    return factures.data.filter(facture => {
-      // 1. Filtrer par client
-      const matchesClient = !filterClient || (facture.client && String(facture.client.id) === filterClient.value);
-      
-      // 2. Filtrer par agence
-      const matchesAgency = !filterAgency || (facture.agency && String(facture.agency.id) === filterAgency.value);
-      
-      // 3. Filtrer par période de date
-      const factureDate = new Date(facture.created_at);
-      const start = filterStartDate ? new Date(filterStartDate) : null;
-      const end = filterEndDate ? new Date(filterEndDate) : null;
-      
-      const matchesDateRange = (!start || factureDate >= start) && (!end || factureDate <= end);
-      
-      return matchesClient && matchesAgency && matchesDateRange;
-    });
-  }, [factures.data, filterClient, filterAgency, filterStartDate, filterEndDate]);
+// --- NOUVELLE IMPORTATION : Modale d'exportation PDF ---
+import ExportPaymentPdfModal from '../../components/Modals/Payment/ExportPaymentPdfModal';
 
-  // --- Fonctions pour les modales ---
-  const openDetailsModal = (facture) => {
-    setSelectedFacture(facture);
-    setIsDetailsModalOpen(true);
-  };
-  const closeDetailsModal = () => {
-    setIsDetailsModalOpen(false);
-    setSelectedFacture(null);
-  };
-
-  const openNewSaleModal = () => {
-    setIsNewSaleModalOpen(true);
-  };
-  const closeNewSaleModal = () => {
-    setIsNewSaleModalOpen(false);
-  };
-
-  // Fonctions pour la nouvelle modale d'exportation
-  const openExportModal = () => {
-    setIsExportModalOpen(true);
-  };
-  const closeExportModal = () => {
-    setIsExportModalOpen(false);
-  };
-
-  // --- Fonction de Suppression de Facture ---
-  const handleDeleteFacture = (factureId) => {
-    Swal.fire({
-      title: 'Êtes-vous sûr, monsieur ?',
-      text: "Vous êtes sur le point de supprimer cette facture. Cette action est irréversible !",
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Oui, supprimer !',
-      cancelButtonText: 'Annuler'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        inertiaDelete(route('factures.delete', factureId), {
-          preserveScroll: true,
-          onSuccess: () => {
-            Swal.fire(
-              'Supprimée !',
-              'La facture a été supprimée avec succès.',
-              'success'
-            );
-          },
-          onError: (errors) => {
-            console.error('Erreur de suppression:', errors);
-            Swal.fire(
-              'Erreur !',
-              'Une erreur est survenue lors de la suppression de la facture.',
-              'error'
-            );
-          },
-        });
-      }
-    });
-  };
-
-  // --- Fonction d'Impression mise à jour pour télécharger le PDF ---
-  const handlePrintFacture = (factureId) => {
-    window.open(route('factures.print', { facture: factureId }), '_blank');
-    Swal.fire(
-      'Téléchargement en cours',
-      'Votre facture PDF est en cours de préparation et de téléchargement, monsieur.',
-      'info'
-    );
-  };
-  
-  // Options pour le sélecteur de clients
-  const clientOptions = Array.isArray(clients)
-    ? clients.map(client => ({ value: String(client.id), label: client.name }))
-    : [];
-    
-  // Options pour le sélecteur d'agences
-  const agencyOptions = Array.isArray(agencies)
-    ? agencies.map(agency => ({ value: String(agency.id), label: agency.name }))
-    : [];
-
-  // Définition des variables CSS pour les couleurs en fonction du thème
+// Styles personnalisés pour react-select, définis une seule fois
+const getSelectStyles = () => {
   const colors = {
     '--text-color': 'rgb(31 41 55)',
     '--placeholder-color': 'rgb(107 114 128)',
@@ -137,6 +28,7 @@ const ComSales = ({ factures, clients, articles, agencies }) => {
     '--bg-menu': 'rgb(255 255 255)',
     '--bg-option-hover': 'rgb(243 244 246)',
   };
+  
   if (document.documentElement.classList.contains('dark')) {
     colors['--text-color'] = 'rgb(249 250 251 / 0.9)';
     colors['--placeholder-color'] = 'rgb(156 163 175)';
@@ -145,57 +37,224 @@ const ComSales = ({ factures, clients, articles, agencies }) => {
     colors['--bg-option-hover'] = 'rgb(55 65 81)';
   }
 
-  // Styles personnalisés pour react-select, utilisant les variables CSS
-  const selectStyles = {
+  return {
     control: (baseStyles, state) => ({
       ...baseStyles,
       height: '44px',
       minHeight: '44px',
-      borderColor: state.isFocused ? '#3B82F6' : 'var(--border-color)',
+      borderColor: state.isFocused ? '#3B82F6' : colors['--border-color'],
       backgroundColor: 'transparent',
       boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
       '&:hover': {
         borderColor: state.isFocused ? '#3B82F6' : '#9CA3AF',
       },
     }),
-    singleValue: (baseStyles) => ({ ...baseStyles, color: 'var(--text-color)' }),
-    placeholder: (baseStyles) => ({ ...baseStyles, color: 'var(--placeholder-color)' }),
-    input: (baseStyles) => ({ ...baseStyles, color: 'var(--text-color)' }),
-    menu: (baseStyles) => ({ ...baseStyles, backgroundColor: 'var(--bg-menu)', zIndex: 9999 }),
+    singleValue: (baseStyles) => ({ ...baseStyles, color: colors['--text-color'] }),
+    placeholder: (baseStyles) => ({ ...baseStyles, color: colors['--placeholder-color'] }),
+    input: (baseStyles) => ({ ...baseStyles, color: colors['--text-color'] }),
+    menu: (baseStyles) => ({ ...baseStyles, backgroundColor: colors['--bg-menu'], zIndex: 9999 }),
     option: (baseStyles, state) => ({
       ...baseStyles,
-      backgroundColor: state.isSelected ? '#2563EB' : state.isFocused ? 'var(--bg-option-hover)' : 'var(--bg-menu)',
-      color: state.isSelected ? 'white' : 'var(--text-color)',
-      '&:hover': { backgroundColor: 'var(--bg-option-hover)', color: 'var(--text-color)' },
+      backgroundColor: state.isSelected ? '#2563EB' : state.isFocused ? colors['--bg-option-hover'] : colors['--bg-menu'],
+      color: state.isSelected ? 'white' : colors['--text-color'],
+      '&:hover': { backgroundColor: colors['--bg-option-hover'], color: colors['--text-color'] },
     }),
-    indicatorSeparator: (baseStyles) => ({ ...baseStyles, backgroundColor: 'var(--border-color)' }),
-    dropdownIndicator: (baseStyles) => ({ ...baseStyles, color: 'var(--placeholder-color)' }),
-    clearIndicator: (baseStyles) => ({ ...baseStyles, color: 'var(--placeholder-color)', '&:hover': { color: '#EF4444' } }),
+    indicatorSeparator: (baseStyles) => ({ ...baseStyles, backgroundColor: colors['--border-color'] }),
+    dropdownIndicator: (baseStyles) => ({ ...baseStyles, color: colors['--placeholder-color'] }),
+    clearIndicator: (baseStyles) => ({ ...baseStyles, color: colors['--placeholder-color'], '&:hover': { color: '#EF4444' } }),
   };
+};
+
+const ComPayment = ({ payments, clients, agencies, banks, sales }) => {
+  // Récupérer l'utilisateur authentifié via Inertia.js
+  const { auth } = usePage().props;
+
+  // --- États pour les modales ---
+  const [isNewPaymentModalOpen, setIsNewPaymentModalOpen] = useState(false);
+  const [isAssociateModalOpen, setIsAssociateModalOpen] = useState(false);
+  const [selectedPaymentForAssociation, setSelectedPaymentForAssociation] = useState(null);
+  
+  // NOUVEAU : États pour la modale de dissociation
+  const [isDisassociateModalOpen, setIsDisassociateModalOpen] = useState(false);
+  const [selectedPaymentForDisassociation, setSelectedPaymentForDisassociation] = useState(null);
+
+  // NOUVEAU : État pour la modale d'exportation PDF
+  const [isExportPdfModalOpen, setIsExportPdfModalOpen] = useState(false);
+
+  // --- États pour les filtres frontend ---
+  const [filterClient, setFilterClient] = useState(null);
+  const [filterAgency, setFilterAgency] = useState(null);
+  const [filterBank, setFilterBank] = useState(null);
+  const [filterStartDate, setFilterStartDate] = useState('');
+  const [filterEndDate, setFilterEndDate] = useState('');
+
+  // Utilisation de useForm pour la suppression
+  const { delete: inertiaDelete } = useForm({});
+
+  // --- NOUVELLE FONCTION canDelete, combinant la logique existante et la nouvelle ---
+  const canDelete = (payment) => {
+    // Si l'utilisateur n'a pas de `modif_days` défini ou s'il est 0, la suppression n'est pas permise.
+    if (!auth.user || !auth.user.modif_days || auth.user.modif_days <= 0) {
+      return false;
+    }
+
+    // Le versement ne peut pas être supprimé s'il est associé à des factures
+    const isAssociated = payment.factures && payment.factures.length > 0;
+    if (isAssociated) {
+      return false;
+    }
+
+    // Vérifier la date de création par rapport aux jours de modification autorisés
+    const today = new Date();
+    const creationDate = new Date(payment.created_at);
+    // Calculer la différence en jours
+    const diffTime = today.getTime() - creationDate.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Renvoyer vrai si le versement a été créé dans la période autorisée
+    return diffDays <= auth.user.modif_days;
+  };
+
+  // --- Filtrage des paiements selon les filtres (optimisé avec useMemo) ---
+  const filteredPayments = useMemo(() => {
+    // S'assurer que 'payments.data' est une liste avant de la filtrer
+    if (!payments || !Array.isArray(payments.data)) {
+      return [];
+    }
+    
+    return payments.data.filter(payment => {
+      const matchesClient = !filterClient || (payment.client && String(payment.client.id) === filterClient.value);
+      const matchesAgency = !filterAgency || (payment.agency && String(payment.agency.id) === filterAgency.value);
+      const matchesBank = !filterBank || (payment.bank && String(payment.bank.id) === filterBank.value);
+      
+      const paymentDate = new Date(payment.created_at);
+      const start = filterStartDate ? new Date(filterStartDate) : null;
+      const end = filterEndDate ? new Date(filterEndDate) : null;
+      
+      const matchesDateRange = (!start || paymentDate >= start) && (!end || paymentDate <= end);
+      
+      return matchesClient && matchesAgency && matchesBank && matchesDateRange;
+    });
+  }, [payments.data, filterClient, filterAgency, filterBank, filterStartDate, filterEndDate]);
+
+  // --- Fonctions pour les modales et actions ---
+  const openNewPaymentModal = () => setIsNewPaymentModalOpen(true);
+  const closeNewPaymentModal = () => setIsNewPaymentModalOpen(false);
+
+  const openAssociateModal = (paymentId) => {
+    const paymentToAssociate = payments.data.find(p => p.id === paymentId);
+    setSelectedPaymentForAssociation(paymentToAssociate);
+    setIsAssociateModalOpen(true);
+  };
+  const closeAssociateModal = () => {
+    setIsAssociateModalOpen(false);
+    setSelectedPaymentForAssociation(null);
+  };
+  
+  // NOUVEAU : Fonctions pour la modale de dissociation
+  const openDisassociateModal = (payment) => {
+    console.log("clicked")
+    setSelectedPaymentForDisassociation(payment);
+    setIsDisassociateModalOpen(true);
+  };
+  const closeDisassociateModal = () => {
+    setIsDisassociateModalOpen(false);
+    setSelectedPaymentForDisassociation(null);
+  };
+
+  // NOUVEAU : Fonctions pour la modale d'exportation PDF
+  const openExportPdfModal = () => setIsExportPdfModalOpen(true);
+  const closeExportPdfModal = () => setIsExportPdfModalOpen(false);
+
+  const handleDeletePayment = (paymentId) => {
+    Swal.fire({
+      title: 'Êtes-vous sûr, monsieur ?',
+      text: "Vous ne pourrez pas annuler cette action !",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Oui, supprimer !',
+      cancelButtonText: 'Annuler',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        inertiaDelete(route('payments.destroy', paymentId), {
+          onSuccess: () => {
+            Swal.fire(
+              'Supprimé !',
+              'Le versement a été supprimé avec succès, monsieur.',
+              'success'
+            );
+          },
+          onError: (errors) => {
+            console.error(errors);
+            Swal.fire(
+              'Erreur',
+              'Une erreur est survenue lors de la suppression.',
+              'error'
+            );
+          },
+        });
+      }
+    });
+  };
+  
+  const handleClearFilters = () => {
+    setFilterClient(null);
+    setFilterAgency(null);
+    setFilterBank(null);
+    setFilterStartDate('');
+    setFilterEndDate('');
+  };
+
+  // Options pour les sélecteurs de filtres
+  const clientOptions = useMemo(() => 
+    Array.isArray(clients) ? clients.map(client => ({ value: String(client.id), label: client.name })) : [],
+    [clients]
+  );
+  
+  const agencyOptions = useMemo(() => 
+    Array.isArray(agencies) ? agencies.map(agency => ({ value: String(agency.id), label: agency.name })) : [],
+    [agencies]
+  );
+
+  const bankOptions = useMemo(() => 
+    Array.isArray(banks) ? banks.map(bank => ({ value: String(bank.id), label: bank.name })) : [],
+    [banks]
+  );
+
+  // NOUVELLES OPTIONS : Types de versement pour le filtre PDF
+  const paymentTypeOptions = useMemo(() => [
+    { value: 'Cash', label: 'Cash' },
+    { value: 'Mobile Money', label: 'Mobile Money' },
+    { value: 'Virement bancaire', label: 'Virement bancaire' },
+    { value: 'Chèque', label: 'Chèque' },
+  ], []);
+
+  const selectStyles = getSelectStyles();
   
   return (
     <>
-      <Head title="Liste des Ventes" />
+      <Head title="Liste des Versements" />
 
-      <div className="p-6" style={colors}>
+      <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Liste des Ventes Effectuées
+            Liste des Versements
           </h1>
           <div className="flex gap-2">
-            {/* Nouveau Bouton Exporter */}
+            {/* NOUVEAU BOUTON : Exporter PDF */}
             <button
-              onClick={openExportModal}
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-green-600 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-green-700 dark:border-green-700 dark:bg-green-700 dark:hover:bg-green-600"
+              onClick={openExportPdfModal}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-red-600 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-red-700 dark:border-red-700 dark:bg-red-700 dark:hover:bg-red-600"
             >
-              <FontAwesomeIcon icon={faFilePdf} /> Exporter
+              <FontAwesomeIcon icon={faFilePdf} /> Exporter PDF
             </button>
-            {/* Bouton Nouvelle Vente existant */}
             <button
-              onClick={openNewSaleModal}
+              onClick={openNewPaymentModal}
               className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-blue-600 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-blue-700 dark:border-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600"
             >
-              <FontAwesomeIcon icon={faPlus} /> Nouvelle Vente
+              <FontAwesomeIcon icon={faPlus} /> Nouveau Versement
             </button>
           </div>
         </div>
@@ -242,6 +301,23 @@ const ComSales = ({ factures, clients, articles, agencies }) => {
                 />
               </div>
 
+              {/* Filtre par banque */}
+              <div>
+                <label htmlFor="filterBank" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Banque
+                </label>
+                <Select
+                  id="filterBank"
+                  options={bankOptions}
+                  value={filterBank}
+                  onChange={setFilterBank}
+                  isClearable={true}
+                  placeholder="Toutes les banques"
+                  classNamePrefix="react-select"
+                  styles={selectStyles}
+                />
+              </div>
+
               {/* Filtre par date de début */}
               <div>
                 <label htmlFor="filterStartDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -270,6 +346,15 @@ const ComSales = ({ factures, clients, articles, agencies }) => {
                 />
               </div>
             </div>
+            
+            <div className="flex justify-end mt-4">
+              <button
+                onClick={handleClearFilters}
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:bg-gray-800 dark:text-white/90 dark:border-gray-700 dark:hover:bg-white/[0.03]"
+              >
+                <FontAwesomeIcon icon={faEraser} /> Réinitialiser les filtres
+              </button>
+            </div>
           </div>
           
 
@@ -278,28 +363,25 @@ const ComSales = ({ factures, clients, articles, agencies }) => {
               <TableHeader className="border-gray-100 dark:border-gray-800 border-y">
                 <TableRow>
                   <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                    ID Facture
-                  </TableCell>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
                     Client
                   </TableCell>
                   <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                    Agent Commercial
+                    Banque
+                  </TableCell>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                    Somme
+                  </TableCell>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                    Type
+                  </TableCell>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                    Note
+                  </TableCell>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                    Commentaire Somme
                   </TableCell>
                   <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
                     Agence
-                  </TableCell>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                    Montant Total
-                  </TableCell>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                    Mode de Paiement
-                  </TableCell>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                    Statut
-                  </TableCell>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                    Date
                   </TableCell>
                   <TableCell isHeader className="py-3 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400">
                     Actions
@@ -308,55 +390,64 @@ const ComSales = ({ factures, clients, articles, agencies }) => {
               </TableHeader>
 
               <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {filteredFactures && filteredFactures.length > 0 ? (
-                  filteredFactures.map((facture) => (
-                    <TableRow key={facture.id}>
+                {filteredPayments && filteredPayments.length > 0 ? (
+                  filteredPayments.map((payment) => (
+                    <TableRow key={payment.id}>
                       <TableCell className="py-3 font-medium text-gray-800 text-theme-sm dark:text-white/90">
-                        #{facture.id}
+                        {payment.client ? payment.client.name : 'N/A'}
                       </TableCell>
                       <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                        {facture.client ? `${facture.client.name} ` : 'N/A'}
-                      </TableCell>
-                      <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                        {facture.user ? `${facture.user.first_name} ${facture.user.last_name}` : 'N/A'}
-                      </TableCell>
-                      <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                        {facture.agency ? facture.agency.name : 'N/A'}
+                        {payment.bank ? payment.bank.name : 'N/A'}
                       </TableCell>
                       <TableCell className="py-3 font-semibold text-gray-800 text-theme-sm dark:text-white/90">
-                        {facture.total_amount.toLocaleString('fr-FR', { style: 'currency', currency: 'XAF' })}
+                        {payment.amount}
                       </TableCell>
                       <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                        {facture.currency || 'N/A'}
+                        {payment.type || 'N/A'}
                       </TableCell>
                       <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                        {facture.status || 'N/A'}
+                        {payment.notes || 'N/A'}
                       </TableCell>
                       <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                        {new Date(facture.created_at).toLocaleDateString('fr-FR')}
+                        {payment.amount_notes || 'N/A'}
+                      </TableCell>
+                      <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
+                        {payment.agency ? payment.agency.name : 'N/A'}
                       </TableCell>
                       <TableCell className="py-3 flex items-center justify-center gap-2">
-                        {/* Bouton Voir */}
                         <button
-                          onClick={() => openDetailsModal(facture)}
                           className="p-2 rounded-lg text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
                           title="Voir les détails"
+                          onClick={() => { /* Logique pour voir les détails */ }}
                         >
                           <FontAwesomeIcon icon={faEye} />
                         </button>
-                        {/* Bouton Imprimer (maintenant un téléchargement) */}
                         <button
-                          onClick={() => handlePrintFacture(facture.id)}
                           className="p-2 rounded-lg text-green-600 hover:bg-green-100 dark:hover:bg-green-900 transition-colors"
-                          title="Imprimer la facture"
+                          title="Associer d'autres factures"
+                          onClick={() => openAssociateModal(payment.id)}
                         >
-                          <FontAwesomeIcon icon={faPrint} />
+                          <FontAwesomeIcon icon={faLink} />
                         </button>
-                        {/* Bouton Supprimer */}
+                        {/* Bouton pour dissocier les factures, désactivé si aucune facture n'est associée */}
                         <button
-                          onClick={() => handleDeleteFacture(facture.id)}
-                          className="p-2 rounded-lg text-red-600 hover:bg-red-100 dark:hover:bg-red-900 transition-colors"
-                          title="Supprimer la facture"
+                          className="p-2 rounded-lg text-yellow-600 hover:bg-yellow-100 dark:hover:bg-yellow-900 transition-colors"
+                          title="Dissocier des factures"
+                          onClick={() => openDisassociateModal(payment)}
+                          disabled={!payment.factures || payment.factures.length === 0}
+                        >
+                          <FontAwesomeIcon icon={faUnlink} />
+                        </button>
+                        {/* Bouton de suppression, désactivé si le versement n'est pas "supprimable" */}
+                        <button
+                          className={`p-2 rounded-lg transition-colors ${
+                            canDelete(payment)
+                              ? 'text-red-600 hover:bg-red-100 dark:hover:bg-red-900'
+                              : 'text-gray-400 cursor-not-allowed'
+                          }`}
+                          title={canDelete(payment) ? "Supprimer le versement" : "Impossible de supprimer, le versement est associé ou la période de modification est expirée."}
+                          onClick={() => canDelete(payment) && handleDeletePayment(payment.id)}
+                          disabled={!canDelete(payment)}
                         >
                           <FontAwesomeIcon icon={faTrash} />
                         </button>
@@ -365,71 +456,53 @@ const ComSales = ({ factures, clients, articles, agencies }) => {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={9} className="py-3 text-center text-gray-500 dark:text-gray-400">
-                      Aucune vente trouvée pour les filtres appliqués, monsieur.
+                    <TableCell colSpan={8} className="py-3 text-center text-gray-500 dark:text-gray-400">
+                      Aucun versement trouvé pour les filtres appliqués, monsieur.
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
-
-            {/* Pagination */}
-            {factures.links && factures.links.length > 3 && (
-              <nav className="flex justify-end mt-4">
-                <div className="flex gap-2">
-                  {factures.links.map((link, index) => (
-                    <Link
-                      key={index}
-                      href={link.url || '#'}
-                      className={`px-3 py-1 text-sm font-medium border rounded-lg shadow-sm
-                        ${link.active
-                          ? 'bg-blue-600 text-white border-blue-600 cursor-default'
-                          : link.url === null
-                            ? 'bg-white border-gray-300 text-gray-700 disabled:opacity-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 cursor-not-allowed'
-                            : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-800 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 dark:hover:bg-white/[0.03] dark:hover:text-gray-200'
-                      }`}
-                      preserveState
-                      preserveScroll
-                      only={['factures']}
-                      onClick={(e) => {
-                        if (!link.url) e.preventDefault();
-                      }}
-                      dangerouslySetInnerHTML={{ __html: link.label }}
-                    />
-                  ))}
-                </div>
-              </nav>
-            )}
           </div>
         </div>
       </div>
 
-      {/* Modale de Détails de Facture */}
-      <InvoiceDetailsModal
-        isOpen={isDetailsModalOpen}
-        onClose={closeDetailsModal}
-        facture={selectedFacture}
-      />
-
-      {/* Modale Nouvelle Vente : IMPORTANT - Passage des props clients et articles */}
-      <NewSaleModal
-        isOpen={isNewSaleModalOpen}
-        onClose={closeNewSaleModal}
-        clients={clients}   
-        articles={articles}
-      />
-
-      {/* Nouvelle Modale d'exportation */}
-      <ExportSalesModal
-        isOpen={isExportModalOpen}
-        onClose={closeExportModal}
+      {/* Modale Nouveau Versement */}
+      <NewPaymentModal
+        isOpen={isNewPaymentModalOpen}
+        onClose={closeNewPaymentModal}
         clients={clients}
+        banks={banks}
+        sales={sales}
+      />
+
+      {/* Modale pour l'association de factures à un versement existant */}
+      <AssociatePaymentModal
+        isOpen={isAssociateModalOpen}
+        onClose={closeAssociateModal}
+        sales={sales}
+        selectedPayment={selectedPaymentForAssociation}
+      />
+
+      {/* NOUVEAU : Modale pour la dissociation de factures */}
+      <DisassociatePaymentModal
+        isOpen={isDisassociateModalOpen}
+        onClose={closeDisassociateModal}
+        selectedPayment={selectedPaymentForDisassociation}
+      />
+
+      {/* NOUVEAU : Modale pour l'exportation PDF */}
+      <ExportPaymentPdfModal
+        isOpen={isExportPdfModalOpen}
+        onClose={closeExportPdfModal}
+        clients={clients}
+        paymentTypes={paymentTypeOptions}
         agencies={agencies}
+        banks={banks}
       />
     </>
   );
 };
 
-
-ComSales.layout = page => <ComLayout children={page} />;
-export default ComSales;
+ComPayment.layout = page => <ComLayout children={page} />;
+export default ComPayment;

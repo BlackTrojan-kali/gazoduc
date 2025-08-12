@@ -30,6 +30,7 @@ return new class extends Migration
             $table->foreign("article_id")->on("articles")->references("id")->onDelete("cascade");
             $table->foreign("recorded_by_user_id")->on("users")->references("id");
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

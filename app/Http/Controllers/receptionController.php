@@ -30,65 +30,74 @@ class receptionController extends Controller
         return back()->with("warning","the reception was deleted successfully");
     }
     public function export(Request $request)
-{
-    // 1. Récupération et validation des paramètres de la requête
-    $startDate =  Carbon::parse($request->input('start_date'))->startOfDay();
-    $endDate =  Carbon::parse($request->input('end_date'))->endOfDay() ;
-    $agencyId = $request->input('agency_id');
-    $reportType = $request->input('export_format', 'pdf'); // Le nom du champ de la modal est 'export_format'
+    {
+        // 1. Récupération et validation des paramètres de la requête
+        $request->validate([
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'agency_id' => 'nullable|exists:agencies,id',
+            // Le type de fichier attendu de la modal (pdf, excel)
+            'file_type' => 'required|in:pdf,excel',
+            // Le type de mouvement pour gérer les soft-deletes (global_no_delete, global_with_delete)
+            'type_mouvement' => 'required|in:global_no_delete,global_with_delete',
+        ]);
+        
+        $startDate = $request->input('start_date') ? Carbon::parse($request->input('start_date'))->startOfDay() : null;
+        $endDate = $request->input('end_date') ? Carbon::parse($request->input('end_date'))->endOfDay() : null;
+        $agencyId = $request->input('agency_id');
+        $fileType = $request->input('file_type');
+        $movementType = $request->input('type_mouvement');
 
-    // Validation de base des dates (si elles sont obligatoires pour l'export)
-    // Vous pouvez commenter ces lignes si les dates sont optionnelles
-    // if (empty($startDate) || empty( $endDate)) {
-    //     return redirect()->back()->withErrors(['message' => 'Les dates de début et de fin sont requises pour l\'exportation, monsieur.']);
-    // }
+        // 2. Construction de la requête de base pour récupérer les réceptions
+        $query = Reception::query()->with(['citerne', 'agency', 'article', 'user']);
 
-    // Validation du type de rapport
-    if (!in_array($reportType, ['pdf', 'excel'])) {
+        // 3. Application du filtre pour inclure les soft-deleted
+        if ($movementType === 'global_with_delete') {
+            $query->withTrashed();
+        }
+
+        // 4. Application des autres filtres (agence, dates)
+        if ($agencyId) {
+            $query->where('destination_agency_id', $agencyId);
+        }
+
+        if ($startDate && $endDate) {
+            $query->whereBetween('created_at', [$startDate, $endDate]);
+        }
+        
+        // 5. Restriction par agence pour les utilisateurs non "direction"
+        if (Auth::check() && Auth::user()->role !== "direction") {
+            $query->where("destination_agency_id", Auth::user()->agency_id);
+        }
+
+        // Récupération des données finales, triées par date de création
+        $receptions = $query->orderBy('created_at', 'asc')->get();
+
+        // 6. Vérifier si des réceptions ont été trouvées
+        if ($receptions->isEmpty()) {
+             return redirect()->back()->withErrors(['message' => 'Aucune réception trouvée pour les critères sélectionnés, monsieur.']);
+        }
+
+        // 7. Génération du rapport selon le type demandé
+        if ($fileType === 'excel') {
+            return Excel::download(
+                new ReceptionsExport($receptions),
+                'historique_receptions_' . now()->format('Ymd_His') . '.xlsx'
+            );
+        } elseif ($fileType === 'pdf') {
+            $data = [
+                'receptions' => $receptions,
+                'start_date' => $startDate ? $startDate->format('d/m/Y') : null,
+                'end_date' => $endDate ? $endDate->format('d/m/Y') : null,
+                'selectedAgency' => $agencyId ? Agency::find($agencyId) : null,
+                'isWithDeleted' => ($movementType === 'global_with_delete'), // Passez cette information à la vue
+            ];
+
+            $pdf = Pdf::loadView('PDF.ReceptionPDFView', $data);
+            return $pdf->download('historique_receptions_' . now()->format('Ymd_His') . '.pdf');
+        }
+
+        // Cas de fallback
         return redirect()->back()->withErrors(['message' => 'Type de rapport invalide spécifié, monsieur.']);
     }
-
-    // 2. Construction de la requête pour récupérer les réceptions
-    $query = Reception::query()
-        ->with(['citerne', 'agency', 'article', 'user']); // Charger les relations spécifiées
-
-    // Filtrage par agence si un agency_id est fourni
-    if ($agencyId) {
-        $query->where('destination_agency_id', $agencyId);
-    }
-
-    // Filtrage par dates si elles sont fournies
-    if ($startDate && $endDate) {
-        $query->whereBetween('created_at', [$startDate, $endDate]); // Filtrer par la date de création
-    }
-
-    // Restriction par agence pour les utilisateurs non "direction"
-    // (Assurez-vous que le rôle est correctement défini dans votre modèle User et que 'agency_id' est sur l'utilisateur)
-    if (Auth::check() && Auth::user()->role !== "direction") {
-        $query->where("destination_agency_id", Auth::user()->agency_id);
-    }
-
-    // Récupération des données finales, triées par date de création
-    $receptions = $query->orderBy('created_at', 'asc')->get();
-
-    // 3. Génération du rapport selon le type demandé
-    if ($reportType === 'excel') {
-        // Pour Excel, nous utilisons Maatwebsite/Excel
-        // La classe ReceptionsExport doit être définie comme nous l'avons fait précédemment.
-        return Excel::download(new ReceptionsExport($receptions), 'historique_receptions_' . now()->format('Ymd_His') . '.xlsx');
-
-    } elseif ($reportType === 'pdf') {
-        // Pour PDF, nous utilisons Barryvdh/DomPDF
-        $data = [
-            'receptions' => $receptions,
-            'start_date' => $startDate,
-            'end_date' => $endDate,
-            // On peut aussi passer l'objet Agence sélectionné si besoin
-            'selectedAgency' => $agencyId ? Agency::find($agencyId) : null,
-        ];
-        // Utilisez le nom de la vue Blade que vous avez créée pour les réceptions PDF
-        $pdf = Pdf::loadView('PDF.ReceptionPDFView', $data);
-        return $pdf->download('historique_receptions_' . now()->format('Ymd_His') . '.pdf');
-    }
-}
 }

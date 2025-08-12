@@ -29,51 +29,92 @@ class CiterneController extends Controller
         return Inertia("Direction/Citerne",compact("citernes","agencies","entreprises","products"));
         }
 
-    public function store(Request $request){
-
+    public function store(Request $request)
+    {
         $request->validate([
-            "name"=>"required|string|unique:citernes,name",
-            "type"=>"string|required",
-            "product_type"=>"string|required",
-           "capacity_liter"=>"numeric|nullable",
-            "capacity_kg"=>"numeric|nullable",
-            "current_product_id"=>"required",
-            "agency_id"=>"required",
+            "name" => "required|string|unique:citernes,name",
+            "type" => "string|required",
+            "product_type" => "string|required",
+            "capacity_liter" => "numeric|nullable",
+            "capacity_kg" => "numeric|nullable",
+            "current_product_id" => "required",
+            "agency_id" => "required",
         ]);
-        $article = Article::where("id",$request->current_product_id)->first();
-        if(!$article){
-            return back()->with("error","this article was not found");
-        }else{
-            try{
-            Db::beginTransaction();
-            $citerne = new Citerne();
-            $citerne->name = $request->name;
-            $citerne->type = $request->type;
-            $citerne->product_type = $request->product_type;
-            $citerne->capacity_liter= $request->capacity_liter;
-            $citerne->capacity_kg = $request->capacity_kg;
-            $citerne->current_product_id = $request->current_product_id;
-            $citerne->agency_id = $request->agency_id;
-            $citerne->entreprise_id =Auth::user()->entreprise_id;
-            $citerne->save();
-            if($citerne->type == "fixed"){
+
+        $article = Article::where("id", $request->current_product_id)->first();
+        if (!$article) {
+            return back()->with("error", "this article was not found");
+        } else {
+            try {
+                DB::beginTransaction();
+                $citerne = new Citerne();
+                $citerne->name = $request->name;
+                $citerne->type = $request->type;
+                $citerne->product_type = $request->product_type;
+                $citerne->capacity_liter = $request->capacity_liter;
+                $citerne->capacity_kg = $request->capacity_kg;
+                $citerne->current_product_id = $request->current_product_id;
+                $citerne->agency_id = $request->agency_id;
+                $citerne->entreprise_id = Auth::user()->entreprise_id;
+                $citerne->save();
+                
+                // La création du stock a été retirée de cette fonction.
+                // Elle est maintenant gérée par la nouvelle méthode generateStock.
+
+                DB::commit();
+                return back()->with("success", "Citerne created successfully");
+            } catch (Exception $e) {
+                DB::rollBack();
+                // dd($e); // Désactivé pour ne pas exposer d'informations sensibles en production
+                return back()->with("error", "Can't create the citerne, contact the maintenance team");
+            }
+        }
+    }
+
+    /**
+     * Generate a new stock entry for a specific citerne.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+       public function generateStock(Request $request)
+    {
+
+        $citerne = Citerne::find($request->input("citerne_id"));
+        $article = Article::find($request->input("article_id"));
+
+        if (!$citerne || !$article) {
+            return back()->with("error", "Citerne or article not found.");
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Vérifier si une entrée de stock existe déjà pour cette citerne et cet article
+            $existingStock = Stock::where('citerne_id', $citerne->id)
+                                  ->where('article_id', $article->id)
+                                  ->first();
+
+            if ($existingStock) {
+                DB::rollBack();
+                return back()->with("error", "Un stock existe déjà pour cette citerne et cet article.");
+            }
+
             Stock::create([
-                "article_id"=> $article->id,
-                "agency_id"=>$request->agency_id,
-                "storage_type"=>$request->product_type,
-                "quantity"=>0,
-                "citerne_id"=>$citerne->id,
-                "entreprise_id"=>Auth::user()->entreprise_id,
-            ]);}
-            Db::commit();
-            return back()->with("success","citerne and stock created successfully");
-        }catch(Exception $e){
-            Db::rollBack();
+                "article_id" => $article->id,
+                "agency_id" => $citerne->agency_id,
+                "storage_type" => $citerne->product_type,
+                "quantity" => 0,
+                "citerne_id" => $citerne->id,
+            ]);
+
+            DB::commit();
+            return back()->with("success", "Stock generated successfully for citerne: {$citerne->name}");
+        } catch (Exception $e) {
+            DB::rollBack();
             dd($e);
-            return back()->with("error","can't create the stock contact the maintenance team");
+            return back()->with("error", "An error occurred while generating the stock. Please contact the maintenance team.");
         }
-        }
-        
     }
 
     public function update(Request $request,$idCit){

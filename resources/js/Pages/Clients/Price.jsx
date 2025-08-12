@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faPlus, faTrash, faDollarSign, faFileCsv } from '@fortawesome/free-solid-svg-icons';
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '../../components/ui/table';
@@ -12,6 +12,9 @@ const Price = ({ prices, clientCategories, articles, agencies }) => {
   // --- États pour contrôler l'ouverture de la modale unique ---
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [selectedPrice, setSelectedPrice] = useState(null);
+
+  // --- Récupérer les données de l'utilisateur authentifié depuis les props de la page ---
+  const { auth } = usePage().props;
 
   // --- useForm d'Inertia pour la suppression ---
   const { delete: inertiaDelete, processing } = useForm();
@@ -28,6 +31,12 @@ const Price = ({ prices, clientCategories, articles, agencies }) => {
   const closeFormModal = () => {
     setSelectedPrice(null);
     setIsFormModalOpen(false);
+  };
+
+  // --- Fonction pour vérifier si l'utilisateur a la permission de supprimer ---
+  const canDelete = () => {
+    // Remplacer 'admin' par le rôle ou la permission souhaitée
+    return auth.user.role === 'admin';
   };
 
   // --- Fonction pour gérer la suppression d'un prix avec SweetAlert2 ---
@@ -207,15 +216,17 @@ const Price = ({ prices, clientCategories, articles, agencies }) => {
                         >
                           <FontAwesomeIcon icon={faEdit} /> Modifier
                         </Button>
-                        <button
-                          disabled={processing}
-                          onClick={() => handleDelete(price.id)}
-                          title="Supprimer ce prix"
-                          className="text-red-600 hover:text-red-800 transition-colors"
-                          type="button"
-                        >
-                          <FontAwesomeIcon icon={faTrash} /> Supprimer
-                        </button>
+                        {canDelete() && (
+                          <button
+                            disabled={processing}
+                            onClick={() => handleDelete(price.id)}
+                            title="Supprimer ce prix"
+                            className="text-red-600 hover:text-red-800 transition-colors"
+                            type="button"
+                          >
+                            <FontAwesomeIcon icon={faTrash} /> Supprimer
+                          </button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))

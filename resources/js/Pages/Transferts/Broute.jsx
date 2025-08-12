@@ -130,17 +130,17 @@ const ExportRoadbillsModalWithAlert = ({ isOpen, onClose, agencies, articles }) 
       arrivalAgency: formData.arrivalAgency?.value,
       article: formData.article?.value,
     };
-    
+
     // Assurez-vous d'avoir une route nommée 'broutes.export-pdf-filtered' dans votre backend
     // qui accepte ces paramètres.
     // window.location.href = route('broutes.export-pdf-filtered', queryParams);
-    
+
     // Pour l'exemple, on simule l'exportation
     console.log("Exportation demandée avec les paramètres:", queryParams);
-    
+
     onClose();
   };
-  
+
   if (!isOpen) return null;
 
   return (
@@ -308,6 +308,28 @@ const PageContent = ({ roadbills, vehicles, drivers, agencies, articles }) => {
       return isDateValid && isDepartureAgencyValid && isArrivalAgencyValid && isStatusValid;
     });
   }, [roadbills.data, filters]);
+
+  // --- Fonction pour déterminer si une réception peut être supprimée ---
+  const canDelete = (roadbillCreatedAt, roadbillStatus) => {
+    // La suppression n'est pas possible si le bordereau est terminé
+    if (roadbillStatus === 'termine') {
+        return false;
+    }
+
+    // Si l'utilisateur n'a pas de `modification_days` défini ou s'il est 0, la suppression n'est pas permise.
+    if (!auth.user || !auth.user.modif_days || auth.user.modif_days <= 0) {
+      return false;
+    }
+
+    const today = new Date();
+    const creationDate = new Date(roadbillCreatedAt);
+    // Calculer la différence en jours
+    const diffTime = today.getTime() - creationDate.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    // Renvoyer vrai si la bordereau a été créé dans la période autorisée
+    return diffDays <= auth.user.modif_days;
+  };
 
   const openCreateModal = () => {
     setSelectedRoadbill(null);
@@ -690,13 +712,21 @@ const PageContent = ({ roadbills, vehicles, drivers, agencies, articles }) => {
                             </Button>
                           )}
                           {roadbill.departure_location_id === auth.user.agency.id && roadbill.status !== 'termine' && (
-                            <Button
+                            <button
+                              disabled={!canDelete(roadbill.created_at, roadbill.status)}
                               onClick={() => handleDelete(roadbill)}
-                              variant="danger"
-                              className="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-red-500 px-2 py-1.5 text-xs font-medium text-white shadow-theme-xs hover:bg-red-600 dark:border-red-600"
+                              title={
+                                canDelete(roadbill.created_at, roadbill.status)
+                                  ? "Supprimer ce bordereau"
+                                  : roadbill.status === 'termine'
+                                    ? "Le bordereau est terminé, il ne peut pas être supprimé"
+                                    : `Suppression non autorisée après ${auth.user.modif_days} jour(s)`
+                              }
+                              className="inline-flex items-center gap-1 rounded-lg border border-red-500 bg-red-500 px-2 py-1.5 text-xs font-medium text-white shadow-theme-xs hover:bg-red-600 dark:border-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                              type="button"
                             >
                               <FontAwesomeIcon icon={faTrash} /> Supprimer
-                            </Button>
+                            </button>
                           )}
                         </div>
                       </TableCell>

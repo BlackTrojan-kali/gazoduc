@@ -1,22 +1,21 @@
-import React, { useState, useMemo } from 'react'; // Importez useState et useMemo
+import React, { useState, useMemo } from 'react';
 import MagLayout from '../layout/MagLayout/MagLayout';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTrash, faFileExport, faSearch, faTimes } from '@fortawesome/free-solid-svg-icons'; // Ajoutez faSearch et faTimes
+import { faTrash, faFileExport, faSearch, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '../components/ui/table';
 import Swal from 'sweetalert2';
 
 // Importez vos composants personnalisés :
 import Button from '../components/ui/button/Button';
-import Input from '../components/form/input/InputField'; // Importez votre composant Input
-// Assurez-vous que le chemin et le nom de la modale sont corrects (ReceptionHistoryPDFExcelModal.jsx)
+import Input from '../components/form/input/InputField';
 import ReceptionHistoryPDFExcelModal from '../components/Modals/RecHistModal';
 import ProdLayout from '../layout/ProdLayout/ProdLayout';
 import RegLayout from '../layout/RegLayout/RegLayout';
 
-const PageContent = ({ receptions:initialReceptions, agencies }) => { // 'filters' est retiré des props
-  // Initialisation de useForm d'Inertia pour la suppression
+const PageContent = ({ receptions: initialReceptions, agencies }) => {
   const { delete: inertiaDelete, processing } = useForm();
+  const { props: { auth } } = usePage(); // Ajoutez la récupération de l'utilisateur authentifié
 
   // --- États et fonctions pour la modale d'exportation ---
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -47,58 +46,64 @@ const PageContent = ({ receptions:initialReceptions, agencies }) => { // 'filter
     });
   };
 
+  // --- Fonction pour déterminer si une réception peut être supprimée ---
+  const canDelete = (receptionCreatedAt) => {
+    // Si l'utilisateur n'a pas de `modification_days` défini ou s'il est 0, la suppression n'est pas permise.
+    if (!auth.user || !auth.user.modif_days || auth.user.modif_days <= 0) {
+      return false;
+    }
+    const today = new Date();
+    const creationDate = new Date(receptionCreatedAt);
+    // Calculer la différence en jours
+    const diffTime = today.getTime() - creationDate.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    // Renvoyer vrai si la réception a été créée dans la période autorisée
+    return diffDays <= auth.user.modif_days;
+  };
+
   // --- Filtrage côté frontend des données de réceptions ---
   const filteredReceptions = useMemo(() => {
-    let currentReceptions = initialReceptions.data; // Utiliser les données brutes paginées par le backend
+    let currentReceptions = initialReceptions.data;
 
-    // Filtrer par agence (si sélectionnée)
     if (filterState.agency_id) {
         currentReceptions = currentReceptions.filter(reception =>
             reception.destination_agency && String(reception.destination_agency.id) === filterState.agency_id
         );
     }
 
-    // Filtrer par dates (si sélectionnées)
     if (filterState.start_date && filterState.end_date) {
-      const startDate = new Date(filterState.start_date + 'T00:00:00'); // Début de journée
-      const endDate = new Date(filterState.end_date + 'T23:59:59');     // Fin de journée
+      const startDate = new Date(filterState.start_date);
+      const endDate = new Date(filterState.end_date);
+      endDate.setHours(23, 59, 59, 999);
+
       currentReceptions = currentReceptions.filter(reception => {
-        // Supposons que la date de la réception est dans 'created_at' ou un champ 'reception_date'
-        // Si vous avez un champ 'reception_date' dans votre modèle, utilisez-le. Sinon, 'created_at' est une bonne base.
         const receptionDate = new Date(reception.created_at);
         return receptionDate >= startDate && receptionDate <= endDate;
       });
     }
 
-    // Filtrer par recherche textuelle/numérique générique
     if (filterState.search) {
       const searchTerm = filterState.search.toLowerCase();
       currentReceptions = currentReceptions.filter(reception => {
-        // Recherche par ID
-        if (String(reception.id).includes(searchTerm)) return true;
-        // Recherche par nom de citerne mobile
-        if (reception.citerne_mobile && reception.citerne_mobile.name.toLowerCase().includes(searchTerm)) return true;
-        // Recherche par nom d'article
-        if (reception.article && reception.article.name.toLowerCase().includes(searchTerm)) return true;
-        // Recherche par quantité reçue
-        if (String(reception.received_quantity).includes(searchTerm)) return true;
-        // Recherche par nom d'agence de destination
-        if (reception.destination_agency && reception.destination_agency.name.toLowerCase().includes(searchTerm)) return true;
-        // Recherche par numéro de BL (si vous l'avez dans votre modèle Reception)
-        if (reception.bl_number && reception.bl_number.toLowerCase().includes(searchTerm)) return true;
-        // Recherche par nom d'utilisateur qui a enregistré
-        if (reception.user && (`${reception.user.first_name} ${reception.user.last_name || ''}`).toLowerCase().includes(searchTerm)) return true;
-        // Recherche par origine
-        if (reception.origin && reception.origin.toLowerCase().includes(searchTerm)) return true;
-        // Recherche par date de création (format YYYY-MM-DD pour la comparaison simple)
-        if (String(reception.created_at).includes(searchTerm)) return true;
+        const searchString = [
+          String(reception.id),
+          reception.citerne_mobile?.name,
+          reception.article?.name,
+          String(reception.received_quantity),
+          reception.destination_agency?.name,
+          reception.user ? `${reception.user.first_name} ${reception.user.last_name || ''}` : '',
+          reception.origin,
+          new Date(reception.created_at).toLocaleDateString('fr-FR'),
+          reception.bl_number,
+        ].join(' ').toLowerCase();
 
-        return false;
+        return searchString.includes(searchTerm);
       });
     }
 
     return currentReceptions;
-  }, [initialReceptions.data, filterState]); // Recalcule quand les données initiales ou les filtres changent
+  }, [initialReceptions.data, filterState]);
 
   // --- Fonction pour gérer la pagination après une suppression ---
   const applyPaginationAfterDelete = () => {
@@ -106,16 +111,11 @@ const PageContent = ({ receptions:initialReceptions, agencies }) => { // 'filter
       ? initialReceptions.current_page - 1
       : initialReceptions.current_page;
 
-    // Recharge la page 'receptions.index' via Inertia avec les paramètres de pagination
-    // Les filtres frontend ne sont PAS inclus dans l'URL.
-    // Assurez-vous d'avoir 'Inertia' importé ou défini globalement si vous l'utilisez
     window.Inertia.get(route('receptions.index', { page: newPage, per_page: initialReceptions.per_page }), {
         preserveScroll: true,
         preserveState: true,
-        only: ['receptions'], // Ne demande que la prop 'receptions'
-        onSuccess: () => {
-            // Le message de succès est géré dans handleDelete
-        },
+        only: ['receptions'],
+        onSuccess: () => {},
         onError: (errors) => {
             console.error('Erreur lors du rechargement après suppression:', errors);
             Swal.fire(
@@ -140,7 +140,7 @@ const PageContent = ({ receptions:initialReceptions, agencies }) => { // 'filter
       cancelButtonText: 'Annuler'
     }).then((result) => {
       if (result.isConfirmed) {
-        inertiaDelete(route('receptions.destroy', receptionId), { // Utilisez 'destroy'
+        inertiaDelete(route('receptions.delete', receptionId), {
           preserveScroll: true,
           onSuccess: () => {
             Swal.fire(
@@ -148,7 +148,7 @@ const PageContent = ({ receptions:initialReceptions, agencies }) => { // 'filter
               'La réception a été supprimée avec succès.',
               'success'
             );
-            applyPaginationAfterDelete(); // Recharge la table pour refléter le changement
+            applyPaginationAfterDelete();
           },
           onError: (errors) => {
             console.error('Erreur de suppression:', errors);
@@ -175,7 +175,6 @@ const PageContent = ({ receptions:initialReceptions, agencies }) => { // 'filter
               </h3>
             </div>
             <div className="flex items-center gap-3">
-              {/* Bouton pour ouvrir la modale d'exportation */}
               <Button
                 onClick={openExportModal}
                 variant="secondary"
@@ -187,11 +186,9 @@ const PageContent = ({ receptions:initialReceptions, agencies }) => { // 'filter
             </div>
           </div>
 
-          {/* --- Section de Filtrage Frontend --- */}
           <div className="mb-4 p-4 border rounded-lg bg-gray-50 dark:bg-gray-900 dark:border-gray-700">
             <h4 className="font-semibold text-gray-700 dark:text-gray-200 mb-3">Rechercher & Filtrer</h4>
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {/* Recherche générique */}
               <Input
                 id="search"
                 type="text"
@@ -202,7 +199,6 @@ const PageContent = ({ receptions:initialReceptions, agencies }) => { // 'filter
                 className="col-span-full md:col-span-1"
                 icon={<FontAwesomeIcon icon={faSearch} className="text-gray-400" />}
               />
-              {/* Filtre Agence (si disponible et pertinent) */}
               {agencies && agencies.length > 0 && (
                 <div>
                   <label htmlFor="agency_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -223,7 +219,6 @@ const PageContent = ({ receptions:initialReceptions, agencies }) => { // 'filter
                   </select>
                 </div>
               )}
-              {/* Date de début */}
               <Input
                 id="start_date"
                 type="date"
@@ -231,7 +226,6 @@ const PageContent = ({ receptions:initialReceptions, agencies }) => { // 'filter
                 value={filterState.start_date}
                 onChange={handleFilterChange}
               />
-              {/* Date de fin */}
               <Input
                 id="end_date"
                 type="date"
@@ -247,7 +241,6 @@ const PageContent = ({ receptions:initialReceptions, agencies }) => { // 'filter
               </Button>
             </div>
           </div>
-          {/* --- Fin Section de Filtrage Frontend --- */}
 
           <div className="max-w-full overflow-x-auto">
             <Table>
@@ -272,7 +265,6 @@ const PageContent = ({ receptions:initialReceptions, agencies }) => { // 'filter
                 ) : (
                   filteredReceptions.map(reception => (
                     <TableRow key={reception.id}>
-                      {/* Appliquer py-4 à chaque TableCell pour plus d'espace */}
                       <TableCell className="py-4">{reception.id}</TableCell>
                       <TableCell className="py-4">{reception.citerne_mobile ? reception.citerne_mobile.name : '—'}</TableCell>
                       <TableCell className="py-4">{reception.article ? reception.article.name : '—'}</TableCell>
@@ -290,10 +282,14 @@ const PageContent = ({ receptions:initialReceptions, agencies }) => { // 'filter
                       <TableCell className="py-4">
                         <div className="flex gap-2 justify-center">
                           <button
-                            disabled={processing}
+                            disabled={processing || !canDelete(reception.created_at)}
                             onClick={() => handleDelete(reception.id)}
-                            title="Supprimer cette réception"
-                            className="text-red-600 hover:text-red-800 transition-colors"
+                            title={
+                              canDelete(reception.created_at)
+                                ? "Supprimer cette réception"
+                                : `Suppression non autorisée après ${auth.user.modif_days} jour(s) `
+                            }
+                            className="text-red-600 hover:text-red-800 transition-colors disabled:text-gray-400 disabled:cursor-not-allowed"
                             type="button"
                           >
                             <FontAwesomeIcon icon={faTrash} />
@@ -338,39 +334,48 @@ const PageContent = ({ receptions:initialReceptions, agencies }) => { // 'filter
       </div>
 
       {/* --- La modale de génération de PDF/Excel pour les réceptions --- */}
-      <ReceptionHistoryPDFExcelModal // Nom correct de la modale
+      <ReceptionHistoryPDFExcelModal
         isOpen={isExportModalOpen}
         onClose={closeExportModal}
-        agencies={agencies} // Passez les agences reçues du contrôleur à la modale
-        currentFilters={filterState} // Passez l'état des filtres frontend à la modale
+        agencies={agencies}
+        currentFilters={filterState}
       />
     </>
   );
 };
 
-const Reception = ({ receptions, agencies })=>{
-  const {auth} = usePage().props
-  if(auth.user.role == "production"){
-    return(
+const Reception = ({ receptions, agencies }) => {
+  const { auth } = usePage().props;
+  if (auth.user.role === "production") {
+    return (
       <ProdLayout>
-        <PageContent receptions={receptions} agencies={agencies}/>
+        <PageContent receptions={receptions} agencies={agencies} />
       </ProdLayout>
-    )
+    );
   }
 
-  if(auth.user.role == "magasin"){
-    return(
+  if (auth.user.role === "magasin") {
+    return (
       <MagLayout>
-        <PageContent receptions={receptions} agencies={agencies}/>
+        <PageContent receptions={receptions} agencies={agencies} />
       </MagLayout>
-    )
+    );
   }
-  if(auth.user.role == "controleur"){
-    return(
+
+  if (auth.user.role === "controleur") {
+    return (
       <RegLayout>
-        <PageContent receptions={receptions} agencies={agencies}/>
+        <PageContent receptions={receptions} agencies={agencies} />
       </RegLayout>
-    )
+    );
   }
-}
+
+  // Fallback au cas où le rôle n'est pas reconnu
+  return (
+    <RegLayout>
+      <PageContent receptions={receptions} agencies={agencies} />
+    </RegLayout>
+  );
+};
+
 export default Reception;

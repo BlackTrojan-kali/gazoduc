@@ -6,7 +6,7 @@
     <style>
         /* Styles généraux du corps */
         body {
-            font-family: 'DejaVu Sans', sans-serif; /* Assurez un bon support des caractères spéciaux et accents */
+            font-family: 'DejaVu Sans', sans-serif;
             font-size: 10px;
             margin: 20px;
             color: #333;
@@ -22,7 +22,7 @@
         /* Titre principal */
         h1 {
             text-align: center;
-            color: #1a202c; /* Couleur sombre pour le titre */
+            color: #1a202c;
             margin-bottom: 20px;
             font-size: 18px;
         }
@@ -47,13 +47,13 @@
             margin-top: 15px;
         }
         th, td {
-            border: 1px solid #ddd; /* Bordures de cellule */
+            border: 1px solid #ddd;
             padding: 8px;
             text-align: left;
             vertical-align: top;
         }
         th {
-            background-color: #f2f2f2; /* Fond pour les en-têtes de colonne */
+            background-color: #f2f2f2;
             font-weight: bold;
             color: #555;
             font-size: 9px;
@@ -65,6 +65,15 @@
         /* Style pour les lignes impaires pour une meilleure lisibilité */
         tr:nth-child(even) {
             background-color: #fdfdfd;
+        }
+
+        /* Style pour les lignes supprimées */
+        tr.deleted-row {
+            background-color: #f8d7da; /* Couleur rouge clair pour indiquer la suppression */
+            color: #721c24; /* Couleur de texte plus foncée */
+        }
+        tr.deleted-row td {
+            text-decoration: line-through; /* Barrer le texte */
         }
 
         /* Pied de page (si vous en ajoutez un) */
@@ -84,8 +93,9 @@
     <h1>Historique des Réceptions</h1>
 
     <div class="filters-info">
-        <p><strong>Période :</strong> {{ $start_date ? $start_date->format('d/m/Y') : 'Début' }} au {{ $end_date ? $end_date->format('d/m/Y') : 'Fin' }}</p>
+        <p><strong>Période :</strong> {{ $start_date ?? 'Début' }} au {{ $end_date ?? 'Fin' }}</p>
         <p><strong>Agence :</strong> {{ $selectedAgency ? $selectedAgency->name : 'Toutes les agences' }}</p>
+        <p><strong>Rapport :</strong> Historique complet des réceptions @if($isWithDeleted) (incluant les suppressions) @endif</p>
     </div>
 
     <table>
@@ -98,12 +108,13 @@
                 <th>Agence Destination</th>
                 <th>Enregistré par</th>
                 <th>Origine</th>
+                <th>Statut</th>
                 <th>Créé le</th>
             </tr>
         </thead>
         <tbody>
             @forelse($receptions as $reception)
-            <tr>
+            <tr @if($reception->trashed()) class="deleted-row" @endif>
                 <td>{{ $reception->id }}</td>
                 <td>{{ $reception->citerne->name ?? 'N/A' }}</td>
                 <td>{{ $reception->article->name ?? 'N/A' }}</td>
@@ -111,11 +122,18 @@
                 <td>{{ $reception->agency->name ?? 'N/A' }}</td>
                 <td>{{ $reception->user ? $reception->user->first_name . ' ' . $reception->user->last_name : 'N/A' }}</td>
                 <td>{{ $reception->origin ?? 'N/A' }}</td>
+                <td>
+                    @if($reception->trashed())
+                        Supprimée
+                    @else
+                        Active
+                    @endif
+                </td>
                 <td>{{ $reception->created_at->format('d/m/Y H:i') }}</td>
             </tr>
             @empty
             <tr>
-                <td colspan="8" style="text-align: center; padding: 20px;">Aucune réception trouvée pour les critères sélectionnés, monsieur.</td>
+                <td colspan="9" style="text-align: center; padding: 20px;">Aucune réception trouvée pour les critères sélectionnés, monsieur.</td>
             </tr>
             @endforelse
         </tbody>

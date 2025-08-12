@@ -3,11 +3,9 @@
 <head>
     <title>Historique des Dépotages</title>
     <meta charset="utf-8">
-    {{-- Pour DomPDF, il est souvent préférable d'inclure des polices de caractères supportées
-         ou d'utiliser 'DejaVu Sans' qui gère bien les caractères accentués. --}}
     <style>
         body {
-            font-family: 'DejaVu Sans', sans-serif; /* Important pour les caractères accentués */
+            font-family: 'DejaVu Sans', sans-serif;
             font-size: 10px;
             margin: 20px;
         }
@@ -66,6 +64,12 @@
             font-size: 11px;
             line-height: 1.6;
         }
+        /* Styles pour les dépotages supprimés */
+        .deleted-row {
+            background-color: #ffeaea; /* Arrière-plan rouge clair pour indiquer la suppression */
+            color: #8b0000; /* Texte rouge foncé */
+            text-decoration: line-through; /* Ligne barrée sur le texte */
+        }
     </style>
 </head>
 <body>
@@ -88,6 +92,9 @@
         </p>
         <p>
             <strong>Nombre total de depotages:</strong> {{ $depotages->count() }}
+            @if($isWithDeleted)
+                (dont {{ $depotages->whereNotNull('deleted_at')->count() }} supprimes)
+            @endif
         </p>
         <p>
             <strong>Quantité totale depotee:</strong> {{ number_format($depotages->sum('quantity'), 2, ',', ' ') }} L
@@ -107,11 +114,14 @@
                 <th>BL Numero</th>
                 <th>Enregistre par</th>
                 <th>Cree le</th>
+                @if($isWithDeleted)
+                    <th>Supprime le</th>
+                @endif
             </tr>
         </thead>
         <tbody>
             @forelse ($depotages as $depotage)
-                <tr>
+                <tr class="{{ $depotage->deleted_at ? 'deleted-row' : '' }}">
                     <td class="text-center">{{ $depotage->id }}</td>
                     <td>{{ \Carbon\Carbon::parse($depotage->depotage_date)->format('d/m/Y') }}</td>
                     <td>{{ $depotage->citerne_mobile->name ?? 'N/A' }}</td>
@@ -122,10 +132,13 @@
                     <td>{{ $depotage->bl_number ?? '—' }}</td>
                     <td>{{ $depotage->user->first_name ?? 'N/A' }} {{ $depotage->user->last_name ?? '' }}</td>
                     <td>{{ $depotage->created_at->format('d/m/Y H:i') }}</td>
+                    @if($isWithDeleted)
+                        <td>{{ $depotage->deleted_at ? \Carbon\Carbon::parse($depotage->deleted_at)->format('d/m/Y H:i') : '—' }}</td>
+                    @endif
                 </tr>
             @empty
                 <tr>
-                    <td colspan="10" class="text-center">Aucun depotage trouve pour les criteres specifies, monsieur.</td>
+                    <td colspan="{{ $isWithDeleted ? '11' : '10' }}" class="text-center">Aucun depotage trouve pour les criteres specifies, monsieur.</td>
                 </tr>
             @endforelse
         </tbody>
