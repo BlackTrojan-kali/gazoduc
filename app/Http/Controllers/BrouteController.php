@@ -23,13 +23,13 @@ class BrouteController extends Controller
         $drivers = Chauffeur::all();
         $agencies = Agency::all();
         $articles = Article::all();
-        $broutes = Bordereau_route::with("departure","arrival","chauffeur","co_chauffeur","vehicule")->paginate(15);
+        $broutes = Bordereau_route::with("departure","arrival","chauffeur","co_chauffeur","vehicule")->paginate(100);
         
-        $roadbills = Bordereau_route::with("departure","arrival","chauffeur","co_chauffeur","vehicule")->paginate(15);
+        $roadbills = Bordereau_route::with("departure","arrival","chauffeur","co_chauffeur","vehicule")->paginate(100);
         
         if(Auth::user()->role->name != "direction"){
 
-        $roadbills = Bordereau_route::where("departure_location_id",Auth::user()->agency_id)->orWhere("arrival_location_id",Auth::user()->agency_id)->with("departure","arrival","chauffeur","co_chauffeur","vehicule")->paginate(15);
+        $roadbills = Bordereau_route::where("departure_location_id",Auth::user()->agency_id)->orWhere("arrival_location_id",Auth::user()->agency_id)->with("departure","arrival","chauffeur","co_chauffeur","vehicule")->paginate(50);
         }
         return inertia("Transferts/Broute",compact("roadbills","agencies","drivers","agencies","vehicles","articles"));
     }

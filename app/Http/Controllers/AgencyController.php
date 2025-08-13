@@ -13,7 +13,7 @@ class AgencyController extends Controller
 {
     //
     public function index(){
-        $agencies = Agency::with("entreprise","licence","region","city")->orderBy("created_at","desc")->paginate(15);
+        $agencies = Agency::with("entreprise","licence","region","city")->orderBy("created_at","desc")->paginate(20);
         $entreprises= Entreprise::all();
         $licences = Licence::all();
         $regions = Region::all();

@@ -1,12 +1,12 @@
 import React, { useEffect } from 'react';
-import { useForm } from '@inertiajs/react';
-import Modal from './Modal'; // Votre composant de modale générique
-import InputField from "../form/input/InputField"; // Votre composant InputField
-import Button from '../ui/button/Button'; // Votre composant Button
-import Swal from 'sweetalert2'; // Pour les notifications
-import Select from 'react-select'; // Pour les sélecteurs améliorés
+import { useForm, usePage } from '@inertiajs/react';
+import Modal from './Modal';
+import InputField from "../form/input/InputField";
+import Button from '../ui/button/Button';
+import Swal from 'sweetalert2';
+import Select from 'react-select';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faFileExport, faSpinner } from '@fortawesome/free-solid-svg-icons'; // Utilisez faFileExport pour un export générique
+import { faFileExport, faSpinner } from '@fortawesome/free-solid-svg-icons';
 
 // Props attendues :
 // isOpen: boolean - pour contrôler l'ouverture/fermeture de la modal
@@ -17,16 +17,29 @@ import { faFileExport, faSpinner } from '@fortawesome/free-solid-svg-icons'; // 
 // services: array - Liste des services/rôles au format { id: number, name: string } (pour le filtre)
 // currentFilters: object - filtres actuels pour pré-remplir le formulaire (optionnel)
 
-// Ajout d'une valeur par défaut pour le titre des props
 const MovementHistoryPDFExcelModal = ({ isOpen, onClose, title = "Exporter l'Historique des Mouvements", articles, agencies, services, currentFilters }) => {
+    // Récupération du rôle de l'utilisateur via usePage
+    const { auth } = usePage().props;
+    const userRole = auth.user.role;
+    const isDirection = userRole === 'direction';
+
+    // Définition des options pour le type de mouvement.
+    // L'option 'global_with_delete' est incluse uniquement pour le rôle 'direction'.
+    const movementTypeOptions = [
+        { value: 'global_no_delete', label: 'Global (Entrées & Sorties)' },
+        { value: 'entree', label: 'Entrée' },
+        { value: 'sortie', label: 'Sortie' },
+        ...(isDirection ? [{ value: 'global_with_delete', label: 'Global (Entrées, Sorties + Suppressions)' }] : []),
+    ];
+
     const { data, setData, processing, errors, reset } = useForm({
         start_date: currentFilters?.start_date || '',
         end_date: currentFilters?.end_date || '',
         article_id: currentFilters?.article_id || '',
         agency_id: currentFilters?.agency_id || '',
         service_id: currentFilters?.service_id || '',
-        // Mise à jour de la valeur par défaut pour correspondre au nouveau menu
-        type_mouvement: currentFilters?.type_mouvement || 'global_with_delete',
+        // Définir la valeur par défaut en fonction du rôle
+        type_mouvement: currentFilters?.type_mouvement || (isDirection ? 'global_with_delete' : 'global_no_delete'),
         file_type: 'pdf',
     });
 
@@ -45,14 +58,6 @@ const MovementHistoryPDFExcelModal = ({ isOpen, onClose, title = "Exporter l'His
         ? services.map(service => ({ value: String(service.id), label: service.name }))
         : [];
 
-    // NOUVELLES options pour le type de mouvement selon votre demande
-    const movementTypeOptions = [
-        { value: 'global_no_delete', label: 'Global (Entrées & Sorties)' },
-        { value: 'global_with_delete', label: 'Global (Entrées, Sorties + Suppressions)' },
-        { value: 'entree', label: 'Entrée' },
-        { value: 'sortie', label: 'Sortie' },
-    ];
-
     // Options pour le type de fichier de sortie
     const fileTypeOptions = [
         { value: 'pdf', label: 'PDF' },
@@ -69,11 +74,11 @@ const MovementHistoryPDFExcelModal = ({ isOpen, onClose, title = "Exporter l'His
                 article_id: currentFilters?.article_id || '',
                 agency_id: currentFilters?.agency_id || '',
                 service_id: currentFilters?.service_id || '',
-                type_mouvement: currentFilters?.type_mouvement || 'global_with_delete',
+                type_mouvement: currentFilters?.type_mouvement || (isDirection ? 'global_with_delete' : 'global_no_delete'),
                 file_type: 'pdf',
             });
         }
-    }, [isOpen, reset, currentFilters]);
+    }, [isOpen, reset, currentFilters, isDirection]);
 
     // Gère les changements pour les champs InputField (date) et Select HTML natifs (file_type)
     const handleChange = (e) => {
@@ -150,20 +155,17 @@ const MovementHistoryPDFExcelModal = ({ isOpen, onClose, title = "Exporter l'His
                 borderColor: state.isFocused ? '#3B82F6' : '#9CA3AF',
             },
         }),
-        // Correction pour la visibilité du texte en mode clair
         singleValue: (baseStyles) => ({
             ...baseStyles,
-            color: 'var(--text-color)', // Utilisation d'une variable CSS pour la couleur
+            color: 'var(--text-color)',
         }),
-        // Correction pour la visibilité du placeholder en mode clair
         placeholder: (baseStyles) => ({
             ...baseStyles,
-            color: 'var(--placeholder-color)', // Utilisation d'une variable CSS
+            color: 'var(--placeholder-color)',
         }),
-        // Correction pour la visibilité du texte saisi en mode clair
         input: (baseStyles) => ({
             ...baseStyles,
-            color: 'var(--text-color)', // Utilisation d'une variable CSS
+            color: 'var(--text-color)',
         }),
         menu: (baseStyles) => ({ ...baseStyles, backgroundColor: 'var(--bg-menu)', zIndex: 9999 }),
         option: (baseStyles, state) => ({

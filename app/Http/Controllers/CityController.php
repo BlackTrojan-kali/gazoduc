@@ -12,7 +12,7 @@ class CityController extends Controller
     //
     public function index(){
         $regions = Region::all();
-        $cities = City::with("region")->orderBy('created_at', 'desc')->paginate(15);
+        $cities = City::with("region")->orderBy('created_at', 'desc')->paginate(20);
         return Inertia("city",["cities"=>$cities,"regions"=>$regions]);
     }
     public function store(Request $request){

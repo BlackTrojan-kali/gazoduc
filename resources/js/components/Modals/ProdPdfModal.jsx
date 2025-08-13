@@ -217,7 +217,7 @@ const ExportProductionModal = ({ show, onClose, agencies, articles, citernes }) 
           >
             <option value="pdf">PDF</option>
             <option value="excel">Excel</option>
-            <option value="pdfWithDeleted">PDF (avec suppression)</option>
+          {auth.user.role =="direction" ?  <option value="pdfWithDeleted">PDF (avec suppression)</option>:""}
           </select>
         </div>
         

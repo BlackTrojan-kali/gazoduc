@@ -1,6 +1,6 @@
 // resources/js/components/Modals/ReceptionHistoryPDFExcelModal.jsx
 import React from 'react';
-import { useForm } from '@inertiajs/react';
+import { useForm, usePage } from '@inertiajs/react';
 import Modal from './Modal';
 import Button from '../ui/button/Button';
 import Input from '../form/input/InputField';
@@ -19,7 +19,7 @@ const ReceptionHistoryPDFExcelModal = ({ isOpen, onClose, agencies, currentFilte
   const handleChange = (e) => {
     setData(e.target.id, e.target.value);
   };
-
+ const {auth} =  usePage().props;
   const handleDownload = () => {
     const params = new URLSearchParams();
     if (data.agency_id) {
@@ -117,7 +117,7 @@ const ReceptionHistoryPDFExcelModal = ({ isOpen, onClose, agencies, currentFilte
             onChange={handleChange}
           >
             <option value="pdf">PDF (mouvements actuels)</option>
-            <option value="pdf_with_delete">PDF (mouvements actuels et supprimés)</option>
+           {auth.user.role =="direction" ? <option value="pdf_with_delete">PDF (mouvements actuels et supprimés)</option>:""}
             <option value="excel">Excel (XLSX)</option>
           </select>
           {errors.export_format && <div className="text-red-500 text-sm mt-1">{errors.export_format}</div>}

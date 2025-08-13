@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEdit, faPlus, faTrash, faUsers, faFileCsv } from '@fortawesome/free-solid-svg-icons';
+import { faEdit, faPlus, faTrash, faUsers, faFileCsv, faUpload, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '../../components/ui/table';
 import Swal from 'sweetalert2';
 import Button from '../../components/ui/button/Button';
@@ -10,11 +10,141 @@ import RegLayout from '../../layout/RegLayout/RegLayout';
 import ComLayout from '../../layout/ComLayout/ComLayout';
 import DirLayout from '../../layout/DirLayout/DirLayout';
 
-// Ajout de la prop 'userRole' pour gérer l'affichage conditionnel
+// Composant pour la modal d'importation CSV
+const ImportClientModal = ({ isOpen, onClose, importForm }) => {
+  // Gère la sélection du fichier
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Met à jour l'état du formulaire avec le fichier sélectionné
+      importForm.setData('import_file', file);
+    }
+  };
+
+  // Gère la soumission du formulaire d'importation
+  const handleSubmit = () => {
+    if (!importForm.data.import_file) {
+      Swal.fire(
+        'Attention !',
+        'Veuillez sélectionner un fichier CSV avant d\'importer.',
+        'warning'
+      );
+      return;
+    }
+
+    importForm.post(route('client.import'), {
+      onSuccess: () => {
+        Swal.fire(
+          'Importation réussie !',
+          'Les clients ont été importés avec succès.',
+          'success'
+        );
+        onClose();
+      },
+      onError: (errors) => {
+        console.error('Erreur d\'importation:', errors);
+        let errorMessage = 'Une erreur est survenue lors de l\'importation. Vérifiez le format du fichier CSV et réessayez.';
+        if (errors && errors.import_file) {
+            errorMessage = errors.import_file;
+        } else if (errors && Object.keys(errors).length > 0) {
+            errorMessage = Object.values(errors).join(', ');
+        }
+        Swal.fire(
+          'Erreur !',
+          errorMessage,
+          'error'
+        );
+      },
+      onFinish: () => {
+        // Réinitialise le formulaire après l'importation
+        importForm.reset();
+      }
+    });
+  };
+
+  // Ne rend rien si la modal n'est pas ouverte
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-50">
+      <div className="relative w-full max-w-lg p-6 bg-white rounded-lg shadow-lg dark:bg-gray-800">
+        <div className="flex items-start justify-between pb-3 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+            Importer un fichier CSV
+          </h3>
+          <button
+            type="button"
+            className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center dark:hover:bg-gray-700 dark:hover:text-white"
+            onClick={onClose}
+          >
+            <FontAwesomeIcon icon={faTimes} className="w-5 h-5" />
+            <span className="sr-only">Fermer la modal</span>
+          </button>
+        </div>
+        <div className="py-4">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            Sélectionnez un fichier CSV pour importer de nouveaux clients. Le fichier doit contenir les colonnes 'Nom', 'Type de Client', 'Catégorie', etc.
+          </p>
+          <div className="flex items-center justify-center w-full">
+            <label
+              htmlFor="dropzone-file"
+              className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-600 hover:bg-gray-100 dark:border-gray-500 dark:hover:border-gray-400"
+            >
+              <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                <FontAwesomeIcon icon={faUpload} className="w-10 h-10 mb-3 text-gray-400" />
+                <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
+                  <span className="font-semibold">Cliquez pour téléverser</span> ou glissez-déposez
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">CSV (MAX. 1MB)</p>
+                {importForm.data.import_file && (
+                    <p className="text-sm text-gray-700 dark:text-gray-300 mt-2">
+                        Fichier sélectionné : <span className="font-semibold">{importForm.data.import_file.name}</span>
+                    </p>
+                )}
+              </div>
+              <input
+                id="dropzone-file"
+                type="file"
+                className="hidden"
+                onChange={handleFileChange} // Utilise la nouvelle fonction handleFileChange
+                accept=".csv"
+              />
+            </label>
+          </div>
+          {importForm.errors.import_file && (
+            <p className="text-red-500 text-sm mt-2">{importForm.errors.import_file}</p>
+          )}
+        </div>
+        <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
+          <Button
+            onClick={handleSubmit} // Appelle la fonction handleSubmit
+            disabled={importForm.processing || !importForm.data.import_file} // Désactive si en cours ou aucun fichier
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
+          >
+            {importForm.processing ? 'Importation...' : <><FontAwesomeIcon icon={faUpload} /> Importer</>}
+          </Button>
+          <Button
+            onClick={onClose}
+            className="ml-2 inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
+          >
+            Annuler
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const PageContent = ({ clients, clientCategories, userRole }) => {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
-  const { delete: inertiaDelete, processing } = useForm();
+  
+  const { delete: inertiaDelete, processing: deleteProcessing } = useForm();
+  
+  const importForm = useForm({
+    import_file: null,
+  });
 
   const openCreateModal = () => {
     setSelectedClient(null);
@@ -29,7 +159,6 @@ const PageContent = ({ clients, clientCategories, userRole }) => {
     setIsFormModalOpen(false);
   };
 
-  // Remplacement de window.alert par Swal
   const handleDelete = (clientId) => {
     Swal.fire({
       title: 'Êtes-vous sûr, monsieur ?',
@@ -64,28 +193,23 @@ const PageContent = ({ clients, clientCategories, userRole }) => {
     });
   };
 
-  // Nouvelle fonction pour l'exportation CSV
   const handleExportCsv = () => {
     if (!clients.data || clients.data.length === 0) {
       Swal.fire('Information', 'Aucune donnée client à exporter.', 'info');
       return;
     }
 
-    // Définir les en-têtes du fichier CSV
     const headers = ["Nom", "Type de Client", "Catégorie", "Téléphone", "Email", "Adresse", "NUI"];
-    // Formater les données
     const csvContent = clients.data.map(client => {
       const categoryName = client.category ? client.category.name : 'N/A';
       return `"${client.name}","${client.client_type || 'N/A'}","${categoryName}","${client.phone_number || 'N/A'}","${client.email_address || 'N/A'}","${client.address || 'N/A'}","${client.NUI || 'N/A'}"`;
     });
 
-    // Créer la chaîne CSV complète
     const csvString = [
       headers.join(','),
       ...csvContent
     ].join('\n');
 
-    // Créer un lien de téléchargement
     const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -100,6 +224,15 @@ const PageContent = ({ clients, clientCategories, userRole }) => {
     Swal.fire('Succès', 'Les données ont été exportées en CSV.', 'success');
   };
 
+  // Nouvelle logique pour ouvrir la modal d'importation
+  const openImportModal = () => {
+    setIsImportModalOpen(true);
+  };
+
+  const closeImportModal = () => {
+    setIsImportModalOpen(false);
+  };
+  
   return (
     <>
       <Head title='Clients' />
@@ -114,6 +247,14 @@ const PageContent = ({ clients, clientCategories, userRole }) => {
             </div>
 
             <div className="flex items-center gap-3">
+              {/* Nouveau bouton pour l'importation CSV */}
+              <Button
+                onClick={openImportModal}
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
+              >
+                <FontAwesomeIcon icon={faUpload} />
+                Importer CSV
+              </Button>
               <Button
                 onClick={handleExportCsv}
                 className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
@@ -197,10 +338,9 @@ const PageContent = ({ clients, clientCategories, userRole }) => {
                         >
                           <FontAwesomeIcon icon={faEdit} /> Modifier
                         </Button>
-                        {/* Condition pour masquer le bouton de suppression si le rôle est 'commercial' */}
                         {userRole !== "commercial" && (
                           <button
-                            disabled={processing}
+                            disabled={deleteProcessing}
                             onClick={() => handleDelete(client.id)}
                             title="Supprimer ce client"
                             className="text-red-600 hover:text-red-800 transition-colors"
@@ -222,7 +362,6 @@ const PageContent = ({ clients, clientCategories, userRole }) => {
               </TableBody>
             </Table>
 
-            {/* --- CONTRÔLES DE PAGINATION --- */}
             {clients.links && clients.links.length > 3 && (
               <nav className="flex justify-end mt-4">
                 <div className="flex gap-2">
@@ -249,12 +388,10 @@ const PageContent = ({ clients, clientCategories, userRole }) => {
                 </div>
               </nav>
             )}
-            {/* -------------------------------------------------------- */}
           </div>
         </div>
       </div>
 
-      {/* --- La Modale Unifiée pour les Clients --- */}
       <ClientFormModal
         isOpen={isFormModalOpen}
         onClose={closeFormModal}
@@ -262,33 +399,36 @@ const PageContent = ({ clients, clientCategories, userRole }) => {
         clientCategories={clientCategories}
         routeName={selectedClient ? "client.update" : "client.store"}
       />
-      {/* --------------- */}
+
+      <ImportClientModal
+        isOpen={isImportModalOpen}
+        onClose={closeImportModal}
+        importForm={importForm}
+      />
     </>
   );
 };
+
 const ClientIndex = ({clients,clientCategories})=>{
   const {auth}= usePage().props
-  if(auth.user.role =="controleur"){
+  if(auth.user.role === "controleur"){
     return (
       <RegLayout>
-        {/* Ajout de la prop userRole */}
         <PageContent clients={clients} clientCategories={clientCategories} userRole={auth.user.role}/>
       </RegLayout>
     )
   }
-  if(auth.user.role == "commercial"){
+  if(auth.user.role === "commercial"){
     return(
       <ComLayout>
-        {/* Ajout de la prop userRole */}
         <PageContent clients={clients} clientCategories={clientCategories} userRole={auth.user.role}/>
       </ComLayout>
     )
   }
 
-  if(auth.user.role == "direction"){
+  if(auth.user.role === "direction"){
     return(
       <DirLayout>
-        {/* Ajout de la prop userRole */}
         <PageContent clients={clients} clientCategories={clientCategories} userRole={auth.user.role}/>
       </DirLayout>
     )

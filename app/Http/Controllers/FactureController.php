@@ -33,7 +33,7 @@ class FactureController extends Controller
         }
         
         // 4. Exécuter la requête et récupérer les résultats
-        $factureItems = $query->paginate(15);
+        $factureItems = $query->paginate(100);
         $articles = Article::all();
         $agencies = Agency::where("id",Auth::user()->agency_id)->get();
         // 5. Retourner les données en format JSON

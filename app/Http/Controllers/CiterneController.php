@@ -22,7 +22,7 @@ class CiterneController extends Controller
 {
     //
     public function index(){
-        $citernes = Citerne::where("entreprise_id",Auth::user()->entreprise_id)->with("entreprise","agency","article")->paginate(15);
+        $citernes = Citerne::where("entreprise_id",Auth::user()->entreprise_id)->with("entreprise","agency","article")->paginate(25);
         $agencies = Agency::where("entreprise_id",Auth::user()->entreprise_id)->get();
         $entreprises = Entreprise::where("id",Auth::user()->entreprise_id)->get();
         $products = Article::where("entreprise_id",Auth::user()->entreprise_id)->where("type","matiere_premiere")->get();

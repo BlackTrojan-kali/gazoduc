@@ -16,10 +16,10 @@ class DepotageController extends Controller
 {
     //
     public function index(){
-            $depotages = Depotage::with("agency","citerne_mobile","citerne_fixe","article","user")->paginate(15);
+            $depotages = Depotage::with("agency","citerne_mobile","citerne_fixe","article","user")->paginate(150);
             $agencies = Agency::all();
         if(Auth::user()->role->name != "direction"){
-            $depotages = Depotage::where("agency_id",Auth::user()->agency_id)->with("agency","citerne_mobile","citerne_fixe","article","user")->paginate(15);
+            $depotages = Depotage::where("agency_id",Auth::user()->agency_id)->with("agency","citerne_mobile","citerne_fixe","article","user")->paginate(100);
             $agencies = Agency::where("id",Auth::user()->agency_id)->get();
         }
         return Inertia("Depotage",compact("depotages","agencies"));
@@ -41,15 +41,13 @@ class DepotageController extends Controller
         // 1. Récupération et validation des paramètres de la requête
         $startDate = Carbon::parse($request->input('start_date'))->startOfDay();
         $endDate = Carbon::parse($request->input('end_date'))->endOfDay();
-        $agencyId = $request->input('agency_id');
-        $format = $request->input('format', 'pdf'); // Utiliser 'format' pour être plus générique
+       $format = $request->input('format', 'pdf'); // Utiliser 'format' pour être plus générique
         $isWithDeleted = filter_var($request->input('isWithDeleted'), FILTER_VALIDATE_BOOLEAN); // Gérer le paramètre pour les soft deletes
-
+        
         // Validation de base des dates
         if (empty($startDate) || empty($endDate)) {
             return redirect()->back()->withErrors(['message' => 'Les dates de début et de fin sont requises pour l\'exportation, monsieur.']);
         }
-
         // 2. Construction de la requête pour récupérer les dépotages
         $query = Depotage::query();
 
@@ -60,23 +58,22 @@ class DepotageController extends Controller
 
         $query->with(['agency', 'citerne_mobile', 'citerne_fixe', 'article', 'user'])
               ->whereBetween('created_at', [$startDate, $endDate]);
-
+    
         // Filtrage par l'agence de l'utilisateur si ce n'est pas la direction
-        if (Auth::check() && Auth::user()->role !== "direction") {
+        if (Auth::user()->role->name != "direction") {
             $query->where("agency_id", Auth::user()->agency_id);
             // Si l'utilisateur est restreint, on force le agencyId pour le rapport à son agence
             $agencyId = Auth::user()->agency_id;
+        }else{
+            $agencyId = $request->input("agency_id");    
         }
+        
+         $query->where('agency_id', $agencyId);
 
-        // Filtrage par agence si un agency_id est fourni ET que l'utilisateur est "direction"
-        if ($agencyId) {
-            $query->where('agency_id', $agencyId);
-        }
-
-        // Récupération des données finales, triées par date de dépotage
+         // Récupération des données finales, triées par date de dépotage
         $depotages = $query->orderBy('created_at', 'asc')->get();
-
         // 3. Génération du rapport selon le format demandé
+        
         if ($format === 'excel') {
             // Assurez-vous que votre exportateur Excel gère la collection de modèles, y compris les soft deletes.
             return Excel::download(new DepotagesExport($depotages), 'historique_depotages_' . now()->format('Ymd_His') . '.xlsx');

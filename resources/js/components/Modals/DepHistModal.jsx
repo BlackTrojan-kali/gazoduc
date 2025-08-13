@@ -4,13 +4,25 @@ import React, { useState, useEffect } from 'react';
 import Modal from './Modal'; // Votre composant de modale générique
 import Input from '../form/input/InputField'; // Votre composant Input
 import Button from '../ui/button/Button'; // Votre composant Button
-import { useForm } from '@inertiajs/react'; // Pour gérer l'état du formulaire
+import { useForm, usePage } from '@inertiajs/react'; // Ajout de usePage
 import Swal from 'sweetalert2'; // Pour les notifications
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner, faFilePdf, faFileExcel } from '@fortawesome/free-solid-svg-icons'; // Icônes
 import Select from 'react-select'; // Ajout de react-select pour l'agence
 
 const DepotageHistoryPDFExcelModal = ({ isOpen, onClose, agencies }) => {
+  // Récupération du rôle de l'utilisateur via usePage
+  const { auth } = usePage().props;
+  const userRole = auth.user.role;
+  const isDirection = userRole === 'direction';
+
+  // Définition des options de format de fichier en fonction du rôle
+  const fileTypeOptions = [
+    { value: 'pdf', label: 'PDF' },
+    { value: 'excel', label: 'Excel' },
+    ...(isDirection ? [{ value: 'pdf_deleted', label: 'PDF (avec suppressions)' }] : []),
+  ];
+
   // Initialisation de l'état du formulaire avec useForm d'Inertia
   const { data, setData, processing, errors, reset } = useForm({
     start_date: '',
@@ -93,13 +105,14 @@ const DepotageHistoryPDFExcelModal = ({ isOpen, onClose, agencies }) => {
     const generateRoute = route('depotages.export') + '?' + queryString;
 
     // Ouverture du rapport dans une nouvelle fenêtre/onglet
-    if (data.file_type === 'pdf' || data.file_type === 'excel' || data.file_type === 'pdf_deleted') {
+    const supportedFileTypes = fileTypeOptions.map(option => option.value);
+    if (supportedFileTypes.includes(data.file_type)) {
       window.open(generateRoute, '_blank');
     } else {
       Swal.fire({
         icon: 'error',
         title: 'Erreur de format',
-        text: 'Veuillez sélectionner un type de fichier valide (PDF, Excel ou PDF avec suppressions), monsieur.',
+        text: 'Veuillez sélectionner un type de fichier valide, monsieur.',
       });
       return;
     }
@@ -216,9 +229,14 @@ const DepotageHistoryPDFExcelModal = ({ isOpen, onClose, agencies }) => {
             onChange={handleChange}
             required
           >
-            <option value="pdf">PDF</option>
-            <option value="excel">Excel</option>
-            <option value="pdf_deleted">PDF (avec suppressions)</option>
+            {fileTypeOptions.map(option => (
+              <option
+                key={option.value}
+                value={option.value}
+              >
+                {option.label}
+              </option>
+            ))}
           </select>
           {errors.file_type && <p className="text-sm text-red-600 mt-1">{errors.file_type}</p>}
         </div>

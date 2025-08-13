@@ -41,7 +41,6 @@ class receptionController extends Controller
             // Le type de mouvement pour gérer les soft-deletes (global_no_delete, global_with_delete)
             'type_mouvement' => 'required|in:global_no_delete,global_with_delete',
         ]);
-        
         $startDate = $request->input('start_date') ? Carbon::parse($request->input('start_date'))->startOfDay() : null;
         $endDate = $request->input('end_date') ? Carbon::parse($request->input('end_date'))->endOfDay() : null;
         $agencyId = $request->input('agency_id');
@@ -66,13 +65,12 @@ class receptionController extends Controller
         }
         
         // 5. Restriction par agence pour les utilisateurs non "direction"
-        if (Auth::check() && Auth::user()->role !== "direction") {
+        if (Auth::check() && Auth::user()->role->name !== "direction") {
             $query->where("destination_agency_id", Auth::user()->agency_id);
         }
 
         // Récupération des données finales, triées par date de création
         $receptions = $query->orderBy('created_at', 'asc')->get();
-
         // 6. Vérifier si des réceptions ont été trouvées
         if ($receptions->isEmpty()) {
              return redirect()->back()->withErrors(['message' => 'Aucune réception trouvée pour les critères sélectionnés, monsieur.']);
