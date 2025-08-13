@@ -233,7 +233,9 @@ const PageContent = ({ drivers }) => { // La prop 'drivers' contiendra la liste 
 
  const Driver=({drivers}) =>{ 
     const {auth} = usePage().props;
-    if(auth.user.role == "controler"){
+
+      console.log(auth)
+    if(auth.user.role == "controleur"){
       return(
         <RegLayout>
             <PageContent drivers={drivers}/>

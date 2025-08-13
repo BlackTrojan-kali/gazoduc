@@ -210,7 +210,7 @@ const PageContent = ({ clientCategories }) => {
 
 const ClientCategoryIndex=({ clientCategories }) =>{ 
 const {auth} = usePage().props
-if(auth.user.role == "controler"){
+if(auth.user.role == "controleur"){
   return(
       <RegLayout>
         <PageContent clientCategories={clientCategories}/>

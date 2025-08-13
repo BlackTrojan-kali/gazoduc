@@ -239,7 +239,7 @@ const PageContent = ({ vehicles }) => {
 
 const Vehicle = ({ vehicles }) =>{ 
     const {auth} = usePage().props
-    if(auth.user.role == "controler"){
+    if(auth.user.role == "controleur"){
       return(
         <RegLayout>
           <PageContent vehicles={vehicles}/>

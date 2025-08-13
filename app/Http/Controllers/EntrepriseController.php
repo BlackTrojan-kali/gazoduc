@@ -62,7 +62,7 @@ class EntrepriseController extends Controller
              // 2. Gestion du téléchargement du logo (si présent)
         if ($request->hasFile('logo_path')) {
             // Stocke le fichier dans 'public/logos' et obtient le chemin de stockage
-           dd($request->logo_path);
+         
         $image_name =$request->logo_path->extension();  
         $request->logo_path->move(public_path('images/clients'), $image_name);
         } else {
@@ -72,7 +72,7 @@ class EntrepriseController extends Controller
         }
         $company->name = $request->name;
         $company->code = $request->code;
-        $company->logo_path = $request->logo_path;
+        $company->logo_path = $image_name;
         $company->tax_number = $request->tax_number;
         $company->phone_number = $request->phone_number;
         $company->address = $request->address;

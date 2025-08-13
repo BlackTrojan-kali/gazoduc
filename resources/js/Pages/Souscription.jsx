@@ -14,7 +14,8 @@ const Souscription = ({ subs, entreprises, licences }) => {
   const { props: { inertia } } = usePage(); // Accès aux méthodes Inertia comme reload
 
   const openCreateSubscriptionModal = () => setIsCreateSubscriptionModalOpen(true);
-  const closeCreateSubscriptionModal = () => setIsCreateSubscriptionModalOpen(false);
+  const closeCreateSubscriptionModal = () => {setIsCreateSubscriptionModalOpen(false) 
+    window.location.reload();};
 
   // --- Fonction pour calculer les jours restants et déterminer la couleur du badge ---
   const getDaysRemainingAndBadge = (expirationDateString) => {
@@ -86,12 +87,7 @@ const Souscription = ({ subs, entreprises, licences }) => {
     // 1. Fermez le modal
     closeCreateSubscriptionModal();
 
-    // 2. Affichez un message de succès
-    Swal.fire(
-      'Créée !',
-      'La souscription a été créée avec succès.',
-      'success'
-    );
+
 
     // 3. Déclenchez le téléchargement du PDF de la facture
     if (newSubscriptionId) {
@@ -104,7 +100,8 @@ const Souscription = ({ subs, entreprises, licences }) => {
         'La facture est en cours de téléchargement.',
         'info'
       );
-    } else {
+
+    } else { 
       console.warn("L'ID de la nouvelle souscription n'a pas été fourni pour le téléchargement de la facture, monsieur.");
     }
 

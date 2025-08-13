@@ -291,7 +291,7 @@ const PageContent = ({ prices, clientCategories, articles, agencies }) => {
 
 const Price =({ prices, clientCategories, articles, agencies })=>{
   const {auth} = usePage().props
-  if(auth.user.role == "controler"){
+  if(auth.user.role == "controleur"){
     return(
       <RegLayout>
         <PageContent prices={prices} clientCategories={clientCategories} articles={articles} agencies={agencies}/>
