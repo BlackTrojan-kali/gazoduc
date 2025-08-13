@@ -81,6 +81,15 @@ class AuthController extends Controller
         ]);
         return redirect()->route("compage.index")->with("success","authentification reussie");
         break;
+         case "pdg":
+                   Notification::create([
+            "user_id"=>Auth::user()->id,
+            "notification_type"=>"ceo_auth",
+            "message"=>"Ceo  logged in",
+            "is_read"=>false,
+        ]);
+        return redirect()->route("pdg.index")->with("success","authentification reussie");
+        break;
         default:
         return back()->with("error","role invalide");
     }

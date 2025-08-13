@@ -6,6 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\bankController;
 use App\Http\Controllers\BrouteController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CEOController;
 use App\Http\Controllers\CiterneController;
 use App\Http\Controllers\CityController;
 use App\Http\Controllers\ClientController;
@@ -33,6 +34,7 @@ use App\Http\Controllers\StockController;
 use App\Http\Controllers\SubController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VehiculeController;
+use App\Http\Middleware\CEOMiddleware;
 use App\Http\Middleware\CommercialMiddleware;
 use App\Http\Middleware\DirectionMiddleware;
 use App\Http\Middleware\IsAdminMiddleware;
@@ -228,6 +230,7 @@ Route::middleware(RegionaMiddleware::class)->group(function(){
     Route::get("/controlleur-index",[RegionalController::class,"index"])->name("controlleur.index");
     Route::get("/controlleur-citerne",[RegionalController::class,"citerne_index"])->name("controlleur.citerne");
 });
+
 //production middleware
 Route::middleware(ProductionMiddleware::class)->group(function(){
     //production citernes routes
@@ -236,4 +239,10 @@ Route::middleware(ProductionMiddleware::class)->group(function(){
     Route::post("/producttion-produced",[ProductionController::class,"produce"])->name("prod.produce");
     Route::delete("/production-delete/{idProd}",[ProductionController::class,"delete"])->name("prodMove.delete");
     
-}); 
+});
+
+//ceo routes
+Route::middleware(CEOMiddleware::class)->group(function(){
+    Route::get("/ceo-index",[CEOController::class,"index"])->name("pdg.index");
+    Route::get("/ceo-ca",[CEOController::class,"sales"])->name("pdg.ca");
+});
