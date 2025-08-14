@@ -288,6 +288,7 @@ const MovementFormModal = ({ isOpen, onClose, articles, agencies }) => {
             <option value="achat">Achat</option>
             <option value="perte">Perte</option>
             <option value="reception">Reception</option>
+            <option value="vente">Vente</option>
             <option value="transfert">Transfert</option>
           </select>
           {errors.qualification && <p className="text-sm text-red-600 mt-1">{errors.qualification}</p>}
@@ -307,7 +308,7 @@ const MovementFormModal = ({ isOpen, onClose, articles, agencies }) => {
         />
 
         {/* Localisation Source - Conditionnel */}
-        { (data.movement_type === 'entree' || data.qualification === 'transfert') && (
+        { (data.movement_type === 'entree' || data.qualification === 'transfert' || data.qualification === 'vente') && (
           <Input
             id="source_location"
             type="text"
