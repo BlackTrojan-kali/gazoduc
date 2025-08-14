@@ -308,7 +308,7 @@ const ComSidebar = () => {
                 }`}
               >
                 {isExpanded || isHovered || isMobileOpen ? (
-                  "Users"
+                  ""
                 ) : (
                   <FontAwesomeIcon icon={faDotCircle} /> 
                 )}

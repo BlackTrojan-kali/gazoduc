@@ -310,7 +310,7 @@ const MagSidebar = () => {
                 }`}
               >
                 {isExpanded || isHovered || isMobileOpen ? (
-                  "Users"
+                  ""
                 ) : (
                   <FontAwesomeIcon icon={faDotCircle} /> 
                 )}
