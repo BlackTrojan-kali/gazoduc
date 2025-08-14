@@ -299,7 +299,7 @@ const MovementFormModal = ({ isOpen, onClose, articles, agencies }) => {
         <Input
           id="quantity"
           type="number"
-          step="0.01"
+          step="1"
           label="Quantité"
           value={data.quantity}
           onChange={handleChange}
