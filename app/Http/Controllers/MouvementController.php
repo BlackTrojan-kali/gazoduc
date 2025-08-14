@@ -199,8 +199,9 @@ class MouvementController extends Controller
     }
     public function delete($idmov){
         $move = Mouvement::where("id",$idmov)->first();
-        $stock =  Stock::where("agency_id",Auth::user()->agency_id)
+        $stock =  Stock::where("agency_id",Auth::user()->agency_id)->where("article_id",$move->article_id)
         ->where("storage_type",Auth::user()->role->name)->first();
+  
         try{
         DB::beginTransaction();
         if ($move->movement_type == "entree"){
