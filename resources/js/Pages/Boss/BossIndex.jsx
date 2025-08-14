@@ -116,8 +116,8 @@ const BossIndex = ({ consolidatedPayments, monthlyConsolidatedPayments, clientsC
                     <div className="bg-white p-6 rounded-lg shadow-md flex items-center justify-between dark:bg-gray-800">
                         <div>
                             <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200">Total Versements Réalisés (Global)</h3>
-                            {/* Modifications ici pour gérer les très grands nombres */}
-                            <p className="text-4xl font-extrabold text-teal-600 mt-2 break-words max-w-full overflow-hidden" style={{ fontSize: 'clamp(1.5rem, 6vw, 2.25rem)' }}>
+                            <p className="text-4xl font-extrabold text-teal-600 mt-2">
+                                {/* consolidatedPayments.data car consolidatedPayments est maintenant un objet paginé */}
                                 {formatCurrency(consolidatedPayments.data.reduce((acc, p) => acc + p.payment_value, 0))}
                             </p>
                         </div>

@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartLine, faStore, faFilter } from '@fortawesome/free-solid-svg-icons';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
-} from 'recharts';
+} from 'recharts'; // Importez les composants Recharts
 
 const CA = () => {
     // Récupérer les props de la page
@@ -14,9 +14,6 @@ const CA = () => {
     // États locaux pour les filtres
     const [filterAgency, setFilterAgency] = useState(selectedAgencyId || '');
     const [filterType, setFilterType] = useState(selectedInvoiceType || '');
-    
-    // NOUVEAU: État local pour les données de vente filtrées, initialisé avec les données complètes
-    const [filteredSalesData, setFilteredSalesData] = useState(agencySalesData);
 
     // Fonction pour le formatage de la monnaie
     const formatCurrency = (amount) => {
@@ -28,10 +25,15 @@ const CA = () => {
     };
 
     // --- Configuration du graphique Recharts ---
+    // Les données sont déjà formatées du backend, pas besoin de transformation majeure pour Recharts.
+    // monthlyChartData est un tableau d'objets comme : [{ month: "janvier 2023", total_ca: 12345 }]
+
+    // Fonction de formatage pour l'axe Y et le tooltip de Recharts
     const formatYAxis = (value) => {
         return formatCurrency(value);
     };
 
+    // Custom Tooltip pour Recharts
     const CustomTooltip = ({ active, payload, label }) => {
         if (active && payload && payload.length) {
             return (
@@ -44,41 +46,41 @@ const CA = () => {
         return null;
     };
 
+    // --- Gestion du mode sombre pour Recharts (via CSS ou props conditionnelles) ---
     const [chartColors, setChartColors] = useState({
-        textColor: 'rgb(107 114 128)',
-        gridColor: 'rgba(209, 213, 219, 0.2)',
-        barColor: 'rgba(75, 192, 192, 0.8)',
+        textColor: 'rgb(107 114 128)', // text-gray-500
+        gridColor: 'rgba(209, 213, 219, 0.2)', // gris clair transparent
+        barColor: 'rgba(75, 192, 192, 0.8)', // couleur de la barre
     });
 
     useEffect(() => {
         const isDarkMode = document.documentElement.classList.contains('dark');
         setChartColors({
-            textColor: isDarkMode ? 'rgb(209 213 219)' : 'rgb(107 114 128)',
+            textColor: isDarkMode ? 'rgb(209 213 219)' : 'rgb(107 114 128)', // text-gray-300 vs text-gray-500
             gridColor: isDarkMode ? 'rgba(107, 114, 128, 0.2)' : 'rgba(209, 213, 219, 0.2)',
-            barColor: isDarkMode ? 'rgba(0, 150, 136, 0.8)' : 'rgba(75, 192, 192, 0.8)',
+            barColor: isDarkMode ? 'rgba(0, 150, 136, 0.8)' : 'rgba(75, 192, 192, 0.8)', // Une couleur adaptée pour le mode sombre
         });
-    }, []);
+    }, [usePage().props]); // Dépendance sur les props de la page pour réagir au changement de thème (si géré par des props) ou juste au chargement initial
 
-    // NOUVEAU: Hook useEffect pour gérer le filtrage côté client
-    useEffect(() => {
-        let newData = [...agencySalesData];
+    // Fonction pour appliquer les filtres
+    const applyFilters = () => {
+        router.get(route('boss.sales'), {
+            agency_id: filterAgency,
+            invoice_type: filterType,
+        }, {
+            preserveState: true,
+            preserveScroll: true,
+        });
+    };
 
-        if (filterAgency) {
-            newData = newData.filter(item => item.agency_id.toString() === filterAgency);
-        }
-        
-        if (filterType) {
-            newData = newData.filter(item => item.invoice_type === filterType);
-        }
-
-        setFilteredSalesData(newData);
-    }, [filterAgency, filterType, agencySalesData]); // Le filtre se déclenche à chaque changement de filtre ou de données
-
-    // MODIFIÉ: La fonction applyFilters n'est plus nécessaire car le filtrage est réactif.
-    // La fonction resetFilters est simplifiée pour ne faire que la réinitialisation des états locaux.
+    // Reset les filtres
     const resetFilters = () => {
         setFilterAgency('');
         setFilterType('');
+        router.get(route('boss.sales'), {}, {
+            preserveState: true,
+            preserveScroll: true,
+        });
     };
 
     return (
@@ -98,16 +100,26 @@ const CA = () => {
                             </h3>
                         </div>
                     </div>
-                    <div className="h-96">
+                    <div className="h-96"> {/* Hauteur fixe pour le graphique */}
                         {monthlyChartData && monthlyChartData.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart
                                     data={monthlyChartData}
-                                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                                    margin={{
+                                        top: 20, right: 30, left: 20, bottom: 5,
+                                    }}
                                 >
                                     <CartesianGrid strokeDasharray="3 3" stroke={chartColors.gridColor} />
-                                    <XAxis dataKey="month" tick={{ fill: chartColors.textColor }} tickLine={{ stroke: chartColors.textColor }} />
-                                    <YAxis tickFormatter={formatYAxis} tick={{ fill: chartColors.textColor }} tickLine={{ stroke: chartColors.textColor }} />
+                                    <XAxis
+                                        dataKey="month"
+                                        tick={{ fill: chartColors.textColor }}
+                                        tickLine={{ stroke: chartColors.textColor }}
+                                    />
+                                    <YAxis
+                                        tickFormatter={formatYAxis}
+                                        tick={{ fill: chartColors.textColor }}
+                                        tickLine={{ stroke: chartColors.textColor }}
+                                    />
                                     <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0, 0, 0, 0.1)' }} />
                                     <Legend wrapperStyle={{ color: chartColors.textColor }} />
                                     <Bar dataKey="total_ca" name="Chiffre d'Affaires" fill={chartColors.barColor} />
@@ -133,7 +145,6 @@ const CA = () => {
                     </div>
 
                     {/* Zone de filtres */}
-                    {/* MODIFIÉ: Le bouton "Appliquer les filtres" a été retiré car les filtres sont réactifs */}
                     <div className="flex flex-wrap items-end gap-4 mb-6 p-4 rounded-lg bg-gray-50 dark:bg-gray-700">
                         <div className="flex-grow">
                             <label htmlFor="agency-filter" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -170,6 +181,12 @@ const CA = () => {
                         </div>
 
                         <button
+                            onClick={applyFilters}
+                            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:bg-indigo-700 dark:hover:bg-indigo-600"
+                        >
+                            Appliquer les filtres
+                        </button>
+                        <button
                             onClick={resetFilters}
                             className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:bg-gray-600 dark:border-gray-500 dark:text-gray-200 dark:hover:bg-gray-500"
                         >
@@ -187,9 +204,8 @@ const CA = () => {
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
-                                {/* MODIFIÉ: Utilisation de filteredSalesData au lieu de agencySalesData */}
-                                {filteredSalesData && filteredSalesData.length > 0 ? (
-                                    filteredSalesData.map((data, index) => (
+                                {agencySalesData && agencySalesData.length > 0 ? (
+                                    agencySalesData.map((data, index) => (
                                         <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{data.agency_name}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{data.invoice_type}</td>
