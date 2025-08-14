@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import ComLayout from '../../layout/ComLayout/ComLayout';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react'; // Import usePage
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '../../components/ui/table';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faPrint, faTrash, faPlus, faFilter, faFilePdf } from '@fortawesome/free-solid-svg-icons';
@@ -14,6 +14,8 @@ import ExportSalesModal from '../../components/Modals/Sales/ExportSalesModal'; /
 
 const ComSales = ({ factures, clients, articles, agencies }) => {
   const { delete: inertiaDelete } = useForm();
+  const { auth } = usePage().props; // Get auth.user from Inertia's page props
+
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedFacture, setSelectedFacture] = useState(null);
   const [isNewSaleModalOpen, setIsNewSaleModalOpen] = useState(false);
@@ -24,6 +26,24 @@ const ComSales = ({ factures, clients, articles, agencies }) => {
   const [filterAgency, setFilterAgency] = useState(null);
   const [filterStartDate, setFilterStartDate] = useState('');
   const [filterEndDate, setFilterEndDate] = useState('');
+
+  // --- canDelete function (integrated) ---
+  const canDelete = (movementCreatedAt) => {
+    // If the user does not have `modification_days` defined or it is 0, we do not allow deletion.
+    // Ensure auth.user exists and has modif_days property.
+    if (!auth.user || typeof auth.user.modif_days === 'undefined' || auth.user.modif_days <= 0) {
+      return false;
+    }
+    const today = new Date();
+    const creationDate = new Date(movementCreatedAt);
+    
+    // Calculate the difference in days
+    const diffTime = today.getTime() - creationDate.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Return true if the movement was created within the allowed period
+    return diffDays <= auth.user.modif_days;
+  };
 
   // --- Filtrage des factures selon les filtres (optimisé avec useMemo) ---
   const filteredFactures = useMemo(() => {
@@ -75,7 +95,16 @@ const ComSales = ({ factures, clients, articles, agencies }) => {
   };
 
   // --- Fonction de Suppression de Facture ---
-  const handleDeleteFacture = (factureId) => {
+  const handleDeleteFacture = (facture) => { // Pass the full facture object
+    if (!canDelete(facture.created_at)) {
+      Swal.fire(
+        'Accès Refusé',
+        `Monsieur, vous ne pouvez pas supprimer cette facture car elle a été créée il y a plus de ${auth.user.modif_days} jours (ou les jours de modification ne sont pas définis).`,
+        'error'
+      );
+      return;
+    }
+
     Swal.fire({
       title: 'Êtes-vous sûr, monsieur ?',
       text: "Vous êtes sur le point de supprimer cette facture. Cette action est irréversible !",
@@ -87,7 +116,7 @@ const ComSales = ({ factures, clients, articles, agencies }) => {
       cancelButtonText: 'Annuler'
     }).then((result) => {
       if (result.isConfirmed) {
-        inertiaDelete(route('factures.delete', factureId), {
+        inertiaDelete(route('factures.delete', facture.id), { // Use facture.id here
           preserveScroll: true,
           onSuccess: () => {
             Swal.fire(
@@ -352,14 +381,16 @@ const ComSales = ({ factures, clients, articles, agencies }) => {
                         >
                           <FontAwesomeIcon icon={faPrint} />
                         </button>
-                        {/* Bouton Supprimer */}
-                        <button
-                          onClick={() => handleDeleteFacture(facture.id)}
-                          className="p-2 rounded-lg text-red-600 hover:bg-red-100 dark:hover:bg-red-900 transition-colors"
-                          title="Supprimer la facture"
-                        >
-                          <FontAwesomeIcon icon={faTrash} />
-                        </button>
+                        {/* Bouton Supprimer (conditionnel) */}
+                        {canDelete(facture.created_at) && (
+                          <button
+                            onClick={() => handleDeleteFacture(facture)} // Pass the full facture object
+                            className="p-2 rounded-lg text-red-600 hover:bg-red-100 dark:hover:bg-red-900 transition-colors"
+                            title="Supprimer la facture"
+                          >
+                            <FontAwesomeIcon icon={faTrash} />
+                          </button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
@@ -429,7 +460,6 @@ const ComSales = ({ factures, clients, articles, agencies }) => {
     </>
   );
 };
-
 
 ComSales.layout = page => <ComLayout children={page} />;
 export default ComSales;
