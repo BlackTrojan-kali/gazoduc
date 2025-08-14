@@ -1,5 +1,3 @@
-// resources/js/Components/Modals/Direction/ArticleModal.jsx
-
 import React, { useEffect } from 'react';
 import { useForm } from '@inertiajs/react';
 import Modal from '../Modal';
@@ -88,8 +86,6 @@ const ArticleModal = ({ isOpen, onClose, entreprises, simpleArticles, article = 
             if (value !== 'produit_fini') {
                 setData('simple_article_id', '');
             }
-            // weight_per_unit reste dans l'état et n'est pas réinitialisé ici,
-            // car il peut être pertinent pour 'produit' et 'produit_fini'.
         }
     };
 
@@ -131,68 +127,78 @@ const ArticleModal = ({ isOpen, onClose, entreprises, simpleArticles, article = 
 
     // --- Dynamic styles for React-Select ---
     const reactSelectStyles = {
+        // Style du conteneur principal (input, flèche, etc.)
         control: (baseStyles, state) => ({
             ...baseStyles,
             height: '44px',
             minHeight: '44px',
-            borderColor: errors[state.selectProps.name] ? '#EF4444' : (state.isFocused ? 'var(--brand-300)' : 'var(--border-gray-300)'),
-            backgroundColor: 'var(--bg-transparent)',
+            // Couleurs pour le mode clair
+            borderColor: errors[state.selectProps.name] ? '#EF4444' : (state.isFocused ? '#3B82F6' : '#E5E7EB'),
+            backgroundColor: '#FFFFFF',
             boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
             '&:hover': {
-                borderColor: state.isFocused ? 'var(--brand-300)' : 'var(--border-gray-400)',
+                borderColor: state.isFocused ? '#3B82F6' : '#D1D5DB',
             },
-            // Dark mode overrides
+            // Couleurs pour le mode sombre
             '.dark &': {
-                borderColor: errors[state.selectProps.name] ? '#EF4444' : (state.isFocused ? 'var(--brand-800)' : 'var(--dark-border-gray-700)'),
-                backgroundColor: 'var(--dark-bg-gray-900)',
+                borderColor: errors[state.selectProps.name] ? '#EF4444' : (state.isFocused ? '#2563EB' : '#374151'),
+                backgroundColor: '#111827',
+                color: '#E5E7EB',
                 '&:hover': {
-                    borderColor: state.isFocused ? 'var(--brand-800)' : 'var(--dark-border-gray-600)',
+                    borderColor: state.isFocused ? '#2563EB' : '#4B5563',
                 },
             }
         }),
+        // Style de la valeur sélectionnée
         singleValue: (baseStyles) => ({
             ...baseStyles,
-            color: 'var(--text-gray-900)',
+            color: '#1F2937',
             '.dark &': {
-                color: 'var(--dark-text-white-90)',
+                color: '#E5E7EB',
             }
         }),
+        // Style du placeholder
         placeholder: (baseStyles) => ({
             ...baseStyles,
-            color: 'var(--text-gray-400)',
+            color: '#9CA3AF',
             '.dark &': {
-                color: 'var(--dark-text-white-30)',
+                color: '#6B7280',
             }
         }),
+        // Style du texte tapé dans l'input
         input: (baseStyles) => ({
             ...baseStyles,
-            color: 'var(--text-gray-900)',
+            color: '#1F2937',
             '.dark &': {
-                color: 'var(--dark-text-white-90)',
+                color: '#E5E7EB',
             }
         }),
+        // Style du menu déroulant
         menu: (baseStyles) => ({
             ...baseStyles,
-            backgroundColor: 'var(--bg-white)',
+            backgroundColor: '#FFFFFF',
             zIndex: 9999,
             '.dark &': {
-                backgroundColor: 'var(--dark-bg-gray-800)',
+                backgroundColor: '#1F2937',
             }
         }),
+        // Style des options du menu déroulant
         option: (baseStyles, state) => ({
             ...baseStyles,
-            backgroundColor: state.isSelected ? 'var(--brand-600)' : (state.isFocused ? 'var(--bg-gray-100)' : 'var(--bg-white)'),
-            color: state.isSelected ? 'white' : 'var(--text-gray-900)',
+            // Couleurs pour le mode clair
+            backgroundColor: state.isSelected ? '#2563EB' : (state.isFocused ? '#F3F4F6' : '#FFFFFF'),
+            color: state.isSelected ? '#FFFFFF' : '#1F2937',
             '&:hover': {
-                backgroundColor: state.isFocused ? 'var(--bg-gray-100)' : 'var(--bg-white)',
-                color: 'var(--text-gray-900)',
+                backgroundColor: state.isFocused ? '#F3F4F6' : '#FFFFFF',
+                color: '#1F2937',
             },
+            // Couleurs pour le mode sombre
             '.dark &': {
-                backgroundColor: state.isSelected ? 'var(--brand-700)' : (state.isFocused ? 'var(--dark-bg-gray-700)' : 'var(--dark-bg-gray-800)'),
-                color: state.isSelected ? 'white' : 'var(--dark-text-white-90)',
+                backgroundColor: state.isSelected ? '#1E40AF' : (state.isFocused ? '#374151' : '#1F2937'),
+                color: state.isSelected ? '#FFFFFF' : '#E5E7EB',
                 '&:hover': {
-                    backgroundColor: state.isFocused ? 'var(--dark-bg-gray-700)' : 'var(--dark-bg-gray-800)',
-                    color: 'var(--dark-text-white-90)',
+                    backgroundColor: state.isFocused ? '#374151' : '#1F2937',
+                    color: '#E5E7EB',
                 },
             }
         }),
@@ -231,7 +237,7 @@ const ArticleModal = ({ isOpen, onClose, entreprises, simpleArticles, article = 
                         id="type"
                         className={`h-11 w-full appearance-none rounded-lg border px-4 py-2.5 pr-11 text-sm shadow-theme-xs
                             ${errors.type ? 'border-red-500' : 'border-gray-300 dark:border-gray-700'}
-                            bg-transparent placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10
+                            placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10
                             dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800`}
                         value={data.type}
                         onChange={handleChange}
@@ -255,7 +261,7 @@ const ArticleModal = ({ isOpen, onClose, entreprises, simpleArticles, article = 
                         id="unit"
                         className={`h-11 w-full appearance-none rounded-lg border px-4 py-2.5 pr-11 text-sm shadow-theme-xs
                             ${errors.unit ? 'border-red-500' : 'border-gray-300 dark:border-gray-700'}
-                            bg-transparent placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10
+                             placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10
                             dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800`}
                         value={data.unit}
                         onChange={handleChange}
