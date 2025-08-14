@@ -108,15 +108,8 @@ const ArticleModal = ({ isOpen, onClose, entreprises, simpleArticles, article = 
 
         submitMethod(submitRoute, {
             onSuccess: () => {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Succès !',
-                    text: successMessage,
-                    showConfirmButton: false,
-                    timer: 1500
-                }).then(() => {
                     onClose();
-                });
+                
             },
             onError: (validationErrors) => {
                 Swal.fire({
@@ -135,6 +128,75 @@ const ArticleModal = ({ isOpen, onClose, entreprises, simpleArticles, article = 
 
     // Déterminer si le champ weight_per_unit doit être affiché
     const showWeightPerUnit = ['produit', 'produit_fini'].includes(data.type);
+
+    // --- Dynamic styles for React-Select ---
+    const reactSelectStyles = {
+        control: (baseStyles, state) => ({
+            ...baseStyles,
+            height: '44px',
+            minHeight: '44px',
+            borderColor: errors[state.selectProps.name] ? '#EF4444' : (state.isFocused ? 'var(--brand-300)' : 'var(--border-gray-300)'),
+            backgroundColor: 'var(--bg-transparent)',
+            boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
+            '&:hover': {
+                borderColor: state.isFocused ? 'var(--brand-300)' : 'var(--border-gray-400)',
+            },
+            // Dark mode overrides
+            '.dark &': {
+                borderColor: errors[state.selectProps.name] ? '#EF4444' : (state.isFocused ? 'var(--brand-800)' : 'var(--dark-border-gray-700)'),
+                backgroundColor: 'var(--dark-bg-gray-900)',
+                '&:hover': {
+                    borderColor: state.isFocused ? 'var(--brand-800)' : 'var(--dark-border-gray-600)',
+                },
+            }
+        }),
+        singleValue: (baseStyles) => ({
+            ...baseStyles,
+            color: 'var(--text-gray-900)',
+            '.dark &': {
+                color: 'var(--dark-text-white-90)',
+            }
+        }),
+        placeholder: (baseStyles) => ({
+            ...baseStyles,
+            color: 'var(--text-gray-400)',
+            '.dark &': {
+                color: 'var(--dark-text-white-30)',
+            }
+        }),
+        input: (baseStyles) => ({
+            ...baseStyles,
+            color: 'var(--text-gray-900)',
+            '.dark &': {
+                color: 'var(--dark-text-white-90)',
+            }
+        }),
+        menu: (baseStyles) => ({
+            ...baseStyles,
+            backgroundColor: 'var(--bg-white)',
+            zIndex: 9999,
+            '.dark &': {
+                backgroundColor: 'var(--dark-bg-gray-800)',
+            }
+        }),
+        option: (baseStyles, state) => ({
+            ...baseStyles,
+            backgroundColor: state.isSelected ? 'var(--brand-600)' : (state.isFocused ? 'var(--bg-gray-100)' : 'var(--bg-white)'),
+            color: state.isSelected ? 'white' : 'var(--text-gray-900)',
+            '&:hover': {
+                backgroundColor: state.isFocused ? 'var(--bg-gray-100)' : 'var(--bg-white)',
+                color: 'var(--text-gray-900)',
+            },
+            '.dark &': {
+                backgroundColor: state.isSelected ? 'var(--brand-700)' : (state.isFocused ? 'var(--dark-bg-gray-700)' : 'var(--dark-bg-gray-800)'),
+                color: state.isSelected ? 'white' : 'var(--dark-text-white-90)',
+                '&:hover': {
+                    backgroundColor: state.isFocused ? 'var(--dark-bg-gray-700)' : 'var(--dark-bg-gray-800)',
+                    color: 'var(--dark-text-white-90)',
+                },
+            }
+        }),
+    };
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={title}>
@@ -242,29 +304,7 @@ const ArticleModal = ({ isOpen, onClose, entreprises, simpleArticles, article = 
                             isSearchable={true}
                             required={data.type === 'produit_fini'} // Requis si c'est un produit fini
                             classNamePrefix="react-select"
-                            styles={{
-                                control: (baseStyles, state) => ({
-                                    ...baseStyles,
-                                    height: '44px',
-                                    minHeight: '44px',
-                                    borderColor: errors.simple_article_id ? '#EF4444' : (state.isFocused ? '#3B82F6' : '#D1D5DB'),
-                                    backgroundColor: 'transparent',
-                                    boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
-                                    '&:hover': {
-                                        borderColor: state.isFocused ? '#3B82F6' : '#9CA3AF',
-                                    },
-                                }),
-                                singleValue: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
-                                placeholder: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.3)' }),
-                                input: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
-                                menu: (baseStyles) => ({ ...baseStyles, backgroundColor: '#1F2937', zIndex: 9999 }),
-                                option: (baseStyles, state) => ({
-                                    ...baseStyles,
-                                    backgroundColor: state.isSelected ? '#2563EB' : state.isFocused ? '#374151' : '#1F2937',
-                                    color: state.isSelected ? 'white' : 'rgb(249 250 251 / 0.9)',
-                                    '&:hover': { backgroundColor: '#374151', color: 'rgb(249 250 251 / 0.9)' },
-                                }),
-                            }}
+                            styles={reactSelectStyles} // Apply the centralized styles
                         />
                         {errors.simple_article_id && <p className="text-sm text-red-600 mt-1">{errors.simple_article_id}</p>}
                     </div>
@@ -286,29 +326,7 @@ const ArticleModal = ({ isOpen, onClose, entreprises, simpleArticles, article = 
                         isSearchable={true}
                         required
                         classNamePrefix="react-select"
-                        styles={{
-                            control: (baseStyles, state) => ({
-                                ...baseStyles,
-                                height: '44px',
-                                minHeight: '44px',
-                                borderColor: errors.entreprise_id ? '#EF4444' : (state.isFocused ? '#3B82F6' : '#D1D5DB'),
-                                backgroundColor: 'transparent',
-                                boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
-                                '&:hover': {
-                                    borderColor: state.isFocused ? '#3B82F6' : '#9CA3AF',
-                                },
-                            }),
-                            singleValue: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
-                            placeholder: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.3)' }),
-                            input: (baseStyles) => ({ ...baseStyles, color: 'rgb(249 250 251 / 0.9)' }),
-                            menu: (baseStyles) => ({ ...baseStyles, backgroundColor: '#1F2937', zIndex: 9999 }),
-                            option: (baseStyles, state) => ({
-                                ...baseStyles,
-                                backgroundColor: state.isSelected ? '#2563EB' : state.isFocused ? '#374151' : '#1F2937',
-                                color: state.isSelected ? 'white' : 'rgb(249 250 251 / 0.9)',
-                                '&:hover': { backgroundColor: '#374151', color: 'rgb(249 250 251 / 0.9)' },
-                            }),
-                        }}
+                        styles={reactSelectStyles} // Apply the centralized styles
                     />
                     {errors.entreprise_id && <p className="text-sm text-red-600 mt-1">{errors.entreprise_id}</p>}
                 </div>

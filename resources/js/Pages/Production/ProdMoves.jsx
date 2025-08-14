@@ -455,7 +455,7 @@ const ProdMoves = ({ prodMoves, agencies, articles, citernes })=>{
       </RegLayout>
     )
   }
-  if(auth.user.role == "direction"){
+  if(auth.user.role === "direction"){
     return (
       <DirLayout>
         <PageContent prodMoves={prodMoves} agencies={agencies} articles={articles} citernes={citernes}/>

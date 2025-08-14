@@ -5,6 +5,7 @@ import Button from '../ui/button/Button';
 import Modal from './Modal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFileExport, faCalendarAlt } from '@fortawesome/free-solid-svg-icons';
+import { usePage } from '@inertiajs/react';
 
 const ExportProductionModal = ({ show, onClose, agencies, articles, citernes }) => {
   const [exportAgency, setExportAgency] = useState(null);
@@ -13,7 +14,7 @@ const ExportProductionModal = ({ show, onClose, agencies, articles, citernes }) 
   const [exportStartDate, setExportStartDate] = useState('');
   const [exportEndDate, setExportEndDate] = useState('');
   const [exportFormat, setExportFormat] = useState('pdf'); // État pour le format d'exportation
-
+const {auth} = usePage().props;
   // Options pour les sélecteurs react-select
   const agencyOptions = Array.isArray(agencies)
     ? agencies.map(agency => ({ value: String(agency.id), label: agency.name }))

@@ -30,7 +30,7 @@ const navItems = [
 
 const othersItems= [
   { icon:  <FontAwesomeIcon icon={faUser} />,
-    name: "Users",
+    name: "",
   
   }
 ];
@@ -302,7 +302,7 @@ const ProdSidebar = () => {
                 }`}
               >
                 {isExpanded || isHovered || isMobileOpen ? (
-                  "Users"
+                  ""
                 ) : (
                   <FontAwesomeIcon icon={faDotCircle} /> 
                 )}
