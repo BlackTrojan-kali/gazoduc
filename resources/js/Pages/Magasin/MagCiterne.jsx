@@ -91,7 +91,7 @@ const MagCiterne = ({ stocks, articles, citernes, agencies, citernesFixes, citer
 
               const discrepancy = actualQuantity - theoreticalQuantity  ;
               let discrepancyColorClass = 'text-gray-600 dark:text-gray-300';
-              if (discrepancy > 0) {
+              if (discrepancy < 0) {
                 discrepancyColorClass = 'text-red-500 font-semibold';
               } else if (discrepancy > 0) {
                 discrepancyColorClass = 'text-green-500 font-semibold';
