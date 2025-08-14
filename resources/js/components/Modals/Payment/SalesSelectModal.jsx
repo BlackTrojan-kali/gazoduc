@@ -57,6 +57,11 @@ const SalesSelectionModal = ({ isOpen, onClose, sales, onSave, processing, payme
     }
   };
 
+  // Calculer le total des montants des ventes sélectionnées
+  const totalSelectedAmount = useMemo(() => {
+    return selectedSales.reduce((sum, sale) => sum + (sale.total_amount || 0), 0);
+  }, [selectedSales]);
+
   // Soumettre le formulaire
   const handleSubmit = () => {
     if (selectedSales.length === 0) {
@@ -152,6 +157,18 @@ const SalesSelectionModal = ({ isOpen, onClose, sales, onSave, processing, payme
           </p>
         )}
       </div>
+
+      {/* Section pour afficher le total des sommes sélectionnées */}
+      {selectedSales.length > 0 && (
+        <div className="flex justify-end mt-4 px-4 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+          <p className="text-lg font-semibold text-gray-900 dark:text-white">
+            Total des factures sélectionnées :{' '}
+            <span className="text-blue-600">
+              {totalSelectedAmount.toLocaleString('fr-FR', { style: 'currency', currency: 'XAF' })}
+            </span>
+          </p>
+        </div>
+      )}
 
       <div className="flex justify-end gap-2 mt-6">
         <button
