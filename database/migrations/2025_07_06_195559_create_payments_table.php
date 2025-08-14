@@ -21,10 +21,10 @@ return new class extends Migration
             $table->foreign("bank_id")->on("banks")->references("id")->onDelete("cascade");
             $table->unsignedBigInteger("client_id");
             $table->foreign("client_id")->on("clients")->references("id")->onDelete("cascade");
-            $table->decimal("amout"); //somme versee
+            $table->decimal("amout",14,2); //somme versee
             $table->string("type");//consigne,gpl,accessoire,carburant
             $table->text("notes")->nullable();
-            $table->decimal("amout_notes")->nullable();//somme prelevee dans le commentaire
+            $table->decimal("amout_notes",14,2)->nullable();//somme prelevee dans le commentaire
             $table->string("bordereau")->nullable();
             $table->timestamps();
         });

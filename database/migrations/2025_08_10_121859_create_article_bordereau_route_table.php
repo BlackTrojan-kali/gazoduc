@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger("bordereau_route_id");
             $table->unsignedBigInteger("article_id");
-            $table->decimal("qty");
+            $table->decimal("qty",14,2);
             $table->foreign("bordereau_route_id")->on("bordereau_routes")->references("id")->onDelete("cascade");
             $table->foreign("article_id")->on("articles")->references("id")->onDelete("cascade");
             $table->timestamps();

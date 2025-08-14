@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreign("payment_id")->on("payments")->references("id")->onDelete("cascade");
             $table->unsignedBigInteger("facture_id");
             $table->foreign("facture_id")->on("factures")->references("id")->onDelete("cascade");
-            $table->decimal("amount")->nullable();
+            $table->decimal("amount",14,2)->nullable();
             $table->timestamps();
         });
     }

@@ -17,9 +17,9 @@ return new class extends Migration
             $table->foreign("facture_id")->on("factures")->references("id")->onDelete("cascade");
             $table->unsignedBigInteger("article_id");
             $table->foreign("article_id")->on("articles")->references("id")->onDelete("cascade");
-            $table->decimal("quantity");
-            $table->decimal("unit_price");
-            $table->decimal("subtotal");
+            $table->decimal("quantity",14,2);
+            $table->decimal("unit_price",14,2);
+            $table->decimal("subtotal",14,2);
             $table->timestamps();
         });
     }

@@ -19,7 +19,7 @@ return new class extends Migration
             $table->foreign("user_id")->on("users")->references("id");
             $table->unsignedBigInteger("agency_id");
             $table->foreign("agency_id")->on("agencies")->references("id");
-            $table->decimal("total_amount");
+            $table->decimal("total_amount",14,2);
             $table->string("currency");
             $table->string("invoice_type");
             $table->string("status");
