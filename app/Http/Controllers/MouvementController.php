@@ -31,7 +31,7 @@ class MouvementController extends Controller
             'agency_id' => ['required', 'exists:agencies,id'],
             'recorded_by_user_id' => ['required', 'exists:users,id'],
             'movement_type' => ['required', 'in:entree,sortie'],
-            'qualification' => ['required', 'in:reepreuve,achat,perte,transfert'],
+            'qualification' => ['required', 'in:reepreuve,achat,perte,transfert,reception'],
             'quantity' => ['required', 'numeric', 'min:0.01'],
             'source_location' => ['nullable', 'string', 'max:255'],
             'destination_location' => ['nullable', 'string', 'max:255'],
