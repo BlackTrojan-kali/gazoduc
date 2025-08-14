@@ -57,7 +57,7 @@ class ProductionController extends Controller
         $stock_depart_vide = Stock::where("article_id",$article->article_id)->where("storage_type","production")->with("article")->first();
      
     if($stock_cit->quantity > ($request->quantity_produced*$stock_article->article->weight_per_unit)  ){
-        if($stock_depart_vide->quantity > $request->quantity_produced ){
+        if($stock_depart_vide->quantity >= $request->quantity_produced ){
              
         try{       
              DB::beginTransaction();
