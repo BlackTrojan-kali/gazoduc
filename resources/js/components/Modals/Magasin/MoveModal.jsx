@@ -289,6 +289,7 @@ const MovementFormModal = ({ isOpen, onClose, articles, agencies }) => {
             <option value="perte">Perte</option>
             <option value="reception">Reception</option>
             <option value="vente">Vente</option>
+            <option value="consigne">Consigne</option>
             <option value="retour_sur_vente">Retour sur vente</option>
             <option value="transfert">Transfert</option>
           </select>
