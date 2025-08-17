@@ -1,6 +1,6 @@
 import React from 'react';
 import CEOLayout from '../../layout/CEOLayout/CEOLayout';
-import { Head, Link } from '@inertiajs/react'; // Importez Link
+import { Head, Link } from '@inertiajs/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUsers, faBoxOpen, faCalendarCheck, faHandHoldingUsd, faChartBar } from '@fortawesome/free-solid-svg-icons';
 
@@ -42,12 +42,12 @@ const Pagination = ({ links }) => {
             {links.map((link) => (
                 <Link
                     key={link.label}
-                    href={link.url || '#'} // Utilise '#' si l'URL est null (pour prev/next inactifs)
+                    href={link.url || '#'}
                     className={`relative inline-flex items-center px-4 py-2 text-sm font-medium border rounded-md
                                 ${link.active
                                     ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600 dark:bg-indigo-900 dark:border-indigo-700 dark:text-indigo-200'
                                     : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}
-                                ${!link.url ? 'opacity-50 cursor-not-allowed' : ''}`} // Désactive le lien si l'URL est null
+                                ${!link.url ? 'opacity-50 cursor-not-allowed' : ''}`}
                     dangerouslySetInnerHTML={{ __html: link.label }}
                 />
             ))}
@@ -59,6 +59,10 @@ const Pagination = ({ links }) => {
 const BossIndex = ({ consolidatedPayments, monthlyConsolidatedPayments, clientsCount, globalStockByArticle, daysRemainingForLicence }) => {
 
     const formatCurrency = (amount) => {
+        // Gère les cas où l'amount pourrait être NaN ou null/undefined
+        if (typeof amount !== 'number' || isNaN(amount)) {
+            amount = 0; // Définit à 0 pour éviter le NaN dans le formatage
+        }
         return new Intl.NumberFormat('fr-FR', {
             style: 'currency',
             currency: 'XAF',
@@ -83,7 +87,7 @@ const BossIndex = ({ consolidatedPayments, monthlyConsolidatedPayments, clientsC
                 <h1 className="text-3xl font-bold text-gray-800 mb-8 dark:text-white">Tableau de Bord</h1>
 
                 {/* Section des cartes récapitulatives principales */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
                     {/* Carte du Nombre de Clients */}
                     <div className="bg-white p-6 rounded-lg shadow-md flex items-center justify-between dark:bg-gray-800">
                         <div>
@@ -111,14 +115,15 @@ const BossIndex = ({ consolidatedPayments, monthlyConsolidatedPayments, clientsC
                         </div>
                     </div>
                     
-
-                    {/* Carte Total Versements Réalisés (Global) */}
-                    <div className="bg-white p-6 rounded-lg shadow-md flex items-center justify-between dark:bg-gray-800">
+                    {/* Carte Total Versements Réalisés (Global) - Occupant la largeur entière sur grand écran */}
+                    <div className="bg-white p-6 rounded-lg shadow-md flex items-center justify-between col-span-1 md:col-span-2 dark:bg-gray-800">
                         <div>
                             <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200">Total Versements Réalisés (Global)</h3>
-                            <p className="text-4xl font-extrabold text-teal-600 mt-2">
-                                {/* consolidatedPayments.data car consolidatedPayments est maintenant un objet paginé */}
-                                {formatCurrency(consolidatedPayments.data.reduce((acc, p) => acc + p.payment_value, 0))}
+                            <p className="text-5xl font-extrabold text-teal-600 mt-2">
+                                {/* Utilisation de parseFloat pour s'assurer que payment_value est un nombre, et || 0 pour gérer les NaN */}
+                                {formatCurrency(
+                                    consolidatedPayments.data.reduce((acc, p) => acc + (parseFloat(p.payment_value) || 0), 0)
+                                )}
                             </p>
                         </div>
                         <div className="bg-teal-100 p-3 rounded-full">
@@ -128,7 +133,7 @@ const BossIndex = ({ consolidatedPayments, monthlyConsolidatedPayments, clientsC
                     
                 </div>
 
-                <hr className="my-10 border-gray-300 dark:border-gray-700" />
+                <hr className="my-10 border-gray-300 " />
 
                 {/* Section des Statistiques Mensuelles des Versements */}
                 <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 shadow-lg mb-10 dark:border-gray-700 dark:bg-gray-800">
@@ -152,7 +157,6 @@ const BossIndex = ({ consolidatedPayments, monthlyConsolidatedPayments, clientsC
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
-                                {/* monthlyConsolidatedPayments.data car c'est un objet paginé */}
                                 {monthlyConsolidatedPayments.data && monthlyConsolidatedPayments.data.length > 0 ? (
                                     monthlyConsolidatedPayments.data.map((monthData) => (
                                         <tr key={monthData.month_year} className="hover:bg-gray-50 dark:hover:bg-gray-700">
@@ -160,13 +164,13 @@ const BossIndex = ({ consolidatedPayments, monthlyConsolidatedPayments, clientsC
                                                 {formatMonthYear(monthData.month_year)}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-semibold dark:text-gray-300">
-                                                {formatCurrency(monthData.total_payment_value_month)}
+                                                {formatCurrency(parseFloat(monthData.total_payment_value_month) || 0)}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                                                {formatCurrency(monthData.total_associated_sales_month)}
+                                                {formatCurrency(parseFloat(monthData.total_associated_sales_month) || 0)}
                                             </td>
                                             <td className={`px-6 py-4 whitespace-nowrap text-sm font-bold ${monthData.total_difference_month === 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                {formatCurrency(monthData.total_difference_month)}
+                                                {formatCurrency(parseFloat(monthData.total_difference_month) || 0)}
                                             </td>
                                         </tr>
                                     ))
@@ -181,7 +185,7 @@ const BossIndex = ({ consolidatedPayments, monthlyConsolidatedPayments, clientsC
                         </table>
                     </div>
                     {/* Liens de pagination pour les statistiques mensuelles */}
-                    {monthlyConsolidatedPayments.links && monthlyConsolidatedPayments.links.length > 3 && ( // 3 links minimum: prev, 1, next
+                    {monthlyConsolidatedPayments.links && monthlyConsolidatedPayments.links.length > 3 && (
                         <Pagination links={monthlyConsolidatedPayments.links} />
                     )}
                 </div>
@@ -228,16 +232,16 @@ const BossIndex = ({ consolidatedPayments, monthlyConsolidatedPayments, clientsC
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
-                                {/* consolidatedPayments.data car consolidatedPayments est un objet paginé */}
                                 {consolidatedPayments.data && consolidatedPayments.data.length > 0 ? (
                                     consolidatedPayments.data.map((payment) => (
                                         <tr key={payment.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{payment.client_name}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{payment.payment_date}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-semibold dark:text-gray-300">{formatCurrency(payment.payment_value)}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{formatCurrency(payment.total_associated_sales)}</td>
+                                            {/* Utilisation de parseFloat pour s'assurer que payment_value est un nombre, et || 0 pour gérer les NaN */}
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-semibold dark:text-gray-300">{formatCurrency(parseFloat(payment.payment_value) || 0)}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{formatCurrency(parseFloat(payment.total_associated_sales) || 0)}</td>
                                             <td className={`px-6 py-4 whitespace-nowrap text-sm font-bold ${payment.difference === 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                {formatCurrency(payment.difference)}
+                                                {formatCurrency(parseFloat(payment.difference) || 0)}
                                             </td>
                                         </tr>
                                     ))
@@ -252,7 +256,7 @@ const BossIndex = ({ consolidatedPayments, monthlyConsolidatedPayments, clientsC
                         </table>
                     </div>
                     {/* Liens de pagination pour les détails des versements */}
-                    {consolidatedPayments.links && consolidatedPayments.links.length > 3 && ( // 3 links minimum: prev, 1, next
+                    {consolidatedPayments.links && consolidatedPayments.links.length > 3 && (
                         <Pagination links={consolidatedPayments.links} />
                     )}
                 </div>
