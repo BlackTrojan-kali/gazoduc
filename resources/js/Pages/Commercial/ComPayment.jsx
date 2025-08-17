@@ -1,9 +1,11 @@
+// resources/js/pages/ComPayment.jsx
+
 import React, { useState, useMemo } from 'react';
 import ComLayout from '../../layout/ComLayout/ComLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '../../components/ui/table';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEye, faPrint, faTrash, faPlus, faFilter, faEraser, faLink, faUnlink, faFilePdf } from '@fortawesome/free-solid-svg-icons';
+import { faEye, faPrint, faTrash, faPlus, faFilter, faEraser, faLink, faUnlink, faFilePdf, faEdit } from '@fortawesome/free-solid-svg-icons';
 import Swal from 'sweetalert2';
 import Select from 'react-select';
 
@@ -19,6 +21,9 @@ import DisassociatePaymentModal from '../../components/Modals/Payment/Dissociate
 // --- NOUVELLE IMPORTATION : Modale d'exportation PDF ---
 import ExportPaymentPdfModal from '../../components/Modals/Payment/ExportPaymentPdfModal';
 
+// --- NOUVELLE IMPORTATION : Modale de modification de versement ---
+import EditPaymentModal from '../../components/Modals/Payment/EditPaymentModal';
+
 // Styles personnalisés pour react-select, définis une seule fois
 const getSelectStyles = () => {
   const colors = {
@@ -29,7 +34,7 @@ const getSelectStyles = () => {
     '--bg-option-hover': 'rgb(243 244 246)',
   };
   
-  if (document.documentElement.classList.contains('dark')) {
+  if (typeof document !== 'undefined' && document.documentElement.classList.contains('dark')) {
     colors['--text-color'] = 'rgb(249 250 251 / 0.9)';
     colors['--placeholder-color'] = 'rgb(156 163 175)';
     colors['--border-color'] = 'rgb(75 85 99)';
@@ -71,12 +76,15 @@ const ComPayment = ({ payments, clients, agencies, banks, sales }) => {
   const [isAssociateModalOpen, setIsAssociateModalOpen] = useState(false);
   const [selectedPaymentForAssociation, setSelectedPaymentForAssociation] = useState(null);
   
-  // NOUVEAU : États pour la modale de dissociation
   const [isDisassociateModalOpen, setIsDisassociateModalOpen] = useState(false);
   const [selectedPaymentForDisassociation, setSelectedPaymentForDisassociation] = useState(null);
 
-  // NOUVEAU : État pour la modale d'exportation PDF
   const [isExportPdfModalOpen, setIsExportPdfModalOpen] = useState(false);
+
+  // NOUVEAU : États pour la modale de modification
+  const [isEditPaymentModalOpen, setIsEditPaymentModalOpen] = useState(false);
+  const [paymentToEdit, setPaymentToEdit] = useState(null);
+
 
   // --- États pour les filtres frontend ---
   const [filterClient, setFilterClient] = useState(null);
@@ -130,9 +138,7 @@ const ComPayment = ({ payments, clients, agencies, banks, sales }) => {
     setSelectedPaymentForAssociation(null);
   };
   
-  // NOUVEAU : Fonctions pour la modale de dissociation
   const openDisassociateModal = (payment) => {
-    console.log("clicked")
     setSelectedPaymentForDisassociation(payment);
     setIsDisassociateModalOpen(true);
   };
@@ -141,9 +147,18 @@ const ComPayment = ({ payments, clients, agencies, banks, sales }) => {
     setSelectedPaymentForDisassociation(null);
   };
 
-  // NOUVEAU : Fonctions pour la modale d'exportation PDF
   const openExportPdfModal = () => setIsExportPdfModalOpen(true);
   const closeExportPdfModal = () => setIsExportPdfModalOpen(false);
+
+  // NOUVEAU : Fonctions pour la modale de modification
+  const openEditPaymentModal = (payment) => {
+    setPaymentToEdit(payment);
+    setIsEditPaymentModalOpen(true);
+  };
+  const closeEditPaymentModal = () => {
+    setIsEditPaymentModalOpen(false);
+    setPaymentToEdit(null);
+  };
 
   const handleDeletePayment = (paymentId) => {
     Swal.fire({
@@ -394,12 +409,13 @@ const ComPayment = ({ payments, clients, agencies, banks, sales }) => {
                         {payment.agency ? payment.agency.name : 'N/A'}
                       </TableCell>
                       <TableCell className="py-3 flex items-center justify-center gap-2">
+                        {/* NOUVEAU BOUTON : Modifier */}
                         <button
                           className="p-2 rounded-lg text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
-                          title="Voir les détails"
-                          onClick={() => { /* Logique pour voir les détails */ }}
+                          title="Modifier le versement"
+                          onClick={() => openEditPaymentModal(payment)}
                         >
-                          <FontAwesomeIcon icon={faEye} />
+                          <FontAwesomeIcon icon={faEdit} />
                         </button>
                         <button
                           className="p-2 rounded-lg text-green-600 hover:bg-green-100 dark:hover:bg-green-900 transition-colors"
@@ -463,14 +479,14 @@ const ComPayment = ({ payments, clients, agencies, banks, sales }) => {
         selectedPayment={selectedPaymentForAssociation}
       />
 
-      {/* NOUVEAU : Modale pour la dissociation de factures */}
+      {/* Modale pour la dissociation de factures */}
       <DisassociatePaymentModal
         isOpen={isDisassociateModalOpen}
         onClose={closeDisassociateModal}
         selectedPayment={selectedPaymentForDisassociation}
       />
 
-      {/* NOUVEAU : Modale pour l'exportation PDF */}
+      {/* Modale pour l'exportation PDF */}
       <ExportPaymentPdfModal
         isOpen={isExportPdfModalOpen}
         onClose={closeExportPdfModal}
@@ -478,6 +494,15 @@ const ComPayment = ({ payments, clients, agencies, banks, sales }) => {
         paymentTypes={paymentTypeOptions}
         agencies={agencies}
         banks={banks}
+      />
+
+      {/* NOUVELLE MODALE IMPORTÉE : Modale de modification de versement */}
+      <EditPaymentModal
+        isOpen={isEditPaymentModalOpen}
+        onClose={closeEditPaymentModal}
+        clients={clients}
+        banks={banks}
+        payment={paymentToEdit}
       />
     </>
   );

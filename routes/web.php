@@ -198,6 +198,7 @@ Route::middleware(CommercialMiddleware::class)->group(function(){
     Route::post("/commercial-page-sales-store",[CommercialController::class,"store"])->name("compage.store");
     //payment routes
     Route::post("/payment-store",[PaymentController::class,"store"])->name("payments.store");
+    Route::put("/payment-update/{PID}",[PaymentController::class,"update"])->name("payments.update");
     Route::post("/payment-associate/",[PaymentController::class,"associate"])->name("payments.associate");
     Route::post('/payments/disassociate', [PaymentController::class, 'disassociate'])->name('payments.disassociate');
     Route::delete('/payments/{payment}', [PaymentController::class, 'destroy'])->name('payments.destroy');

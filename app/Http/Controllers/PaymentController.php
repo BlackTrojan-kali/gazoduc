@@ -103,6 +103,29 @@ class PaymentController extends Controller
             return back()->with('error','Une erreur est survenue lors de l\'enregistrement du versement. Veuillez réessayer.' . $e->getMessage());
         }
     } 
+    public function update(Request $request,$PID){
+          $request->validate([
+            'client_id' => 'required',
+            "bank_id"=>"required",
+            "amout"=>"required|numeric",
+            "notes"=>"required| string",
+            "amout_notes"=>"required |numeric",
+            'type' => ['required', 'string'], // <-- Nouveau champ de validation
+        ]);
+
+        $payment = Payment::findOrFail($PID);
+        $payment->user_id = Auth::user()->id;
+        $payment->agency_id = Auth::user()->agency_id;
+        $payment->bank_id = $request->bank_id;
+        $payment->client_id = $request->client_id;
+        $payment->amout = $request->amout;
+        $payment->type = $request->type;
+        $payment->notes = $request->notes;
+        $payment->amout_notes = $request->amout_notes;
+            
+        $payment->save();
+        return back()->with("info","versement updated successfully");
+    }
     
     public function associate(Request $request)
     {

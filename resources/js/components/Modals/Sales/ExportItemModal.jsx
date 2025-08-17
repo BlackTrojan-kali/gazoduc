@@ -114,7 +114,7 @@ const ExportItemsModal = ({ isOpen, onClose, articles, agencies }) => {
                         id="export-article-filter"
                         value={articleOptions.find(option => option.value === exportFilters.selectedArticle)}
                         onChange={(selectedOption) => setExportFilters(prev => ({ ...prev, selectedArticle: selectedOption ? selectedOption.value : '' }))}
-                        options={[{ value: '', label: 'Tous les articles' }, ...articleOptions]}
+                        options={[ ...articleOptions]}
                         isClearable={true}
                         styles={customStyles}
                         className="w-full text-sm dark:bg-gray-900 dark:text-white/90"
@@ -131,7 +131,7 @@ const ExportItemsModal = ({ isOpen, onClose, articles, agencies }) => {
                         id="export-agency-filter"
                         value={agencyOptions.find(option => option.value === exportFilters.selectedAgency)}
                         onChange={(selectedOption) => setExportFilters(prev => ({ ...prev, selectedAgency: selectedOption ? selectedOption.value : '' }))}
-                        options={[{ value: '', label: 'Toutes les agences' }, ...agencyOptions]}
+                        options={[ ...agencyOptions]}
                         isClearable={true}
                         styles={customStyles}
                         className="w-full text-sm dark:bg-gray-900 dark:text-white/90"

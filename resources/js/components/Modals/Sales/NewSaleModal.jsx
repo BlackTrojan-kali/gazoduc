@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimes, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faTimes, faPlus, faTrash, faRedo } from '@fortawesome/free-solid-svg-icons';
 import { useForm } from '@inertiajs/react';
 import Swal from 'sweetalert2';
 import Select from 'react-select';
@@ -17,6 +17,8 @@ const NewSaleModal = ({ isOpen, onClose, clients, articles }) => {
 
   const [selectedArticleOption, setSelectedArticleOption] = useState(null);
   const [articleQuantity, setArticleQuantity] = useState(1);
+  const [quantityError, setQuantityError] = useState(''); // Nouvel état pour l'erreur de quantité
+  const [selectedClientOption, setSelectedClientOption] = useState(null);
 
   // Prépare les options pour React Select
   const clientOptions = clients.map(client => ({
@@ -29,14 +31,14 @@ const NewSaleModal = ({ isOpen, onClose, clients, articles }) => {
     label: article.name,
   }));
 
-  // Styles personnalisés pour React Select, inspirés par votre exemple
+  // Styles personnalisés pour React Select
   const selectStyles = {
     control: (baseStyles, state) => ({
       ...baseStyles,
       height: '44px',
       minHeight: '44px',
       borderColor: state.isFocused ? '#3B82F6' : '#D1D5DB',
-      backgroundColor: '#1F2937', // Utilise un fond sombre pour le thème
+      backgroundColor: '#1F2937',
       boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
       '&:hover': {
         borderColor: state.isFocused ? '#3B82F6' : '#9CA3AF',
@@ -56,24 +58,40 @@ const NewSaleModal = ({ isOpen, onClose, clients, articles }) => {
 
   useEffect(() => {
     if (!isOpen) {
-      reset();
-      setSelectedArticleOption(null);
-      setArticleQuantity(1);
+      handleResetForm();
     }
-  }, [isOpen, reset]);
+  }, [isOpen]);
 
-  // Gère la sélection d'un client. Met à jour le `client_id` dans le formulaire.
   const handleClientSelect = (selectedOption) => {
+    setSelectedClientOption(selectedOption);
     setData('client_id', selectedOption ? selectedOption.value : null);
   };
 
-  // Gère la sélection d'un article. Met à jour l'état local de l'option sélectionnée.
   const handleArticleSelect = (selectedOption) => {
     setSelectedArticleOption(selectedOption);
-    setArticleQuantity(1);
+    setArticleQuantity(1); // Réinitialise la quantité à 1 quand un nouvel article est sélectionné
+    setQuantityError(''); // Efface l'erreur précédente
+  };
+
+  // Nouvelle fonction pour gérer le changement de quantité
+  const handleQuantityChange = (e) => {
+    const value = parseInt(e.target.value);
+
+    if (isNaN(value) || value <= 0) {
+      setQuantityError('La quantité doit être un nombre positif.');
+      setArticleQuantity(value); // Permet d'afficher la valeur invalide
+    } else {
+      setQuantityError('');
+      setArticleQuantity(value);
+    }
   };
 
   const handleAddItem = () => {
+    // Vérifie l'erreur de quantité avant d'ajouter
+    if (quantityError) {
+      Swal.fire('Erreur', quantityError, 'error');
+      return;
+    }
     if (!selectedArticleOption || articleQuantity <= 0) {
       Swal.fire('Erreur', 'Veuillez sélectionner un article et entrer une quantité valide.', 'error');
       return;
@@ -102,6 +120,7 @@ const NewSaleModal = ({ isOpen, onClose, clients, articles }) => {
 
     setSelectedArticleOption(null);
     setArticleQuantity(1);
+    setQuantityError(''); // Efface l'erreur après l'ajout
   };
 
   const handleRemoveItem = (indexToRemove) => {
@@ -109,6 +128,15 @@ const NewSaleModal = ({ isOpen, onClose, clients, articles }) => {
   };
 
   const totalAmountDisplay = "Calculé au backend";
+
+  const handleResetForm = () => {
+    reset(); // Réinitialise l'état du formulaire Inertia
+    setSelectedClientOption(null); // Réinitialise l'état du Select client
+    setSelectedArticleOption(null); // Réinitialise l'état du Select article
+    setArticleQuantity(1); // Réinitialise la quantité d'article
+    setQuantityError(''); // Réinitialise l'erreur de quantité
+    setData('items', []); // ************ AJOUT/MODIFICATION ICI ************
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -120,6 +148,12 @@ const NewSaleModal = ({ isOpen, onClose, clients, articles }) => {
     if (data.items.length === 0) {
       Swal.fire('Erreur', 'Veuillez ajouter au moins un article à la facture.', 'error');
       return;
+    }
+
+    // Vérification finale de la quantité si l'utilisateur n'a pas déclenché handleAddItem
+    if (articleQuantity <= 0) {
+        Swal.fire('Erreur', 'La quantité de l\'article actuel doit être un nombre positif.', 'error');
+        return;
     }
 
     post(route('compage.store'), data, {
@@ -158,7 +192,7 @@ const NewSaleModal = ({ isOpen, onClose, clients, articles }) => {
                 id="client_select"
                 options={clientOptions}
                 onChange={handleClientSelect}
-                value={clientOptions.find(option => option.value === data.client_id)}
+                value={selectedClientOption}
                 placeholder="Sélectionner un client"
                 isClearable
                 isSearchable
@@ -223,10 +257,11 @@ const NewSaleModal = ({ isOpen, onClose, clients, articles }) => {
                   type="number"
                   id="quantity"
                   value={articleQuantity}
-                  onChange={(e) => setArticleQuantity(parseInt(e.target.value) || 1)}
-                  min="1"
+                  onChange={handleQuantityChange}
+                  min="0" // Le min attr HTML est là pour l'UX, mais la vraie validation se fait en JS
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-800 dark:border-gray-700 dark:text-white focus:ring-blue-500 focus:border-blue-500"
                 />
+                {quantityError && <div className="text-red-500 text-sm mt-1">{quantityError}</div>}
               </div>
               <button
                 type="button"
@@ -298,6 +333,14 @@ const NewSaleModal = ({ isOpen, onClose, clients, articles }) => {
           <div className="flex justify-end gap-3 mt-6">
             <button
               type="button"
+              onClick={handleResetForm}
+              className="inline-flex items-center rounded-md border border-gray-300 bg-yellow-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-yellow-600 dark:bg-yellow-600 dark:hover:bg-yellow-700"
+              disabled={processing}
+            >
+              <FontAwesomeIcon icon={faRedo} className="mr-2" /> Réinitialiser
+            </button>
+            <button
+              type="button"
               onClick={onClose}
               className="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
               disabled={processing}
@@ -306,7 +349,7 @@ const NewSaleModal = ({ isOpen, onClose, clients, articles }) => {
             </button>
             <button
               type="submit"
-              className="inline-flex items-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
+              className="inline-flex items-center rounded-md border border-transparent bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
               disabled={processing}
             >
               {processing ? 'Création...' : 'Créer la Vente'}

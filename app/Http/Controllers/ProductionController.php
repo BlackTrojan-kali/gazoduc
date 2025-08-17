@@ -11,6 +11,7 @@ use App\Models\Mouvement;
 use App\Models\ProductionHistory;
 use App\Models\Stock;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -143,13 +144,13 @@ class ProductionController extends Controller
         $agencyId = $request->input('agency_id');
         $articleId = $request->input('article_id');
         $citerneId = $request->input('citerne_id');
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
+        $startDate = Carbon::parse($request->input('start_date'))->startOfDay();
+        $endDate = Carbon::parse($request->input('end_date'))->endOfDay();
         $format = $request->input('format');
         $fileName = 'historique_productions_' . now()->format('Ymd_His');
         // Définir la base de la requête
         $query = ProductionHistory::query()->with(['agency', 'article', 'citerne', 'user']);
-
+     
         // Ajouter la clause withTrashed() si le format demandé inclut les enregistrements supprimés
         $isWithDeleted = ($format === 'isWithDeleted=' );
         if ($isWithDeleted) {
@@ -166,15 +167,11 @@ class ProductionController extends Controller
         if ($citerneId) {
             $query->where('source_citerne_id', $citerneId);
         }
-        if ($startDate) {
-            $query->whereDate('created_at', '>=', $startDate);
-        }
-        if ($endDate) {
-            $query->whereDate('created_at', '<=', $endDate);
-        }
+            $query->whereBetween('created_at', [$startDate,$endDate]);
+      
 
         $prodMoves = $query->get();
-
+    
         // Gestion de l'exportation selon le format demandé
         if($format === "pdf=" || $format === "isWithDeleted=") {
             $data = [
