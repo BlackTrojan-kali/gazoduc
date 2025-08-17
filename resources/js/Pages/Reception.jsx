@@ -270,7 +270,7 @@ const PageContent = ({ receptions: initialReceptions, agencies }) => {
                       <TableCell className="py-4">{reception.citerne_mobile ? reception.citerne_mobile.name : '—'}</TableCell>
                       <TableCell className="py-4">{reception.article ? reception.article.name : '—'}</TableCell>
                       <TableCell className="py-4">{reception.received_quantity.toLocaleString('fr-FR')}</TableCell>
-                      <TableCell className="py-4">{reception.destination_agency ? reception.destination_agency.name : '—'}</TableCell>
+                      <TableCell className="py-4">{reception.agency ? reception.agency.name : '—'}</TableCell>
                       <TableCell className="py-4">{reception.user ? `${reception.user.first_name} ` : '—'}</TableCell>
                       <TableCell className="py-4">{reception.origin || '—'}</TableCell>
                       <TableCell className="py-4">{new Date(reception.created_at).toLocaleDateString('fr-FR', {

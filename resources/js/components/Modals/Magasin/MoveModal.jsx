@@ -301,10 +301,12 @@ const MovementFormModal = ({ isOpen, onClose, articles, agencies }) => {
           id="quantity"
           type="number"
           step="1"
+          min='0'
           label="Quantité"
           value={data.quantity}
           onChange={handleChange}
           error={errors.quantity}
+          onWheel={(e) => e.target.blur()}
           placeholder="Ex: 100"
           required
         />

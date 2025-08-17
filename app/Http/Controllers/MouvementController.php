@@ -290,8 +290,8 @@ class MouvementController extends Controller
 
         if ($movementType === 'entree' || $movementType === 'sortie') {
             $query->where('movement_type', $movementType);
-        } elseif ($movementType === 'global_no_delete') {
-            $query->whereIn('movement_type', ['entree', 'sortie']);
+        }else{
+            $query;
         }
         
         $query->when($serviceId, function ($q) use ($serviceName) {
