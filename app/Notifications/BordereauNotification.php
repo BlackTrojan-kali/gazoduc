@@ -13,14 +13,14 @@ class BordereauNotification extends Notification
     use Queueable;
 
     /**
-     * L'instance du bordereau de route concerné par la notification.
+     * The bordereau de route instance.
      *
      * @var Bordereau_route
      */
     public $bordereau;
 
     /**
-     * Crée une nouvelle instance de la notification.
+     * Create a new notification instance.
      *
      * @param Bordereau_route $bordereau
      */
@@ -30,27 +30,35 @@ class BordereauNotification extends Notification
     }
 
     /**
-     * Obtient les canaux de diffusion de la notification.
+     * Get the notification's delivery channels.
      *
      * @param  mixed  $notifiable
      * @return array
      */
     public function via($notifiable)
     {
-        // Nous utilisons le canal de base de données pour stocker les notifications.
         return ['database'];
     }
 
     /**
-     * Obtient la représentation de la notification en tant que tableau.
+     * Get the array representation of the notification.
      *
      * @param  mixed  $notifiable
      * @return array
      */
     public function toArray($notifiable)
     {
+        // Construction du message de notification.
+        $message = "Un nouveau bordereau de route (ID: {$this->bordereau->id}) est en route de l'agence de départ '{$this->bordereau->departure->name}' vers votre agence '{$this->bordereau->arrival->name}'.";
+        
+        // Ajout des détails pour le chauffeur et le véhicule.
+        $message .= " Le véhicule est '{$this->bordereau->vehicule->name}' conduit par '{$this->bordereau->chauffeur->name}'.";
+        
+        // Ajout de la date de départ.
+        $message .= " Départ le {$this->bordereau->departure_date}.";
+
         return [
-            'message' => "Un nouveau bordereau de route est en route de {$this->bordereau->departure->name} vers votre agence.",
+            'message' => $message,
             'bordereau_id' => $this->bordereau->id,
             'departure_agency' => $this->bordereau->departure->name,
             'arrival_agency' => $this->bordereau->arrival->name,

@@ -23,6 +23,7 @@ use App\Http\Controllers\FactureController;
 use App\Http\Controllers\LicenceController;
 use App\Http\Controllers\MagasinController;
 use App\Http\Controllers\MouvementController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PriceController;
 use App\Http\Controllers\ProductionController;
@@ -190,7 +191,10 @@ Route::middleware(isAuthenticatedMiddleware::class)->group(function(){
     Route::get("/controlleur-sales",[RegionalController::class,"sales"])->name("controlleu.sales");
     Route::get("/controlleur-payment",[RegionalController::class,"payments"])->name("controlleur.payments");
     Route::get("/controlleur-factures",[RegionalController::class,"factures"])->name("controlleur.factures");
+    //notifications
 
+Route::post('/notifications/{notification}/mark-as-read', [NotificationController::class, 'markAsRead'])->name('notifications.markAsRead');
+Route::post('/notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.markAllAsRead');
 });
 Route::middleware([CommercialMiddleware::class,isArchivedMiddleWare::class])->group(function(){
     //commercial routes

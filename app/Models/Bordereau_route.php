@@ -8,10 +8,9 @@ use Illuminate\Notifications\Notifiable;
 
 class Bordereau_route extends Model
 {
-    use Notifiable; // Permet au modèle d'envoyer des notifications
+    use Notifiable;
 
     protected $fillable = [
-        "id Primary",
         "vehicule_id",
         "chauffeur_id",
         "co_chauffeur_id",
@@ -57,13 +56,23 @@ class Bordereau_route extends Model
         parent::boot();
 
         static::created(function ($bordereau) {
-            // Récupère les utilisateurs de l'agence de destination.
-            // Assurez-vous d'avoir une relation 'users' dans votre modèle Agency.
-            // Par exemple : public function users() { return $this->hasMany(User::class); }
-            $arrivalAgencyUsers = $bordereau->arrival->users;
-
-            foreach ($arrivalAgencyUsers as $user) {
-                // Envoie la notification à chaque utilisateur de l'agence de destination.
+            // Récupère les utilisateurs à notifier en une seule requête optimisée.
+            $usersToNotify = User::where(function ($query) use ($bordereau) {
+                // Condition 1: Utilisateurs de l'agence de destination avec les rôles 'magasin' ou 'controleur'.
+                $query->where('agency_id', $bordereau->arrival_location_id)
+                      ->whereHas('role', function ($q) {
+                          $q->whereIn('name', ['magasin', 'controleur']);
+                      });
+            })->orWhere(function ($query) {
+                // Condition 2: Utilisateurs 'direction' sans agence.
+                $query->where('agency_id', null)
+                      ->whereHas('role', function ($q) {
+                          $q->where('name', 'direction');
+                      });
+            })->get();
+            
+            // Envoie la notification à chaque utilisateur trouvé, en s'assurant qu'il n'y a pas de doublons.
+            foreach ($usersToNotify->unique() as $user) {
                 $user->notify(new BordereauNotification($bordereau));
             }
         });

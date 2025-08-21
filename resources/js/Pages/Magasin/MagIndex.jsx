@@ -1,6 +1,6 @@
 import React, { useState } from 'react'; // Importez useState
 import MagLayout from '../../layout/MagLayout/MagLayout';
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'; // Importez FontAwesome
 import { faPlus } from '@fortawesome/free-solid-svg-icons'; // Importez l'icône plus
 
@@ -9,7 +9,6 @@ import MovementFormModal from '../../components/Modals/Magasin/MoveModal'; // As
 const MagIndex = ({ stocks, articles, agencies }) => { // Ajoutez articles et agencies comme props si ce n'est pas déjà fait
   // Définir la quantité maximale pour la jauge
   const MAX_QUANTITY_FOR_GAUGE = 10000;
-
   const [isMovementModalOpen, setIsMovementModalOpen] = useState(false); // État pour contrôler l'ouverture/fermeture de la modal
 
   const openMovementModal = () => {

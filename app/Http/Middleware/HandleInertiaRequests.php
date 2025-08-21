@@ -48,6 +48,7 @@ class HandleInertiaRequests extends Middleware
                     "agency"=>$request->user()->agency ??null,
                     "entreprice"=>$request->user()->entreprise ?? null,
                     "modif_days"=>$request->user()->modif_days,
+                    "notifications"=>$request->user()->unreadNotifications
                     ] : null,
             ],
 
