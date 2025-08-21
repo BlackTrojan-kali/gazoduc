@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -32,13 +31,7 @@ class AuthController extends Controller
            
         return redirect()->route("director.index")->with("success","authentification reussie");
           case "magasin":
-                   Notification::create([
-            "user_id"=>Auth::user()->id,
-            "notification_type"=>"Magasin_auth",
-            "agency_id"=>Auth::user()->agency_id,
-            "message"=>"magasinier ".Auth::user()->name." logged in",
-            "is_read"=>false,
-        ]);
+          
         return redirect()->route("magasin.index")->with("success","authentification reussie");
         break;
          case "production":
