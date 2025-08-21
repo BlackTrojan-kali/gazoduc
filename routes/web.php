@@ -49,7 +49,7 @@ use App\Models\Mouvement;
 //auth routes
 Route::get('/login',[AuthController::class,"loginPage"] )->name("login");
 Route::post('/login',[AuthController::class,"login"] )->name("login");
-Route::get('/logout',[AuthController::class,"logout"] )->name("logout");
+Route::post('/logout',[AuthController::class,"logout"] )->name("logout");
 
 //super admins routes
 Route::middleware(SuperAdminMiddleWare::class)->group(function(){
