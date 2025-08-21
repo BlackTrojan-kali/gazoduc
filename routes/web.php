@@ -42,6 +42,7 @@ use App\Http\Middleware\isAuthenticatedMiddleware;
 use App\Http\Middleware\MagasinMiddleware;
 use App\Http\Middleware\ProductionMiddleware;
 use App\Http\Middleware\RegionaMiddleware;
+use App\Http\Middleware\isArchivedMiddleWare;
 use App\Models\Mouvement;
 
 //auth routes
@@ -89,7 +90,7 @@ Route::get('/subscriptions/{subscription}/invoice', [SubController::class, 'down
     Route::get("/subs/{idSub}",[SubController::class,"renew"])->name("subs.renew");
 });
 
-Route::middleware(DirectionMiddleware::class)->group(function(){
+Route::middleware([DirectionMiddleware::class,isArchivedMiddleWare::class])->group(function(){
     //direction routes
     Route::get("/director/index",[DirectionController::class,"index"])->name("director.index");
     //articles routes
@@ -111,7 +112,7 @@ Route::middleware(DirectionMiddleware::class)->group(function(){
     Route::put("/banks/archive/{idBank}",[bankController::class,"archive"])->name("banks.archive");
 });
 //magasinier middleware
-Route::middleware(MagasinMiddleware::class)->group(function(){
+Route::middleware([MagasinMiddleware::class,isArchivedMiddleWare::class])->group(function(){
    //magasinier citernes routes
     Route::get("/magasin-index",[MagasinController::class,"index"])->name("magasin.index"); 
    Route::get("/magasin-citernes",[MagasinController::class,"citerne_index"])->name("magasin.citerne_index"); 
@@ -191,7 +192,7 @@ Route::middleware(isAuthenticatedMiddleware::class)->group(function(){
     Route::get("/controlleur-factures",[RegionalController::class,"factures"])->name("controlleur.factures");
 
 });
-Route::middleware(CommercialMiddleware::class)->group(function(){
+Route::middleware([CommercialMiddleware::class,isArchivedMiddleWare::class])->group(function(){
     //commercial routes
     Route::get("/commercial-page-index",[CommercialController::class,"index"])->name("compage.index");
     Route::get("/commercial-page-sales",[CommercialController::class,"sales"])->name("compage.sales");
@@ -227,13 +228,13 @@ Route::middleware(IsAdminMiddleware::class)->group(function(){
     Route::put("/archived-commercial/{idceo}",[UserController::class,"archive_commercial"])->name("commercial.archive");
   
 });
-Route::middleware(RegionaMiddleware::class)->group(function(){
+Route::middleware([RegionaMiddleware::class,isArchivedMiddleWare::class])->group(function(){
     Route::get("/controlleur-index",[RegionalController::class,"index"])->name("controlleur.index");
     Route::get("/controlleur-citerne",[RegionalController::class,"citerne_index"])->name("controlleur.citerne");
 });
 
 //production middleware
-Route::middleware(ProductionMiddleware::class)->group(function(){
+Route::middleware([ProductionMiddleware::class,isArchivedMiddleWare::class])->group(function(){
     //production citernes routes
     Route::get("/production-dashboard",[ProductionController::class,"index"])->name("prod.index");
     Route::get("/production-citernes",[ProductionController::class,"citerne_index"])->name("prod.citerne");

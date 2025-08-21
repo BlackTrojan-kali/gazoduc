@@ -25,22 +25,11 @@ class AuthController extends Controller
         //redirection en fonction du role
         switch(Auth::user()->role->name){
             case "super_administrateur":
-            Notification::create([
-            "user_id"=>Auth::user()->id,
-            "notification_type"=>"admin_auth",
-            "message"=>"a super admin logged in",
-            "is_read"=>false,
-            
-        ]);
+           
         return redirect()->route("dashboard")->with("success","authentification reussie");
         break;
             case "direction":
-                   Notification::create([
-            "user_id"=>Auth::user()->id,
-            "notification_type"=>"Director_auth",
-            "message"=>"director logged in",
-            "is_read"=>false,
-        ]);
+           
         return redirect()->route("director.index")->with("success","authentification reussie");
           case "magasin":
                    Notification::create([
@@ -53,41 +42,19 @@ class AuthController extends Controller
         return redirect()->route("magasin.index")->with("success","authentification reussie");
         break;
          case "production":
-                   Notification::create([
-            "user_id"=>Auth::user()->id,
-            "notification_type"=>"Prod_auth",
-            "agency_id"=>Auth::user()->agency_id,
-            "message"=>"Production ".Auth::user()->name." logged in",
-            "is_read"=>false,
-        ]);
+                  
         return redirect()->route("prod.index")->with("success","authentification reussie");
         break;
          case "controleur":
-                   Notification::create([
-            "user_id"=>Auth::user()->id,
-            "notification_type"=>"reg_auth",
-            "agency_id"=>Auth::user()->agency_id,
-            "message"=>"Regional ".Auth::user()->name." logged in",
-            "is_read"=>false,
-        ]);
+                  
         return redirect()->route("controlleur.index")->with("success","authentification reussie");
         break;
          case "commercial":
-                   Notification::create([
-            "user_id"=>Auth::user()->id,
-            "notification_type"=>"com_auth",
-            "message"=>"Commercial ".Auth::user()->name." logged in",
-            "is_read"=>false,
-        ]);
+                  
         return redirect()->route("compage.index")->with("success","authentification reussie");
         break;
          case "pdg":
-                   Notification::create([
-            "user_id"=>Auth::user()->id,
-            "notification_type"=>"ceo_auth",
-            "message"=>"Ceo  logged in",
-            "is_read"=>false,
-        ]);
+                  
         return redirect()->route("pdg.index")->with("success","authentification reussie");
         break;
         default:
@@ -96,12 +63,6 @@ class AuthController extends Controller
     }
     public function logout(){
         
-        Notification::create([
-            "user_id"=>Auth::user()->id,
-            "notification_type"=>"admin_auth",
-            "message"=>Auth::user()->first_name." logged out",
-            "is_read"=>false,
-        ]);
         Auth::logout();
         return redirect()->route("login")->with("warning","vous vous etes deconnecte");
     }
