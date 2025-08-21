@@ -8,7 +8,7 @@ use Illuminate\Notifications\Notifiable;
 
 class Stock extends Model
 {
-    use Notifiable; // Permet au modèle d'envoyer des notifications
+    use Notifiable;
 
     protected $fillable = [
         'article_id',
@@ -35,29 +35,35 @@ class Stock extends Model
         return $this->belongsTo(Citerne::class, "citerne_id");
     }
 
-    /**
-     * La méthode boot() est appelée au démarrage du modèle.
-     * Nous y attachons un écouteur sur l'événement 'saving'.
-     * C'est l'endroit parfait pour vérifier la quantité et envoyer la notification.
-     */
     protected static function boot()
     {
         parent::boot();
 
         static::saving(function ($stock) {
-            // Vérifie si la quantité est égale ou inférieure à 10 et si elle a été modifiée.
-            if ($stock->quantity <= 10 && $stock->isDirty('quantity')) {
-                // Récupère tous les utilisateurs de l'agence.
-                $agencyUsers = $stock->agency->users;
-
-                // Filtre les utilisateurs pour ne garder que ceux qui ont le même rôle
-                // que le type de stockage du stock.
-                $usersToNotify = $agencyUsers->filter(function ($user) use ($stock) {
-                    return $user->role->name === $stock->storage_type;
-                });
-
-                // Envoie la notification à chaque utilisateur filtré.
-                foreach ($usersToNotify as $user) {
+            // Vérifie si la quantité est égale ou inférieure à 100 et si elle a été modifiée.
+            if ($stock->quantity <= 100 && $stock->isDirty('quantity')) {
+                // Détermine les rôles de stockage pertinents pour la notification.
+                $rolesToNotify = ['controleur'];
+                // La propriété storage_type du stock correspond au rôle.
+                $rolesToNotify[] = $stock->storage_type;
+                
+                // Récupère les utilisateurs à notifier en une seule requête optimisée.
+                $usersToNotify = User::where(function ($query) use ($stock, $rolesToNotify) {
+                    // Condition 1: Utilisateurs de l'agence avec les rôles spécifiés.
+                    $query->where('agency_id', $stock->agency_id)
+                          ->whereHas('role', function ($q) use ($rolesToNotify) {
+                              $q->whereIn('name', $rolesToNotify);
+                          });
+                })->orWhere(function ($query) {
+                    // Condition 2: Utilisateurs "direction" sans agence.
+                    $query->where('agency_id', null)
+                          ->whereHas('role', function ($q) {
+                              $q->where('name', 'direction');
+                          });
+                })->get();
+                
+                // Envoie la notification à chaque utilisateur.
+                foreach ($usersToNotify->unique() as $user) {
                     $user->notify(new StockLevelNotification($stock));
                 }
             }

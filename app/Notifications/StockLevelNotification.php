@@ -37,7 +37,7 @@ class StockLevelNotification extends Notification
      */
     public function via($notifiable)
     {
-        return ['database']; // Nous utiliserons le canal de base de données pour la table de notifications.
+        return ['database'];
     }
 
     /**
@@ -48,13 +48,22 @@ class StockLevelNotification extends Notification
      */
     public function toArray($notifiable)
     {
+        $message = "Le stock de l'article '{$this->stock->article->name}' de l'agence '{$this->stock->agency->name}' est tombé à {$this->stock->quantity}.";
+
+        // Condition pour les stocks de type 'gaz' ou 'carburant'
+        if (in_array($this->stock->article->type, ['gaz', 'carburant'])) {
+            $message = "Le stock de {$this->stock->article->name} (citerne: {$this->stock->tank_name}) de l'agence {$this->stock->agency->name} a atteint un niveau bas de {$this->stock->quantity}.";
+        }
+
         return [
-            'message' => "Le stock de l'article '{$this->stock->article->name}' de l'agence '{$this->stock->agency->name}' est tombé à {$this->stock->quantity}.",
+            'message' => $message,
             'article_id' => $this->stock->article_id,
             'article_name' => $this->stock->article->name,
             'agency_id' => $this->stock->agency_id,
             'agency_name' => $this->stock->agency->name,
-            'current_quantity' => $this->stock->quantity
+            'current_quantity' => $this->stock->quantity,
+            // si besoin, vous pouvez ajouter d'autres champs ici
+            // 'tank_name' => $this->stock->tank_name, // si cette propriété existe
         ];
     }
 }
