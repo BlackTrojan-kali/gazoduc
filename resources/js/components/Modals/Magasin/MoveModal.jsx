@@ -4,16 +4,16 @@ import React, { useEffect, useMemo } from 'react';
 import { useForm, usePage } from '@inertiajs/react';
 import Modal from '../Modal';
 import Swal from 'sweetalert2';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner } from '@fortawesome/free-solid-svg-icons';
 import Input from '../../form/input/InputField';
 import Button from '../../ui/button/Button';
-import Select from 'react-select'; // import react-select
+import Select from 'react-select';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 const MovementFormModal = ({ isOpen, onClose, articles, agencies }) => {
   const { props: { auth } } = usePage();
   const { data, setData, post, processing, errors, reset } = useForm({
-    article_id: null, // MODIFIÉ : Initialiser à null pour react-select
+    article_id: null,
     agency_id: '',
     recorded_by_user_id: auth.user ? auth.user.id : '',
     movement_type: '',
@@ -24,8 +24,6 @@ const MovementFormModal = ({ isOpen, onClose, articles, agencies }) => {
     description: '',
   });
 
-  // NOTE : J'ai laissé articleOptions ici car vous aviez l'import useMemo,
-  // et c'est une bonne pratique même si votre Select utilise une autre approche pour les options.
   const articleOptions = useMemo(() => articles.map(article => ({
     value: String(article.id),
     label: article.name
@@ -35,7 +33,7 @@ const MovementFormModal = ({ isOpen, onClose, articles, agencies }) => {
     if (isOpen) {
       const userId = auth.user ? auth.user.id : '';
       reset({
-        article_id: null, // MODIFIÉ : Réinitialiser à null pour react-select
+        article_id: null,
         agency_id: '',
         recorded_by_user_id: userId,
         movement_type: '',
@@ -89,15 +87,12 @@ const MovementFormModal = ({ isOpen, onClose, articles, agencies }) => {
     setData(id, value);
   };
 
-  // NOTE : La logique de votre onChange pour Select gère déjà la conversion.
-  // Je n'introduis pas handleArticleSelectChange comme une fonction séparée si ce n'est pas nécessaire.
-
   const handleSubmit = (e) => {
     e.preventDefault();
 
     const formData = {
       ...data,
-      article_id: data.article_id || '', // Garde votre logique de conversion
+      article_id: data.article_id || '',
     };
 
     post(route('magasin.move.store'), {
@@ -136,7 +131,6 @@ const MovementFormModal = ({ isOpen, onClose, articles, agencies }) => {
     });
   };
 
-  // AJOUTÉ : Fonction pour les styles de react-select (gestion du dark mode et des erreurs)
   const getSelectStyles = (hasError) => {
     const isDarkMode = () => {
       if (typeof window === 'undefined') return false;
@@ -183,7 +177,7 @@ const MovementFormModal = ({ isOpen, onClose, articles, agencies }) => {
         borderColor: isDarkMode() ? 'rgb(55 65 81 / 1)' : 'rgb(209 213 219 / 1)',
         boxShadow: isDarkMode() ? '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' : provided.boxShadow,
       }),
-      menuPortal: (base) => ({ ...base, zIndex: 9999 }), // S'assurer que le menu est au-dessus des modals
+      menuPortal: (base) => ({ ...base, zIndex: 9999 }),
     };
   };
 
@@ -214,13 +208,11 @@ const MovementFormModal = ({ isOpen, onClose, articles, agencies }) => {
               setData('article_id', selectedOption ? selectedOption.value : '');
             }}
             placeholder="Sélectionnez un article"
-                        isClearable
-            // AJOUTÉ : Indispensable pour l'affichage au-dessus de la modale et les styles
-        />
+            isClearable
+          />
           {errors.article_id && <p className="text-sm text-red-600 mt-1">{errors.article_id}</p>}
         </div>
 
-        {/* Le reste du formulaire reste identique */}
         {/* Agence */}
         <div className="mb-4">
           <label htmlFor="agency_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -246,54 +238,57 @@ const MovementFormModal = ({ isOpen, onClose, articles, agencies }) => {
           {errors.agency_id && <p className="text-sm text-red-600 mt-1">{errors.agency_id}</p>}
         </div>
 
-        {/* Type de Mouvement */}
-        <div className="mb-4">
-          <label htmlFor="movement_type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Type de Mouvement
-          </label>
-          <select
-            id="movement_type"
-            className={`h-11 w-full appearance-none rounded-lg border px-4 py-2.5 pr-11 text-sm shadow-theme-xs
-              ${errors.movement_type ? 'border-red-500' : 'border-gray-300 dark:border-gray-700'}
-              bg-transparent placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10
-              dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800`}
-            value={data.movement_type}
-            onChange={handleChange}
-            required
-          >
-            <option value="">Sélectionnez un type</option>
-            <option value="entree">Entrée</option>
-            <option value="sortie">Sortie</option>
-          </select>
-          {errors.movement_type && <p className="text-sm text-red-600 mt-1">{errors.movement_type}</p>}
-        </div>
+        {/* Conteneur pour Type de Mouvement et Qualification */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Type de Mouvement */}
+          <div className="mb-4 md:mb-0">
+            <label htmlFor="movement_type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Type de Mouvement
+            </label>
+            <select
+              id="movement_type"
+              className={`h-11 w-full appearance-none rounded-lg border px-4 py-2.5 pr-11 text-sm shadow-theme-xs
+                ${errors.movement_type ? 'border-red-500' : 'border-gray-300 dark:border-gray-700'}
+                bg-transparent placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10
+                dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800`}
+              value={data.movement_type}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Sélectionnez un type</option>
+              <option value="entree">Entrée</option>
+              <option value="sortie">Sortie</option>
+            </select>
+            {errors.movement_type && <p className="text-sm text-red-600 mt-1">{errors.movement_type}</p>}
+          </div>
 
-        {/* Qualification */}
-        <div className="mb-4">
-          <label htmlFor="qualification" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Qualification
-          </label>
-          <select
-            id="qualification"
-            className={`h-11 w-full appearance-none rounded-lg border px-4 py-2.5 pr-11 text-sm shadow-theme-xs
-              ${errors.qualification ? 'border-red-500' : 'border-gray-300 dark:border-gray-700'}
-              bg-transparent placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10
-              dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800`}
-            value={data.qualification}
-            onChange={handleChange}
-            required
-          >
-            <option value="">Sélectionnez une qualification</option>
-            <option value="reepreuve">Réépreuve</option>
-            <option value="achat">Achat</option>
-            <option value="perte">Perte</option>
-            <option value="reception">Reception</option>
-            <option value="vente">Vente</option>
-            <option value="consigne">Consigne</option>
-            <option value="retour_sur_vente">Retour sur vente</option>
-            <option value="transfert">Transfert</option>
-          </select>
-          {errors.qualification && <p className="text-sm text-red-600 mt-1">{errors.qualification}</p>}
+          {/* Qualification */}
+          <div className="mb-4 md:mb-0">
+            <label htmlFor="qualification" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Qualification
+            </label>
+            <select
+              id="qualification"
+              className={`h-11 w-full appearance-none rounded-lg border px-4 py-2.5 pr-11 text-sm shadow-theme-xs
+                ${errors.qualification ? 'border-red-500' : 'border-gray-300 dark:border-gray-700'}
+                bg-transparent placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10
+                dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800`}
+              value={data.qualification}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Sélectionnez une qualification</option>
+              <option value="reepreuve">Réépreuve</option>
+              <option value="achat">Achat</option>
+              <option value="perte">Perte</option>
+              <option value="reception">Reception</option>
+              <option value="vente">Vente</option>
+              <option value="consigne">Consigne</option>
+              <option value="retour_sur_vente">Retour sur vente</option>
+              <option value="transfert">Transfert</option>
+            </select>
+            {errors.qualification && <p className="text-sm text-red-600 mt-1">{errors.qualification}</p>}
+          </div>
         </div>
 
         {/* Quantité */}
@@ -314,9 +309,9 @@ const MovementFormModal = ({ isOpen, onClose, articles, agencies }) => {
         {/* Localisation Source - Conditionnel */}
         { (data.movement_type === 'entree' || data.qualification === 'transfert' || data.qualification === 'vente') && (
           <Input
+            className='hidden'
             id="source_location"
             type="text"
-            label="Localisation Source"
             value={data.source_location}
             onChange={handleChange}
             disabled={true}
@@ -336,7 +331,7 @@ const MovementFormModal = ({ isOpen, onClose, articles, agencies }) => {
             onChange={handleChange}
             error={errors.destination_location}
             placeholder="Ex: Magasin B, Citerne 2"
-            required={data.movement_type === 'entree' || data.qualification === 'transfert'}
+            required={data.movement_type === 'sortie' || data.qualification === 'transfert'}
           />
         )}
 

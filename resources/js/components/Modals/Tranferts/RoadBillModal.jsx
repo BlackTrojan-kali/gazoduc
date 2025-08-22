@@ -25,7 +25,7 @@ const RoadbillFormModal = ({ isOpen, onClose, roadbill, routeName, vehicles, dri
     arrival_location_id: '',
     departure_date: '',
     arrival_date: '',
-    status: 'en_cours', // Statut par défaut
+    status: 'en_cours',
     type: '',
     note: '',
     articles: [],
@@ -33,7 +33,6 @@ const RoadbillFormModal = ({ isOpen, onClose, roadbill, routeName, vehicles, dri
 
   const [isArticlesModalOpen, setIsArticlesModalOpen] = useState(false);
 
-  // Définition des options pour les Select
   const vehicleOptions = vehicles.map(v => ({ value: v.id, label: v.licence_plate }));
   const driverOptions = drivers.map(d => ({ value: d.id, label: d.name }));
   const agencyOptions = agencies.map(a => ({ value: a.id, label: a.name }));
@@ -42,12 +41,10 @@ const RoadbillFormModal = ({ isOpen, onClose, roadbill, routeName, vehicles, dri
     { value: 'livraison', label: 'Livraison' },
     { value: 'transit', label: 'Transit' },
   ];
-  // Fin de la définition des options
 
   useEffect(() => {
     if (isOpen) {
       if (roadbill) {
-        // Mode modification : utiliser les données existantes
         setData({
           vehicle_id: roadbill.vehicle_id || '',
           driver_id: roadbill.driver_id || '',
@@ -62,7 +59,6 @@ const RoadbillFormModal = ({ isOpen, onClose, roadbill, routeName, vehicles, dri
           articles: roadbill.articles || [],
         });
       } else {
-        // Mode création : réinitialiser et pré-remplir avec l'agence de l'utilisateur
         reset();
         setData({
           vehicle_id: '',
@@ -84,7 +80,7 @@ const RoadbillFormModal = ({ isOpen, onClose, roadbill, routeName, vehicles, dri
   useEffect(() => {
     if (recentlySuccessful) {
       reset();
-      setData('articles', []); // Réinitialiser aussi les articles après succès
+      setData('articles', []);
       onClose();
       Swal.fire({
         title: 'Succès !',
@@ -106,7 +102,6 @@ const RoadbillFormModal = ({ isOpen, onClose, roadbill, routeName, vehicles, dri
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // Validation : Vérifier si au moins un article a été sélectionné
     if (!data.articles || data.articles.length === 0) {
       Swal.fire({
         title: 'Attention !',
@@ -116,7 +111,6 @@ const RoadbillFormModal = ({ isOpen, onClose, roadbill, routeName, vehicles, dri
       });
       return;
     }
-    // Fin de la validation
 
     if (roadbill) {
       put(route(routeName, roadbill.id), {
@@ -147,7 +141,6 @@ const RoadbillFormModal = ({ isOpen, onClose, roadbill, routeName, vehicles, dri
     }
   };
 
-  // Styles personnalisés pour React Select (mis à jour)
   const customStyles = {
     control: (provided, state) => ({
       ...provided,
@@ -199,19 +192,17 @@ const RoadbillFormModal = ({ isOpen, onClose, roadbill, routeName, vehicles, dri
       zIndex: 9999,
       
       '.dark &': {
-        backgroundColor: '#1f2937', // Fond du menu en dark mode
+        backgroundColor: '#1f2937',
       },
     }),
     option: (provided, state) => ({
       ...provided,
-      // Styles par défaut pour le mode clair
       backgroundColor: state.isSelected ? '#2563eb' : (state.isFocused ? '#3b82f6' : 'transparent'),
-      color: state.isSelected || state.isFocused ? '#ffffff' : '#1f2937', // Texte noir par défaut
+      color: state.isSelected || state.isFocused ? '#ffffff' : '#1f2937',
 
-      // Styles pour le mode sombre
       '.dark &': {
         backgroundColor: state.isSelected ? '#2563eb' : (state.isFocused ? '#3b82f6' : 'transparent'),
-        color: state.isSelected || state.isFocused ? '#ffffff' : '#e5e7eb', // Texte blanc par défaut
+        color: state.isSelected || state.isFocused ? '#ffffff' : '#e5e7eb',
       },
     }),
     indicatorSeparator: (provided) => ({
@@ -262,68 +253,73 @@ const RoadbillFormModal = ({ isOpen, onClose, roadbill, routeName, vehicles, dri
             {errors.vehicle_id && <div className="text-red-500 text-sm mt-1">{errors.vehicle_id}</div>}
           </div>
 
-          {/* Champ Chauffeur Principal */}
-          <div>
-            <Label htmlFor="roadbill-driver_id">Chauffeur Principal <span className="text-red-500">*</span></Label>
-            <Select
-              id="roadbill-driver_id"
-              name="driver_id"
-              options={driverOptions}
-              value={driverOptions.find(option => option.value === data.driver_id) || null}
-              onChange={(selectedOption) => setData('driver_id', selectedOption ? selectedOption.value : '')}
-              isDisabled={processing}
-              placeholder="Sélectionner un chauffeur"
-              isClearable
-              styles={customStyles}
-              classNamePrefix="react-select"
-            />
-            {errors.driver_id && <div className="text-red-500 text-sm mt-1">{errors.driver_id}</div>}
+          {/* Conteneur pour Chauffeur et Co-Chauffeur */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Champ Chauffeur Principal */}
+            <div>
+              <Label htmlFor="roadbill-driver_id">Chauffeur Principal <span className="text-red-500">*</span></Label>
+              <Select
+                id="roadbill-driver_id"
+                name="driver_id"
+                options={driverOptions}
+                value={driverOptions.find(option => option.value === data.driver_id) || null}
+                onChange={(selectedOption) => setData('driver_id', selectedOption ? selectedOption.value : '')}
+                isDisabled={processing}
+                placeholder="Sélectionner un chauffeur"
+                isClearable
+                styles={customStyles}
+                classNamePrefix="react-select"
+              />
+              {errors.driver_id && <div className="text-red-500 text-sm mt-1">{errors.driver_id}</div>}
+            </div>
+
+            {/* Champ Co-Chauffeur (facultatif) */}
+            <div>
+              <Label htmlFor="roadbill-co_driver_id">Co-Chauffeur</Label>
+              <Select
+                id="roadbill-co_driver_id"
+                name="co_driver_id"
+                options={driverOptions}
+                value={driverOptions.find(option => option.value === data.co_driver_id) || null}
+                onChange={(selectedOption) => setData('co_driver_id', selectedOption ? selectedOption.value : '')}
+                isDisabled={processing}
+                placeholder="Aucun co-chauffeur"
+                isClearable
+                styles={customStyles}
+                classNamePrefix="react-select"
+              />
+              {errors.co_driver_id && <div className="text-red-500 text-sm mt-1">{errors.co_driver_id}</div>}
+            </div>
           </div>
 
-          {/* Champ Co-Chauffeur (facultatif) */}
-          <div>
-            <Label htmlFor="roadbill-co_driver_id">Co-Chauffeur</Label>
-            <Select
-              id="roadbill-co_driver_id"
-              name="co_driver_id"
-              options={driverOptions}
-              value={driverOptions.find(option => option.value === data.co_driver_id) || null}
-              onChange={(selectedOption) => setData('co_driver_id', selectedOption ? selectedOption.value : '')}
-              isDisabled={processing}
-              placeholder="Aucun co-chauffeur"
-              isClearable
-              styles={customStyles}
-              classNamePrefix="react-select"
-            />
-            {errors.co_driver_id && <div className="text-red-500 text-sm mt-1">{errors.co_driver_id}</div>}
-          </div>
+          {/* Conteneur pour Agence de Départ et Agence d'Arrivée */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Affichage du nom de l'agence de départ non-modifiable */}
+            <div>
+              <Label htmlFor="roadbill-departure_location_id">Agence de Départ <span className="text-red-500">*</span></Label>
+              <p className="mt-1 block w-full rounded-md bg-gray-100 border-gray-300 shadow-sm px-3 py-2 text-gray-700 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200">
+                {userAgencyName}
+              </p>
+              <input type="hidden" name="departure_location_id" value={data.departure_location_id} />
+            </div>
 
-          {/* Affichage du nom de l'agence de départ non-modifiable */}
-          <div>
-            <Label htmlFor="roadbill-departure_location_id">Agence de Départ <span className="text-red-500">*</span></Label>
-            <p className="mt-1 block w-full rounded-md bg-gray-100 border-gray-300 shadow-sm px-3 py-2 text-gray-700 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200">
-              {userAgencyName}
-            </p>
-            {/* Champ caché pour la soumission du formulaire */}
-            <input type="hidden" name="departure_location_id" value={data.departure_location_id} />
-          </div>
-
-          {/* Champ Agence d'Arrivée */}
-          <div>
-            <Label htmlFor="roadbill-arrival_location_id">Agence d'Arrivée <span className="text-red-500">*</span></Label>
-            <Select
-              id="roadbill-arrival_location_id"
-              name="arrival_location_id"
-              options={agencyOptions}
-              value={agencyOptions.find(option => option.value === data.arrival_location_id) || null}
-              onChange={(selectedOption) => setData('arrival_location_id', selectedOption ? selectedOption.value : '')}
-              isDisabled={processing}
-              placeholder="Sélectionner une agence d'arrivée"
-              isClearable
-              styles={customStyles}
-              classNamePrefix="react-select"
-            />
-            {errors.arrival_location_id && <div className="text-red-500 text-sm mt-1">{errors.arrival_location_id}</div>}
+            {/* Champ Agence d'Arrivée */}
+            <div>
+              <Label htmlFor="roadbill-arrival_location_id">Agence d'Arrivée <span className="text-red-500">*</span></Label>
+              <Select
+                id="roadbill-arrival_location_id"
+                name="arrival_location_id"
+                options={agencyOptions}
+                value={agencyOptions.find(option => option.value === data.arrival_location_id) || null}
+                onChange={(selectedOption) => setData('arrival_location_id', selectedOption ? selectedOption.value : '')}
+                isDisabled={processing}
+                placeholder="Sélectionner une agence d'arrivée"
+                isClearable
+                styles={customStyles}
+                classNamePrefix="react-select"
+              />
+              {errors.arrival_location_id && <div className="text-red-500 text-sm mt-1">{errors.arrival_location_id}</div>}
+            </div>
           </div>
 
           {/* Champ Date de Départ */}
@@ -343,7 +339,7 @@ const RoadbillFormModal = ({ isOpen, onClose, roadbill, routeName, vehicles, dri
           </div>
 
           {/* Champ Date d'Arrivée (facultatif) */}
-          <div>
+          <div className='hidden'>
             <Label htmlFor="roadbill-arrival_date">Date d'Arrivée</Label>
             <Input
               type="datetime-local"
@@ -375,7 +371,7 @@ const RoadbillFormModal = ({ isOpen, onClose, roadbill, routeName, vehicles, dri
           </div>
 
           {/* Champ Note (Commentaire) */}
-          <div>
+          <div className='hidden'>
             <Label htmlFor="roadbill-note">Note (Commentaire)</Label>
             <textarea
               id="roadbill-note"
@@ -398,7 +394,6 @@ const RoadbillFormModal = ({ isOpen, onClose, roadbill, routeName, vehicles, dri
             >
               Sélectionner les Articles ({data.articles.length})
             </button>
-            {/* Affichage de l'erreur si aucun article n'est sélectionné */}
             {errors.articles && <div className="text-red-500 text-sm mt-1">{errors.articles}</div>}
           </div>
 

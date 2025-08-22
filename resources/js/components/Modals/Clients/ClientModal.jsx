@@ -1,9 +1,8 @@
 import React, { useEffect } from 'react';
 import { useForm } from '@inertiajs/react';
-import Modal from '../Modal'; // Chemin correct vers votre Modal
-import InputField from '../../form/input/InputField'; // Chemin correct vers votre InputField
-import TextArea from '../../form/input/TextArea'; // Chemin correct vers votre TextArea (Assurez-vous qu'il prend `errorMessage`)
-// import SelectField from '../../form/select/SelectField'; // <-- N'importez plus SelectField
+import Modal from '../Modal';
+import InputField from '../../form/input/InputField';
+import TextArea from '../../form/input/TextArea';
 import Button from '../../ui/button/Button';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSave, faTimes } from '@fortawesome/free-solid-svg-icons';
@@ -17,7 +16,7 @@ const ClientFormModal = ({ isOpen, onClose, client, clientCategories, routeName 
   // sinon avec des chaînes vides pour la création.
   const { data, setData, post, put, processing, errors, reset } = useForm({
     client_category_id: client?.client_category_id || '',
-    client_type: client?.client_type || '', // Par exemple: 'particulier', 'entreprise'
+    client_type: client?.client_type || '',
     name: client?.name || '',
     phone_number: client?.phone_number || '',
     email_address: client?.email_address || '',
@@ -94,7 +93,7 @@ const ClientFormModal = ({ isOpen, onClose, client, clientCategories, routeName 
             label="Nom du Client"
             type="text"
             value={data.name}
-            onChange={(e) => setData('name', e.target.value)} // Corrigé ici : e.target.value
+            onChange={(e) => setData('name', e.target.value)}
             errorMessage={errors.name}
             required
             autoFocus
@@ -156,27 +155,30 @@ const ClientFormModal = ({ isOpen, onClose, client, clientCategories, routeName 
             )}
           </div>
 
-          {/* Numéro de Téléphone */}
-          <InputField
-            id="phone_number"
-            label="Numéro de Téléphone"
-            type="text"
-            value={data.phone_number}
-            onChange={(e) => setData('phone_number', e.target.value)}
-            errorMessage={errors.phone_number}
-            placeholder="Ex: +237XXXXXXXXX"
-          />
+          {/* Conteneur pour Numéro de Téléphone et Adresse Email */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Numéro de Téléphone */}
+            <InputField
+              id="phone_number"
+              label="Numéro de Téléphone"
+              type="text"
+              value={data.phone_number}
+              onChange={(e) => setData('phone_number', e.target.value)}
+              errorMessage={errors.phone_number}
+              placeholder="Ex: +237XXXXXXXXX"
+            />
 
-          {/* Adresse Email */}
-          <InputField
-            id="email_address"
-            label="Adresse Email"
-            type="email"
-            value={data.email_address}
-            onChange={(e) => setData('email_address', e.target.value)}
-            errorMessage={errors.email_address}
-            placeholder="Ex: client@example.com"
-          />
+            {/* Adresse Email */}
+            <InputField
+              id="email_address"
+              label="Adresse Email"
+              type="email"
+              value={data.email_address}
+              onChange={(e) => setData('email_address', e.target.value)}
+              errorMessage={errors.email_address}
+              placeholder="Ex: client@example.com"
+            />
+          </div>
 
           {/* Adresse Physique */}
           <TextArea

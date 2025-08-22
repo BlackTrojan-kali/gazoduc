@@ -46,6 +46,7 @@ const PriceFormModal = ({ isOpen, onClose, price, clientCategories, articles, ag
       put(route(routeName, price.id), {
         data: submitData,
         onSuccess: () => {
+          reset();
           onClose();
         },
         onError: (err) => {
@@ -56,6 +57,7 @@ const PriceFormModal = ({ isOpen, onClose, price, clientCategories, articles, ag
       post(route(routeName), {
         data: submitData,
         onSuccess: () => {
+          reset();
           onClose();
         },
         onError: (err) => {

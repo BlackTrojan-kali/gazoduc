@@ -181,6 +181,8 @@ layer(base);
   ::file-selector-button {
     border-color: var(--color-gray-200, currentColor);
   }
+  /* S'assurer que le sélecteur de date est visible sur tous les navigateurs WebKit (Chrome, Safari) */
+
   button:not(:disabled),
   [role="button"]:not(:disabled) {
     cursor: pointer;
@@ -292,8 +294,7 @@ layer(base);
   input[type="time"]::-webkit-inner-spin-button,
   input[type="date"]::-webkit-calendar-picker-indicator,
   input[type="time"]::-webkit-calendar-picker-indicator {
-    display: none;
-    -webkit-appearance: none;
+ 
   }
 }
 

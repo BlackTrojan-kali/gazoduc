@@ -5,41 +5,34 @@ import Modal from './Modal';
 import Form from '../form/Form';
 import Label from '../form/Label';
 import Input from '../form/input/InputField';
-
-import { useForm, usePage } from '@inertiajs/react';
+import { useForm } from '@inertiajs/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner } from '@fortawesome/free-solid-svg-icons';
 import Swal from 'sweetalert2';
 
-const CreateUserModal = ({ isOpen, onClose,roles, entreprises, agencies ,routeName}) => {
-  // Récupérer les props nécessaires (roles, entreprises, agences)
-  
-
+const CreateUserModal = ({ isOpen, onClose, roles, entreprises, agencies, routeName }) => {
   const { data, setData, post, processing, errors, reset, recentlySuccessful } = useForm({
     first_name: '',
     last_name: '',
     email: '',
     password: '',
-    password_confirmation: '', // Important pour le champ 'confirmed'
+    password_confirmation: '',
     phone_number: '',
     code: '',
     role_id: '',
     entreprise_id: '',
-    agency_id: '', // Champ optionnel
+    agency_id: '',
   });
 
-  // Réinitialiser le formulaire et définir les premières valeurs par défaut des selects
   useEffect(() => {
     if (isOpen) {
       reset();
       if (roles && roles.length > 0) setData('role_id', roles[0].id);
       if (entreprises && entreprises.length > 0) setData('entreprise_id', entreprises[0].id);
-      // agence_id n'est pas pré-rempli car il est optionnel et dépend du rôle ou de l'entreprise
-      setData('agence_id', '');
+      setData('agency_id', '');
     }
   }, [isOpen, roles, entreprises, setData, reset]);
 
-  // Gérer la réinitialisation du formulaire après une soumission réussie et fermer la modale
   useEffect(() => {
     if (recentlySuccessful) {
       reset();
@@ -56,7 +49,7 @@ const CreateUserModal = ({ isOpen, onClose,roles, entreprises, agencies ,routeNa
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    post(route(routeName), { // Assurez-vous que 'users.store' est votre route de création d'utilisateur
+    post(route(routeName), {
       preserveScroll: true,
       onError: (validationErrors) => {
         Swal.fire({
@@ -70,44 +63,40 @@ const CreateUserModal = ({ isOpen, onClose,roles, entreprises, agencies ,routeNa
     });
   };
 
-  // Filtrer les agences en fonction de l'entreprise sélectionnée
   const filteredAgencies = agencies.filter(agence => agence.entreprise_id == data.entreprise_id);
-
-  // Déterminer si le champ agence_id doit être affiché
-  // Par exemple, si le rôle n'est pas "DG" (qui gère l'entreprise entière)
-  const isAgenceIdRequired = data.role_id && (roles.find(r => r.id == data.role_id)?.name !== 'DG'); // Adapter la condition
+  const isAgenceIdRequired = data.role_id && (roles.find(r => r.id == data.role_id)?.name !== 'DG');
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Créer un Nouvel Utilisateur" >
-      <Form onSubmit={handleSubmit} >
-        {/* Champ Prénom */}
-        <div>
-          <Label htmlFor="create-user-first_name">Nom de famille <span className="text-red-500">*</span></Label>
-          <Input
-            type="text"
-            id="create-user-first_name"
-            name="first_name"
-            value={data.first_name}
-            onChange={(e) => setData('first_name', e.target.value)}
-            disabled={processing}
-            error={!!errors.first_name}
-            hint={errors.first_name}
-          />
-        </div>
-
-        {/* Champ Nom de famille */}
-        <div>
-          <Label htmlFor="create-user-last_name">Prenom</Label>
-          <Input
-            type="text"
-            id="create-user-last_name"
-            name="last_name"
-            value={data.last_name}
-            onChange={(e) => setData('last_name', e.target.value)}
-            disabled={processing}
-            error={!!errors.last_name}
-            hint={errors.last_name}
-          />
+    <Modal isOpen={isOpen} onClose={onClose} title="Créer un Nouvel Utilisateur">
+      <Form onSubmit={handleSubmit}>
+        {/* Conteneur pour Nom de famille et Prénom */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="create-user-last_name">Nom de famille <span className="text-red-500">*</span></Label>
+            <Input
+              type="text"
+              id="create-user-last_name"
+              name="last_name"
+              value={data.last_name}
+              onChange={(e) => setData('last_name', e.target.value)}
+              disabled={processing}
+              error={!!errors.last_name}
+              hint={errors.last_name}
+            />
+          </div>
+          <div>
+            <Label htmlFor="create-user-first_name">Prénom <span className="text-red-500">*</span></Label>
+            <Input
+              type="text"
+              id="create-user-first_name"
+              name="first_name"
+              value={data.first_name}
+              onChange={(e) => setData('first_name', e.target.value)}
+              disabled={processing}
+              error={!!errors.first_name}
+              hint={errors.first_name}
+            />
+          </div>
         </div>
 
         {/* Champ Email */}
@@ -150,39 +139,42 @@ const CreateUserModal = ({ isOpen, onClose,roles, entreprises, agencies ,routeNa
             value={data.password_confirmation}
             onChange={(e) => setData('password_confirmation', e.target.value)}
             disabled={processing}
-            error={!!errors.password_confirmation} // Inertia mettra l'erreur sur password_confirmation si 'confirmed' échoue
+            error={!!errors.password_confirmation}
             hint={errors.password_confirmation}
           />
         </div>
 
-        {/* Champ Numéro de téléphone */}
-        <div>
-          <Label htmlFor="create-user-phone_number">Numéro de téléphone</Label>
-          <Input
-            type="text"
-            id="create-user-phone_number"
-            name="phone_number"
-            value={data.phone_number}
-            onChange={(e) => setData('phone_number', e.target.value)}
-            disabled={processing}
-            error={!!errors.phone_number}
-            hint={errors.phone_number}
-          />
-        </div>
+        {/* Conteneur pour le Numéro de téléphone et le Code */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Champ Numéro de téléphone */}
+          <div>
+            <Label htmlFor="create-user-phone_number">Numéro de téléphone</Label>
+            <Input
+              type="text"
+              id="create-user-phone_number"
+              name="phone_number"
+              value={data.phone_number}
+              onChange={(e) => setData('phone_number', e.target.value)}
+              disabled={processing}
+              error={!!errors.phone_number}
+              hint={errors.phone_number}
+            />
+          </div>
 
-        {/* Champ Code */}
-        <div>
-          <Label htmlFor="create-user-code">Code <span className="text-red-500">*</span></Label>
-          <Input
-            type="text"
-            id="create-user-code"
-            name="code"
-            value={data.code}
-            onChange={(e) => setData('code', e.target.value)}
-            disabled={processing}
-            error={!!errors.code}
-            hint={errors.code}
-          />
+          {/* Champ Code */}
+          <div>
+            <Label htmlFor="create-user-code">Code <span className="text-red-500">*</span></Label>
+            <Input
+              type="text"
+              id="create-user-code"
+              name="code"
+              value={data.code}
+              onChange={(e) => setData('code', e.target.value)}
+              disabled={processing}
+              error={!!errors.code}
+              hint={errors.code}
+            />
+          </div>
         </div>
 
         {/* Champ Rôle */}
@@ -206,14 +198,14 @@ const CreateUserModal = ({ isOpen, onClose,roles, entreprises, agencies ,routeNa
         </div>
 
         {/* Champ Entreprise */}
-        <div>
+        <div className='hidden'>
           <Label htmlFor="create-user-entreprise_id">Entreprise <span className="text-red-500">*</span></Label>
           <select
             id="create-user-entreprise_id"
             value={data.entreprise_id}
             onChange={(e) => {
               setData('entreprise_id', e.target.value);
-              setData('agence_id', ''); // Réinitialise l'agence quand l'entreprise change
+              setData('agency_id', '');
             }}
             disabled={processing}
             className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.entreprise_id ? 'border-red-500' : ''}`}
@@ -236,10 +228,10 @@ const CreateUserModal = ({ isOpen, onClose,roles, entreprises, agencies ,routeNa
               id="create-user-agence_id"
               value={data.agency_id}
               onChange={(e) => setData('agency_id', e.target.value)}
-              disabled={processing || !data.entreprise_id || filteredAgencies.length === 0} // Désactive si pas d'entreprise ou pas d'agences
+              disabled={processing || !data.entreprise_id || filteredAgencies.length === 0}
               className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.agence_id ? 'border-red-500' : ''}`}
             >
-              <option value="">Sélectionner une agence (Optionnel)</option>
+              <option value="">Sélectionner une agence </option>
               {filteredAgencies.map((agence) => (
                 <option key={agence.id} value={agence.id}>
                   {agence.name} {agence.entreprise.name}

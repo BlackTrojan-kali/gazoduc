@@ -130,8 +130,8 @@ const NewPaymentModal = ({ isOpen, onClose, clients, banks, sales }) => {
     
     post(route('payments.store',{sales:selectedSales}), {
       onSuccess: () => {
-        //onClose(); // Ferme la modale principale
-        //reset(); // Réinitialise le formulaire
+        onClose(); // Ferme la modale principale
+        reset(); // Réinitialise le formulaire
       },
       onError: (err) => {
         console.error(err);
@@ -280,6 +280,7 @@ const NewPaymentModal = ({ isOpen, onClose, clients, banks, sales }) => {
             <button
               type="submit" // Changé en type="submit" pour déclencher handleNextStep
               className="inline-flex items-center gap-2 rounded-lg border border-blue-600 bg-blue-600 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-blue-700 disabled:opacity-50 dark:border-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600"
+              disabled={processing}
             >
               Suivant
               <FontAwesomeIcon icon={faSpinner} className={processing ? 'animate-spin' : 'hidden'} />

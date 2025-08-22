@@ -202,26 +202,28 @@ const MovementHistoryPDFExcelModal = ({ isOpen, onClose, title = "Exporter l'His
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={title}>
             <form onSubmit={handleSubmit} className="space-y-4" style={colors}>
-                {/* Champs de Date */}
-                <InputField
-                    id="start_date"
-                    type="date"
-                    label="Date de Début"
-                    value={data.start_date}
-                    onChange={handleChange}
-                    error={errors.start_date}
-                    required
-                />
+                {/* Conteneur pour aligner les champs de date sur la même ligne */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <InputField
+                        id="start_date"
+                        type="date"
+                        label="Date de Début"
+                        value={data.start_date}
+                        onChange={handleChange}
+                        error={errors.start_date}
+                        required
+                    />
 
-                <InputField
-                    id="end_date"
-                    type="date"
-                    label="Date de Fin"
-                    value={data.end_date}
-                    onChange={handleChange}
-                    error={errors.end_date}
-                    required
-                />
+                    <InputField
+                        id="end_date"
+                        type="date"
+                        label="Date de Fin"
+                        value={data.end_date}
+                        onChange={handleChange}
+                        error={errors.end_date}
+                        required
+                    />
+                </div>
 
                 {/* Sélecteur d'Article avec react-select */}
                 <div className="mb-4">

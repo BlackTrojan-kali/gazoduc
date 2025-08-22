@@ -148,77 +148,83 @@ const CiterneFormModal = ({ isOpen, onClose, entreprises, agencies, products, se
                     placeholder="Ex: Citerne A, Citerne principale"
                     required
                 />
+                
+                {/* Conteneur pour aligner les deux champs de type sur la même ligne */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="mb-4">
+                        <label htmlFor="type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Type de Citerne
+                        </label>
+                        <select
+                            id="type"
+                            className={`h-11 w-full appearance-none rounded-lg border px-4 py-2.5 pr-11 text-sm shadow-theme-xs
+                                ${errors.type ? 'border-red-500' : 'border-gray-300 dark:border-gray-700'}
+                                bg-transparent placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10
+                                dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800`}
+                            value={data.type}
+                            onChange={handleChange}
+                            required
+                        >
+                            {citerneTypes.map(option => (
+                                <option key={option.value} value={option.value}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                        {errors.type && <p className="text-sm text-red-600 mt-1">{errors.type}</p>}
+                    </div>
 
-                <div className="mb-4">
-                    <label htmlFor="type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Type de Citerne
-                    </label>
-                    <select
-                        id="type"
-                        className={`h-11 w-full appearance-none rounded-lg border px-4 py-2.5 pr-11 text-sm shadow-theme-xs
-                            ${errors.type ? 'border-red-500' : 'border-gray-300 dark:border-gray-700'}
-                            bg-transparent placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10
-                            dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800`}
-                        value={data.type}
-                        onChange={handleChange}
-                        required
-                    >
-                        {citerneTypes.map(option => (
-                            <option key={option.value} value={option.value}>
-                                {option.label}
-                            </option>
-                        ))}
-                    </select>
-                    {errors.type && <p className="text-sm text-red-600 mt-1">{errors.type}</p>}
+                    <div className="mb-4">
+                        <label htmlFor="product_type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Type de Produit Stocké
+                        </label>
+                        <select
+                            id="product_type"
+                            className={`h-11 w-full appearance-none rounded-lg border px-4 py-2.5 pr-11 text-sm shadow-theme-xs
+                                ${errors.product_type ? 'border-red-500' : 'border-gray-300 dark:border-gray-700'}
+                                bg-transparent placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10
+                                dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800`}
+                            value={data.product_type}
+                            onChange={handleChange}
+                            required
+                        >
+                            {productTypes.map(option => (
+                                <option key={option.value} value={option.value}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                        {errors.product_type && <p className="text-sm text-red-600 mt-1">{errors.product_type}</p>}
+                    </div>
                 </div>
 
-                <div className="mb-4">
-                    <label htmlFor="product_type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Type de Produit Stocké
-                    </label>
-                    <select
-                        id="product_type"
-                        className={`h-11 w-full appearance-none rounded-lg border px-4 py-2.5 pr-11 text-sm shadow-theme-xs
-                            ${errors.product_type ? 'border-red-500' : 'border-gray-300 dark:border-gray-700'}
-                            bg-transparent placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10
-                            dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800`}
-                        value={data.product_type}
+                {/* Conteneur pour aligner les deux champs de capacité sur la même ligne */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <InputField
+                        id="capacity_liter"
+                        type="number"
+                        step="0.01"
+                        label="Capacité (Litres)"
+                        value={data.capacity_liter}
                         onChange={handleChange}
+                        error={errors.capacity_liter}
+                        placeholder="Capacité en Litres"
+                        min="0"
                         required
-                    >
-                        {productTypes.map(option => (
-                            <option key={option.value} value={option.value}>
-                                {option.label}
-                            </option>
-                        ))}
-                    </select>
-                    {errors.product_type && <p className="text-sm text-red-600 mt-1">{errors.product_type}</p>}
+                    />
+
+                    <InputField
+                        id="capacity_kg"
+                        type="number"
+                        step="0.01"
+                        label="Capacité (Kg)"
+                        value={data.capacity_kg}
+                        onChange={handleChange}
+                        error={errors.capacity_kg}
+                        placeholder="Capacité en Kilogrammes"
+                        min="0"
+                    />
                 </div>
-
-                <InputField
-                    id="capacity_liter"
-                    type="number"
-                    step="0.01"
-                    label="Capacité (Litres)"
-                    value={data.capacity_liter}
-                    onChange={handleChange}
-                    error={errors.capacity_liter}
-                    placeholder="Capacité en Litres"
-                    min="0"
-                    required
-                />
-
-                <InputField
-                    id="capacity_kg"
-                    type="number"
-                    step="0.01"
-                    label="Capacité (Kg)"
-                    value={data.capacity_kg}
-                    onChange={handleChange}
-                    error={errors.capacity_kg}
-                    placeholder="Capacité en Kilogrammes"
-                    min="0"
-                />
 
                 <div className="mb-4">
                     <label htmlFor="current_product_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
