@@ -8,6 +8,7 @@ use App\Models\ArticleCategoryPrice;
 use App\Models\ClientCategory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class PriceController extends Controller
 {
@@ -27,24 +28,33 @@ class PriceController extends Controller
     }
         return inertia("Clients/Price",compact("prices", "clientCategories", "articles", "agencies"));
     }
-    public function store(Request $request){
-        $request->validate([
-            "article_id"=>"required",
-            "client_category_id"=>"required",
-            "agency_id"=>"required",
-            "price"=>"required|numeric",
-            "consigne_price"=>"numeric",
-        ]);
+   
+public function store(Request $request)
+{
+    $request->validate([
+        "article_id" => [
+            "required",
+            Rule::unique('article_category_prices')->where(function ($query) use ($request) {
+                return $query->where('client_category_id', $request->client_category_id)
+                             ->where('agency_id', $request->agency_id);
+            }),
+        ],
+        "client_category_id" => "required",
+        "agency_id" => "required",
+        "price" => "required|numeric",
+        "consigne_price" => "numeric",
+    ]);
 
-        $price = new ArticleCategoryPrice();
-        $price->article_id =  $request->article_id;
-        $price->client_category_id = $request->client_category_id;
-        $price->agency_id = $request->agency_id;
-        $price->price = $request->price;
-        $price->consigne_price = $request->consigne_price;
-        $price->save();
-        return back ()->with("success","price created successfully");
-    }
+    $price = new ArticleCategoryPrice();
+    $price->article_id =  $request->article_id;
+    $price->client_category_id = $request->client_category_id;
+    $price->agency_id = $request->agency_id;
+    $price->price = $request->price;
+    $price->consigne_price = $request->consigne_price;
+    $price->save();
+
+    return back()->with("success", "Price created successfully");
+}
 
     public function update(Request $request,$idprice){
         $request->validate([

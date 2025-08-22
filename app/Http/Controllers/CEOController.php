@@ -13,42 +13,45 @@ use Illuminate\Support\Facades\Auth;
 
 class CEOController extends Controller
 {
-
   public function index()
     {
         // 1. Informations pour les versements consolidés (individuels) paginés
-        // On récupère les paiements avec pagination
         $individualConsolidatedPayments = Payment::with('client', 'factures')
-                            ->orderBy('created_at', 'desc')
-                            ->paginate(10); // Paginer par 10 éléments par page, ajustez si nécessaire
+            ->orderBy('created_at', 'desc')
+            ->paginate(13);
 
-        // On mappe chaque paiement pour calculer le total des ventes associées et la différence
         $individualConsolidatedPayments->through(function ($payment) {
-            $totalFactureAmount = $payment->factures->sum('pivot.amount'); // Somme des montants pivot dans facture_payments
-            $difference = $payment->amout - $totalFactureAmount; // 'amout' est le montant du versement
+            // CORRECTION: La valeur totale du versement est la somme de 'amout' et 'amout_notes'
+            $totalPaymentValue = $payment->amout + $payment->amout_notes;
+
+            // La somme des montants totaux des factures associées
+            $totalFactureAmount = $payment->factures->sum('total_amount');
+            
+            // Calcul de la différence
+            $difference = $totalPaymentValue - $totalFactureAmount;
 
             return [
                 'client_name' => $payment->client->name ?? 'N/A',
                 'payment_date' => Carbon::parse($payment->created_at)->format('Y-m-d'),
-                'payment_month_year' => Carbon::parse($payment->created_at)->format('Y-m'), // Ajout d'une clé Année-Mois pour le regroupement
-                'payment_value' => $payment->amout,
+                'payment_month_year' => Carbon::parse($payment->created_at)->format('Y-m'),
+                'payment_value' => $totalPaymentValue, // Utilisez la nouvelle somme ici
                 'total_associated_sales' => $totalFactureAmount,
                 'difference' => $difference,
             ];
         });
 
         // 2. Statistiques consolidées des versements par mois paginées
-        // Pour les statistiques mensuelles, il faut d'abord récupérer TOUS les versements
-        // pour s'assurer que l'agrégation mensuelle est complète avant de la paginer.
-        // On ne pagine PAS la collection 'payments' originale ici, mais le résultat de l'agrégation.
-        $allPaymentsForMonthlyAggregation = Payment::with('factures')->get(); // Récupérer tous les paiements nécessaires pour l'agrégation mensuelle complète
+        $allPaymentsForMonthlyAggregation = Payment::with('factures')->get();
 
         $tempIndividualPayments = $allPaymentsForMonthlyAggregation->map(function ($payment) {
-            $totalFactureAmount = $payment->factures->sum('pivot.amount');
-            $difference = $payment->amout - $totalFactureAmount;
+            // CORRECTION: La valeur totale du versement est la somme de 'amout' et 'amout_notes'
+            $totalPaymentValue = $payment->amout + $payment->amout_notes;
+
+            $totalFactureAmount = $payment->factures->sum('total_amount');
+            $difference = $totalPaymentValue - $totalFactureAmount;
             return [
                 'payment_month_year' => Carbon::parse($payment->created_at)->format('Y-m'),
-                'payment_value' => $payment->amout,
+                'payment_value' => $totalPaymentValue, // Utilisez la nouvelle somme ici
                 'total_associated_sales' => $totalFactureAmount,
                 'difference' => $difference,
             ];
@@ -61,12 +64,9 @@ class CEOController extends Controller
                 'total_associated_sales_month' => $monthlyPayments->sum('total_associated_sales'),
                 'total_difference_month' => $monthlyPayments->sum('difference'),
             ];
-        })->sortByDesc('month_year'); // Trier du mois le plus récent au plus ancien
+        })->sortByDesc('month_year');
 
-        // Convertir la collection triée en un Paginator manuel pour l'envoyer à Inertia
-        // Note: La pagination manuelle est nécessaire car le groupBy/map génère une collection.
-        // Si vous avez BEAUCOUP de mois, vous devrez optimiser cela avec une agrégation SQL.
-        $perPage = 5; // Nombre de mois par page, ajustez si nécessaire
+        $perPage = 5;
         $currentPage = \Illuminate\Pagination\LengthAwarePaginator::resolveCurrentPage();
         $currentItems = $monthlyConsolidatedPayments->slice(($currentPage - 1) * $perPage, $perPage)->values();
         $monthlyConsolidatedPaymentsPaginator = new \Illuminate\Pagination\LengthAwarePaginator(
@@ -77,30 +77,23 @@ class CEOController extends Controller
             ['path' => \Illuminate\Pagination\LengthAwarePaginator::resolveCurrentPath()]
         );
 
-
         // 3. Informations pour les cartes du tableau de bord (restent inchangées)
         $stocks = Stock::with("article", "agency")->get();
         $clients = Client::all();
-
         $licenceData = Auth::user()->load("entreprise.subscription.licence");
         $subscription = $licenceData->entreprise->subscription;
-
         $daysRemaining = null;
         if ($subscription && $subscription->date_expiration) {
             $expirationDate = Carbon::parse($subscription->date_expiration);
             $daysRemaining = Carbon::now()->diffInDays($expirationDate, false);
         }
-
-        // Calcul de la quantité globale en stock par article
         $globalStockByArticle = $stocks->groupBy('article.name')->map(function ($items) {
             return $items->sum('quantity');
         });
 
         // 4. Retourner les données à la vue Inertia
         return Inertia("Boss/BossIndex", [
-            // On envoie le paginator directement
             "consolidatedPayments" => $individualConsolidatedPayments,
-            // On envoie le paginator pour les stats mensuelles
             "monthlyConsolidatedPayments" => $monthlyConsolidatedPaymentsPaginator,
             "clientsCount" => $clients->count(),
             "globalStockByArticle" => $globalStockByArticle->toArray(),

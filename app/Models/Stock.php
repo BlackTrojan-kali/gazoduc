@@ -41,7 +41,7 @@ class Stock extends Model
 
         static::saving(function ($stock) {
             // Vérifie si la quantité est égale ou inférieure à 100 et si elle a été modifiée.
-            if ($stock->quantity <= 100 && $stock->isDirty('quantity')) {
+            if ($stock->quantity <= 10 && $stock->isDirty('quantity')) {
                 // Détermine les rôles de stockage pertinents pour la notification.
                 $rolesToNotify = ['controleur'];
                 // La propriété storage_type du stock correspond au rôle.

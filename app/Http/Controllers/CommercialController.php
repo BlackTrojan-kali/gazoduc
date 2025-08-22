@@ -117,7 +117,7 @@ class CommercialController extends Controller
         // Récupération des factures filtrées par l'agence de l'utilisateur
         $factures = Facture::where("agency_id", Auth::user()->agency_id)
             ->with("client", "user", "items.article", "agency")
-            ->paginate(15);
+            ->orderBy("created_at","desc")->paginate(100);
 
         // Récupération de toutes les données nécessaires
         $articles = Article::all();
