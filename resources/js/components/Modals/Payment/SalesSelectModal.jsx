@@ -57,11 +57,17 @@ const SalesSelectionModal = ({ isOpen, onClose, sales, onSave, processing, payme
     }
   };
 
-  // Calculer le total des montants des ventes sélectionnées
-  const totalSelectedAmount = useMemo(() => {
-    return selectedSales.reduce((sum, sale) => sum + (sale.total_amount || 0), 0);
-  }, [selectedSales]);
-
+ // Calculer le total des montants des ventes sélectionnées
+const totalSelectedAmount = useMemo(() => {
+    return selectedSales.reduce((sum, sale) => {
+        // 1. Convertir sale.total_amount en nombre décimal (float).
+        // 2. Utiliser l'opérateur de court-circuit || 0 pour gérer les cas où la valeur est null,
+        //    undefined, ou si la conversion donne NaN (Not a Number).
+        const amount = parseFloat(sale.total_amount) || 0;
+        
+        return sum + amount;
+    }, 0);
+}, [selectedSales]);
   // Soumettre le formulaire
   const handleSubmit = () => {
     if (selectedSales.length === 0) {

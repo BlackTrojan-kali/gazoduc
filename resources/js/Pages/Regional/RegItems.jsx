@@ -306,7 +306,7 @@ const PageContent = ({ factureItems, articles, agencies, onPageChange, onFilterC
 const RegItems = ({ factureItems, articles, agencies, onPageChange, onFilterChange }) => {
  const {auth} = usePage().props
  
-    if(auth.user.role=="controler"){
+    if(auth.user.role=="controleur"){
         return(
         <RegLayout>
             <PageContent factureItems={factureItems} articles={articles} agencies={agencies} onPageChange={onPageChange} onFilterChange={onFilterChange}/>

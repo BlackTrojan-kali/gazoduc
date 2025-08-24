@@ -425,7 +425,7 @@ const RegSales= ({ factures, clients, articles, agencies }) =>{
           <PageContent factures={factures} clients={clients} articles={articles} agencies={agencies}/>
        </DirLayout>
     )
-  }if(auth.user.role == "controler"){
+  }if(auth.user.role == "controleur"){
     return(
        <RegLayout>
           <PageContent factures={factures} clients={clients} articles={articles} agencies={agencies}/>

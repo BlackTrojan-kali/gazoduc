@@ -435,7 +435,7 @@ const PageContent = ({ payments, clients, agencies, banks, sales }) => {
 
 const RegPayment = ({ payments, clients, agencies, banks, sales })=>{
   const {auth} = usePage().props
-  if(auth.user.role == "controler"){
+  if(auth.user.role == "controleur"){
       return(
 
    <RegLayout>
