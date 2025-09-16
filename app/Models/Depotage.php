@@ -17,7 +17,7 @@ class Depotage extends Model
         return $this->belongsTo(Citerne::class,"citerne_fixe_id");
     }
     public function citerne_mobile(){
-        return $this->belongsTo(Citerne::class,"citerne_mobile_id");
+        return $this->belongsTo(Vehicule::class,"citerne_mobile_id");
     }
     public function article(){
         return $this->belongsTo(Article::class,"article_id");

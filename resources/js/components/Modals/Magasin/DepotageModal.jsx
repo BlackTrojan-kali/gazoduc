@@ -118,7 +118,7 @@ const DepotageFormModal = ({ isOpen, onClose, citernesMobiles, citernesFixes, ar
             <option value="">Sélectionnez une citerne mobile</option>
             {citernesMobiles && citernesMobiles.map(citerne => (
               <option key={citerne.id} value={String(citerne.id)}>
-                {citerne.name}
+                {citerne.licence_plate}
               </option>
             ))}
           </select>

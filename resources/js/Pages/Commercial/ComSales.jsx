@@ -322,7 +322,7 @@ const ComSales = ({ factures, clients, articles, agencies }) => {
                     Montant Total
                   </TableCell>
                   <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                    Mode de Paiement
+                    Type
                   </TableCell>
                   <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
                     Statut
@@ -356,7 +356,7 @@ const ComSales = ({ factures, clients, articles, agencies }) => {
                         {facture.total_amount.toLocaleString('fr-FR', { style: 'currency', currency: 'XAF' })}
                       </TableCell>
                       <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                        {facture.currency || 'N/A'}
+                        {facture.invoice_type || 'N/A'}
                       </TableCell>
                       <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
                         {facture.status || 'N/A'}

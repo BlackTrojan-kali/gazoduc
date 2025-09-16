@@ -1,75 +1,70 @@
-// resources/js/Components/Modals/DepotageHistoryPDFExcelModal.jsx
-
 import React, { useState, useEffect } from 'react';
-import Modal from './Modal'; // Votre composant de modale générique
-import Input from '../form/input/InputField'; // Votre composant Input
-import Button from '../ui/button/Button'; // Votre composant Button
-import { useForm, usePage } from '@inertiajs/react'; // Ajout de usePage
-import Swal from 'sweetalert2'; // Pour les notifications
+import Modal from './Modal';
+import Input from '../form/input/InputField';
+import Button from '../ui/button/Button';
+import { useForm, usePage } from '@inertiajs/react';
+import Swal from 'sweetalert2';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSpinner, faFilePdf, faFileExcel } from '@fortawesome/free-solid-svg-icons'; // Icônes
-import Select from 'react-select'; // Ajout de react-select pour l'agence
+import { faSpinner, faFilePdf, faFileExcel } from '@fortawesome/free-solid-svg-icons';
+import Select from 'react-select';
 
 const DepotageHistoryPDFExcelModal = ({ isOpen, onClose, agencies }) => {
-  // Récupération du rôle de l'utilisateur via usePage
   const { auth } = usePage().props;
   const userRole = auth.user.role;
   const isDirection = userRole === 'direction';
 
-  // Définition des options de format de fichier en fonction du rôle
   const fileTypeOptions = [
     { value: 'pdf', label: 'PDF' },
     { value: 'excel', label: 'Excel' },
     ...(isDirection ? [{ value: 'pdf_deleted', label: 'PDF (avec suppressions)' }] : []),
   ];
 
-  // Initialisation de l'état du formulaire avec useForm d'Inertia
   const { data, setData, processing, errors, reset } = useForm({
     start_date: '',
     end_date: '',
-    agency_id: null, // Initialisé à null pour la sélection
-    file_type: 'pdf', // Type de fichier par défaut
+    agency_id: null,
+    file_type: 'pdf',
   });
 
-  // Utilisation de useMemo pour créer les options pour react-select
+  // --- Début de la modification ---
   const agencyOptions = React.useMemo(() => [
-    { value: null, label: 'Toutes les agences' },
+    ...(isDirection ? [{ value: null, label: 'Toutes les agences' }] : []),
     ...agencies.map(agency => ({
       value: String(agency.id),
       label: agency.name
     }))
-  ], [agencies]);
+  ], [agencies, isDirection]);
+  // --- Fin de la modification ---
 
-  // Effet pour initialiser les dates par défaut (mois précédent à aujourd'hui) lors de l'ouverture de la modale
   useEffect(() => {
     if (isOpen) {
       const today = new Date();
       const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
-      reset({ // Utiliser reset pour s'assurer que tous les champs sont réinitialisés
-        start_date: lastMonth.toISOString().split('T')[0], // Format YYYY-MM-DD
-        end_date: today.toISOString().split('T')[0], // Format YYYY-MM-DD
-        agency_id: null, // Réinitialiser l'agence
-        file_type: 'pdf', // Réinitialiser le type de fichier
+      reset({
+        start_date: lastMonth.toISOString().split('T')[0],
+        end_date: today.toISOString().split('T')[0],
+        agency_id: isDirection ? null : String(agencies[0]?.id || null), // Réinitialisation de l'agence
+        file_type: 'pdf',
       });
+      // si le role n'est pas 'direction', on sélectionne la première agence par défaut
+      if (!isDirection && agencies.length > 0) {
+        setData('agency_id', String(agencies[0].id));
+      }
     }
-  }, [isOpen, reset]); // Se déclenche quand 'isOpen' change
+  }, [isOpen, reset, agencies, isDirection, setData]);
 
-  // Gestion des changements dans les champs du formulaire
   const handleChange = (e) => {
     const { id, value } = e.target;
     setData(id, value);
   };
   
-  // Handler pour la sélection d'agence
   const handleAgencyChange = (selectedOption) => {
     setData('agency_id', selectedOption ? selectedOption.value : null);
   };
 
-  // Soumission du formulaire
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // Validation des dates
     if (!data.start_date || !data.end_date) {
       Swal.fire({
         icon: 'warning',
@@ -88,23 +83,20 @@ const DepotageHistoryPDFExcelModal = ({ isOpen, onClose, agencies }) => {
       return;
     }
     
-    // Construction de la chaîne de requête
     const formDataForQuery = {
       ...data,
-      agency_id: data.agency_id || '', // S'assurer que agency_id est une chaîne vide si null
-      format: data.file_type, // Utiliser 'format' au lieu de 'file_type' si la route l'attend
+      agency_id: data.agency_id || '',
+      format: data.file_type,
     };
 
-    // Ajout du paramètre pour les suppressions si l'option est choisie
     if (data.file_type === 'pdf_deleted') {
       formDataForQuery.isWithDeleted = true;
-      formDataForQuery.format = 'pdf'; // On force le format à PDF même si le type est 'pdf_deleted'
+      formDataForQuery.format = 'pdf';
     }
 
     const queryString = new URLSearchParams(formDataForQuery).toString();
     const generateRoute = route('depotages.export') + '?' + queryString;
 
-    // Ouverture du rapport dans une nouvelle fenêtre/onglet
     const supportedFileTypes = fileTypeOptions.map(option => option.value);
     if (supportedFileTypes.includes(data.file_type)) {
       window.open(generateRoute, '_blank');
@@ -117,22 +109,19 @@ const DepotageHistoryPDFExcelModal = ({ isOpen, onClose, agencies }) => {
       return;
     }
 
-    // Notification à l'utilisateur
     Swal.fire({
       icon: 'info',
       title: 'Génération en cours',
       text: `Le rapport d'historique des dépotages au format ${data.file_type.toUpperCase()} est en cours de génération.`,
       showConfirmButton: false,
-      timer: 2000 // La notification disparaît après 2 secondes
+      timer: 2000
     });
 
-    onClose(); // Ferme la modale après la soumission
+    onClose();
   };
 
-  // Détecte le mode sombre pour appliquer les styles corrects
   const isDarkMode = document.documentElement.classList.contains('dark');
 
-  // Styles pour les composants react-select en mode sombre et clair
   const selectStyles = {
     control: (provided, state) => ({
       ...provided,
@@ -143,9 +132,9 @@ const DepotageHistoryPDFExcelModal = ({ isOpen, onClose, agencies }) => {
         borderColor: errors[state.selectProps.id] ? 'rgb(239 68 68 / 1)' : (state.isFocused ? 'rgb(59 130 246 / 1)' : (isDarkMode ? 'rgb(55 65 81 / 1)' : 'rgb(209 213 219 / 1)')),
       },
       borderRadius: '8px',
-      backgroundColor: isDarkMode ? 'rgb(17 24 39 / 1)' : '#fff', // dark:bg-gray-900
+      backgroundColor: isDarkMode ? 'rgb(17 24 39 / 1)' : '#fff',
       fontSize: '0.875rem',
-      color: isDarkMode ? 'rgb(255 255 255 / 0.9)' : 'rgb(17 24 39 / 1)', // dark:text-white/90
+      color: isDarkMode ? 'rgb(255 255 255 / 0.9)' : 'rgb(17 24 39 / 1)',
     }),
     singleValue: (provided) => ({
       ...provided,
@@ -153,17 +142,17 @@ const DepotageHistoryPDFExcelModal = ({ isOpen, onClose, agencies }) => {
     }),
     placeholder: (provided) => ({
       ...provided,
-      color: isDarkMode ? 'rgb(255 255 255 / 0.3)' : 'rgb(107 114 128 / 1)', // dark:placeholder:text-white/30
+      color: isDarkMode ? 'rgb(255 255 255 / 0.3)' : 'rgb(107 114 128 / 1)',
     }),
     menu: (provided) => ({
       ...provided,
       zIndex: 9999,
-      backgroundColor: isDarkMode ? 'rgb(17 24 39 / 1)' : '#fff', // dark:bg-gray-900
+      backgroundColor: isDarkMode ? 'rgb(17 24 39 / 1)' : '#fff',
       borderRadius: '8px',
     }),
     option: (provided, state) => ({
       ...provided,
-      backgroundColor: isDarkMode ? (state.isFocused ? 'rgb(55 65 81 / 1)' : provided.backgroundColor) : (state.isFocused ? '#e5e7eb' : provided.backgroundColor), // dark:hover:bg-gray-700
+      backgroundColor: isDarkMode ? (state.isFocused ? 'rgb(55 65 81 / 1)' : provided.backgroundColor) : (state.isFocused ? '#e5e7eb' : provided.backgroundColor),
       color: isDarkMode ? (state.isFocused ? '#fff' : 'rgb(255 255 255 / 0.9)') : (state.isFocused ? '#111827' : '#111827'),
     }),
   };
@@ -171,7 +160,6 @@ const DepotageHistoryPDFExcelModal = ({ isOpen, onClose, agencies }) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Générer l'historique des dépotages">
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Période */}
         <div className="flex gap-4">
           <Input
             id="start_date"
@@ -193,7 +181,6 @@ const DepotageHistoryPDFExcelModal = ({ isOpen, onClose, agencies }) => {
           />
         </div>
 
-        {/* Agence - Utilisation de react-select pour une meilleure UX */}
         {agencies && agencies.length > 0 && (
           <div className="mb-4">
             <label htmlFor="agency_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -206,7 +193,8 @@ const DepotageHistoryPDFExcelModal = ({ isOpen, onClose, agencies }) => {
               value={agencyOptions.find(option => option.value === data.agency_id)}
               onChange={handleAgencyChange}
               placeholder="Sélectionnez une agence"
-              isClearable
+              isClearable={isDirection}
+              isDisabled={!isDirection && agencies.length === 1}
               styles={selectStyles}
               classNamePrefix="react-select"
             />
@@ -214,7 +202,6 @@ const DepotageHistoryPDFExcelModal = ({ isOpen, onClose, agencies }) => {
           </div>
         )}
 
-        {/* Type de Fichier */}
         <div className="mb-4">
           <label htmlFor="file_type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Format de Fichier

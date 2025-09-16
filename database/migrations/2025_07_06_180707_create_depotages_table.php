@@ -19,7 +19,7 @@ return new class extends Migration
             $table->unsignedBigInteger("agency_id");
             $table->unsignedBigInteger("recorded_by_user_id");
             $table->decimal("quantity");
-            $table->foreign("citerne_mobile_id")->on("citernes")->references("id");
+            $table->foreign("citerne_mobile_id")->on("vehicules")->references("id");
             $table->foreign("citerne_fixe_id")->on("citernes")->references("id");
             $table->foreign("article_id")->on("articles")->references("id");
             $table->foreign("recorded_by_user_id")->on("users")->references("id");

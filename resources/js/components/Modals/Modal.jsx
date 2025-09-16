@@ -11,7 +11,7 @@ const Modal = ({ isOpen, onClose, children, title }) => {
     <div
       className="fixed inset-0 z-[9999999] flex items-center justify-center overflow-x-hidden overflow-y-auto outline-none focus:outline-none bg-gray-900/20 dark:bg-white/10 bg-opacity-70"
       // Optionnel: Fermer la modale si l'on clique en dehors du contenu
-      onClick={onClose}
+     
     >
       {/*
         Le conteneur interne de la modale.

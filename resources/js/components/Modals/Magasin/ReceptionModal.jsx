@@ -81,7 +81,7 @@ const ReceptionFormModal = ({ isOpen, onClose, articles, citernesMobiles, agenci
             <option value="">Sélectionnez une citerne mobile</option>
             {citernesMobiles && citernesMobiles.map(citerne => (
               <option key={citerne.id} value={String(citerne.id)}>
-                {citerne.name}
+                camion citerne {citerne.licence_plate}
               </option>
             ))}
           </select>

@@ -31,7 +31,6 @@ const CiterneFormModal = ({ isOpen, onClose, entreprises, agencies, products, se
 
     const citerneTypes = [
         { value: 'fixed', label: 'Fixe' },
-        { value: 'mobile', label: 'Mobile' },
     ];
 
     const productTypes = [

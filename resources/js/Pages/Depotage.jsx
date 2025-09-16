@@ -283,7 +283,7 @@ const PageContent = ({ depotages: initialDepotages, agencies }) => {
                   filteredDepotages.map(depotage => (
                     <TableRow key={depotage.id}>
                       <TableCell className="py-4">{depotage.id}</TableCell>
-                      <TableCell className="py-4">{depotage.citerne_mobile ? depotage.citerne_mobile.name : '—'}</TableCell>
+                      <TableCell className="py-4">{depotage.citerne_mobile ? depotage.citerne_mobile.licence_plate : '—'}</TableCell>
                       <TableCell className="py-4">{depotage.citerne_fixe ? depotage.citerne_fixe.name : '—'}</TableCell>
                       <TableCell className="py-4">{depotage.article ? depotage.article.name : '—'}</TableCell>
                       <TableCell className="py-4">{depotage.quantity.toLocaleString('fr-FR')}</TableCell>

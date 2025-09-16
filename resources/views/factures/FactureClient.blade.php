@@ -108,16 +108,16 @@
         <div class="invoice-details">
             <div>
                 <h3>Facturé à</h3>
-                <p><strong>{{ $facture->client->first_name }} {{ $facture->client->last_name }}</strong></p>
+                <p><strong>{{ $facture->client->name }}</strong></p>
                 <p>{{ $facture->client->address ?? 'Non spécifié' }}</p>
                 <p>Tél: {{ $facture->client->phone_number }}</p>
                 <p>Email: {{ $facture->client->email ?? 'Non spécifié' }}</p>
             </div>
             <div>
                 <h3>Informations de la Vente</h3>
-                <p>Type de vente: **{{ $facture->type }}**</p>
+                <p>Type de vente: **{{ $facture->invoice_type }}**</p>
                 <p>Mode de paiement: **{{ $facture->currency }}**</p>
-                <p>Enregistrée par: **{{ $facture->user->name }}**</p>
+                <p>Enregistrée par: **{{ $facture->user->first_name." ".$facture->user->last_name }}**</p>
             </div>
         </div>
 

@@ -75,7 +75,8 @@ const ReceptionHistoryPDFExcelModal = ({ isOpen, onClose, agencies, currentFilte
             value={data.agency_id}
             onChange={handleChange}
           >
-            <option value="">Toutes les agences</option>
+            {auth.user.role =="direction" ?<option value="">Toutes les agences</option>:""}
+            
             {agencies.map(agency => (
               <option key={agency.id} value={String(agency.id)}>
                 {agency.name}

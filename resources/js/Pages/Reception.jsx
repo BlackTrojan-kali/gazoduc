@@ -267,7 +267,7 @@ const PageContent = ({ receptions: initialReceptions, agencies }) => {
                   filteredReceptions.map(reception => (
                     <TableRow key={reception.id}>
                       <TableCell className="py-4">{reception.id}</TableCell>
-                      <TableCell className="py-4">{reception.citerne_mobile ? reception.citerne_mobile.name : '—'}</TableCell>
+                      <TableCell className="py-4">{reception.citerne ? reception.citerne.licence_plate : '—'}</TableCell>
                       <TableCell className="py-4">{reception.article ? reception.article.name : '—'}</TableCell>
                       <TableCell className="py-4">{reception.received_quantity.toLocaleString('fr-FR')}</TableCell>
                       <TableCell className="py-4">{reception.agency ? reception.agency.name : '—'}</TableCell>

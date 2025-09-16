@@ -15,7 +15,7 @@ class Reception extends Model
     }
 
     public function citerne(){
-        return $this->belongsTo(Citerne::class,"citerne_mobile_id");
+        return $this->belongsTo(Vehicule::class,"citerne_mobile_id");
     }
     public function article(){
         return $this->belongsTo(Article::class,"article_id");

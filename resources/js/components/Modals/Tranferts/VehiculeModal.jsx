@@ -145,7 +145,7 @@ const VehicleFormModal = ({ isOpen, onClose, vehicle, routeName }) => {
 
         {/* Champ Capacité (Litres) - Facultatif */}
         <div>
-          <Label htmlFor="vehicle-capacity_liters">Capacité (Litres)</Label>
+          <Label htmlFor="vehicle-capacity_liters">Capacité</Label>
           <Input
             type="number"
             id="vehicle-capacity_liters"
