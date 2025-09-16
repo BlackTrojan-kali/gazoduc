@@ -18,7 +18,7 @@ const DepotageHistoryPDFExcelModal = ({ isOpen, onClose, agencies }) => {
     { value: 'excel', label: 'Excel' },
     ...(isDirection ? [{ value: 'pdf_deleted', label: 'PDF (avec suppressions)' }] : []),
   ];
-
+ 
   const { data, setData, processing, errors, reset } = useForm({
     start_date: '',
     end_date: '',
