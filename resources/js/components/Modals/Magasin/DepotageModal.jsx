@@ -62,7 +62,7 @@ const DepotageFormModal = ({ isOpen, onClose, citernesMobiles, citernesFixes, ar
     };
 
     post(route('magasin.depotage'), {
-      data: formData, // AJOUTÉ : Envoyer les données mappées
+      data: formData, //  AJOUTÉ : Envoyer les données mappées
       onSuccess: () => {
         Swal.fire({
           icon: 'success',
