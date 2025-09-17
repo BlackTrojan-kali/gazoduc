@@ -11,12 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('article_bordereau_route', function (Blueprint $table) {
+        Schema::create('packages', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger("bordereau_route_id");
             $table->unsignedBigInteger("article_id");
+            $table->unsignedBigInteger("departure_agency_id");
+            $table->unsignedBigInteger("arrival_agency_id");
             $table->decimal("qty",14,2);
+            $table->string("status");
+            $table->string("note")->nullable();
             $table->foreign("bordereau_route_id")->on("bordereau_routes")->references("id")->onDelete("cascade");
+            $table->foreign("departure_agency_id")->on("agencies")->references("id")->onDelete("cascade");
+            $table->foreign("arrival_agency_id")->on("agencies")->references("id")->onDelete("cascade");
             $table->foreign("article_id")->on("articles")->references("id")->onDelete("cascade");
             $table->timestamps();
         });
@@ -27,6 +33,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('table_article_bordereau_route');
+        Schema::dropIfExists('packages');
     }
 };

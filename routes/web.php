@@ -187,6 +187,7 @@ Route::middleware(isAuthenticatedMiddleware::class)->group(function(){
     Route::delete('/roadbills/{id}', [BrouteController::class, 'destroy'])->name('broutes.destroy');
     Route::post('/roadbills/{roadbill}/validate',[BrouteController::class, 'validateRoadbill'])->name('broutes.validate');
     Route::get('/roadbills/export',[BrouteController::class, 'export'])->name('broutes.export');
+    Route::get('/bordereaux/{roadbill}/packages', [BrouteController::class, 'showPackages'])->name('broutes.packages.index');
     //sales rroutes
     Route::get("/controlleur-sales",[RegionalController::class,"sales"])->name("controlleu.sales");
     Route::get("/controlleur-payment",[RegionalController::class,"payments"])->name("controlleur.payments");

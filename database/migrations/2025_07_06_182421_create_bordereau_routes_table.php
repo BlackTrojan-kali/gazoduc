@@ -14,21 +14,26 @@ return new class extends Migration
         Schema::create('bordereau_routes', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger("vehicule_id");
-            $table->foreign("vehicule_id")->on("vehicules")->references("id")->onDelete("cascade");
             $table->unsignedBigInteger("chauffeur_id");
-            $table->foreign("chauffeur_id")->on("chauffeurs")->references("id")->onDelete("cascade");
             $table->unsignedBigInteger("co_chauffeur_id")->nullable();
-            $table->foreign("co_chauffeur_id")->on("chauffeurs")->references("id");
             $table->unsignedBigInteger("departure_location_id");
-            $table->foreign("departure_location_id")->on("agencies")->references("id");
             $table->unsignedBigInteger("arrival_location_id");
-            $table->foreign("arrival_location_id")->on("agencies")->references("id")->onDelete("cascade");
-            $table->dateTime("arrival_date")->nullable();
-            $table->dateTime("departure_date");
+            
+            $table->date("departure_date");
+            $table->date("arrival_date")->nullable(); // Rendre nullable, car la date d'arrivée n'est pas connue au début du trajet
             $table->string("status");
-            $table->string("types")->nullable();
-            $table->Text("notes")->nullable();
+            
+            // Foreign Keys
+            $table->foreign("vehicule_id")->on("vehicules")->references("id")->onDelete("cascade");
+            $table->foreign("chauffeur_id")->on("chauffeurs")->references("id")->onDelete("cascade");
+            $table->foreign("co_chauffeur_id")->on("chauffeurs")->references("id");
+            $table->foreign("departure_location_id")->on("agencies")->references("id");
+            $table->foreign("arrival_location_id")->on("agencies")->references("id")->onDelete("cascade");
+            
             $table->timestamps();
+            
+            // Ajout d'index pour les requêtes de recherche fréquentes
+            $table->index('status');
         });
     }
 

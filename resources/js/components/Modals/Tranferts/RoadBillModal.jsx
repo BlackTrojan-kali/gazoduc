@@ -1,440 +1,250 @@
-import React, { useEffect, useState } from 'react';
-import { useForm, usePage } from '@inertiajs/react';
-import Modal from '../Modal';
-import Form from '../../form/Form';
-import Label from '../../form/Label';
-import Input from '../../form/input/InputField';
+import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
-
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSpinner } from '@fortawesome/free-solid-svg-icons';
 import Swal from 'sweetalert2';
+import Modal from '../Modal';
+import { usePage, useForm } from '@inertiajs/react';
+import AddPackagesModal from './AddPackagesModal';
 
-import ArticlesSelectionModal from './ArticleSelectionModal';
+const BrouteFormModal = ({ isOpen, onClose, vehicles, drivers, agencies, articles }) => {
+    const { auth } = usePage().props;
+    const isDirection = auth.user.role?.name === 'direction';
+    const userAgencyId = auth.user.agency?.id;
 
-const RoadbillFormModal = ({ isOpen, onClose, roadbill, routeName, vehicles, drivers, agencies, articles }) => {
-  const { auth } = usePage().props;
-  const userAgencyId = auth.user.agency_id;
-  const userAgencyName = auth.user.agency?.name;
+    const { data, setData, post, processing, reset, errors } = useForm({
+        vehicle_id: null,
+        driver_id: null,
+        co_driver_id: null,
+        departure_location_id: userAgencyId,
+        arrival_location_id: null,
+        departure_date: new Date().toISOString().slice(0, 10),
+        arrival_date: '',
+        status: 'en_cours',
+        note: '',
+        type: 'livraison',
+        packages: [],
+    });
 
-  const { data, setData, post, put, processing, errors, reset, recentlySuccessful } = useForm({
-    vehicle_id: '',
-    driver_id: '',
-    co_driver_id: '',
-    departure_location_id: '',
-    arrival_location_id: '',
-    departure_date: '',
-    arrival_date: '',
-    status: 'en_cours',
-    type: '',
-    note: '',
-    articles: [],
-  });
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isAddPackagesModalOpen, setIsAddPackagesModalOpen] = useState(false);
 
-  const [isArticlesModalOpen, setIsArticlesModalOpen] = useState(false);
+    useEffect(() => {
+        if (!isDirection && userAgencyId) {
+            setData('departure_location_id', userAgencyId);
+        }
+    }, [isDirection, userAgencyId]);
 
-  const vehicleOptions = vehicles.map(v => ({ value: v.id, label: v.licence_plate }));
-  const driverOptions = drivers.map(d => ({ value: d.id, label: d.name }));
-  const agencyOptions = agencies.map(a => ({ value: a.id, label: a.name }));
-  const typeOptions = [
-    { value: 'ramassage', label: 'Ramassage' },
-    { value: 'livraison', label: 'Livraison' },
-    { value: 'transit', label: 'Transit' },
-  ];
-
-  useEffect(() => {
-    if (isOpen) {
-      if (roadbill) {
-        setData({
-          vehicle_id: roadbill.vehicle_id || '',
-          driver_id: roadbill.driver_id || '',
-          co_driver_id: roadbill.co_driver_id || '',
-          departure_location_id: roadbill.departure_location_id || '',
-          arrival_location_id: roadbill.arrival_location_id || '',
-          departure_date: roadbill.departure_date ? new Date(roadbill.departure_date).toISOString().slice(0, 16) : '',
-          arrival_date: roadbill.arrival_date ? new Date(roadbill.arrival_date).toISOString().slice(0, 16) : '',
-          status: roadbill.status || 'en_cours',
-          type: roadbill.type || '',
-          note: roadbill.note || '',
-          articles: roadbill.articles || [],
-        });
-      } else {
+    const handleClose = () => {
         reset();
-        setData({
-          vehicle_id: '',
-          driver_id: '',
-          co_driver_id: '',
-          departure_location_id: userAgencyId,
-          arrival_location_id: '',
-          departure_date: '',
-          arrival_date: '',
-          status: 'en_cours',
-          type: '',
-          note: '',
-          articles: [],
+        setIsAddPackagesModalOpen(false);
+        onClose();
+    };
+
+    const handleAddPackages = (newPackages) => {
+        setData('packages', newPackages);
+    };
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        
+        setIsSubmitting(true);
+        post(route('broutes.store'), {
+            onSuccess: () => {
+                Swal.fire('Succès', 'Bordereau de route créé avec succès !', 'success');
+                handleClose();
+            },
+            onError: (err) => {
+                const errorMessage = err?.message || 'Une erreur est survenue. Veuillez vérifier les champs.';
+                Swal.fire('Erreur', errorMessage, 'error');
+            },
+            onFinish: () => {
+                setIsSubmitting(false);
+            }
         });
-      }
-    }
-  }, [isOpen, roadbill, reset, setData, userAgencyId]);
+    };
 
-  useEffect(() => {
-    if (recentlySuccessful) {
-      reset();
-      setData('articles', []);
-      onClose();
-      Swal.fire({
-        title: 'Succès !',
-        text: `Bordereau ${roadbill ? 'modifié' : 'créé'} avec succès.`,
-        icon: 'success',
-        timer: 1500,
-        showConfirmButton: false
-      });
-    }
-  }, [recentlySuccessful, reset, onClose, roadbill, setData]);
+    const vehicleOptions = vehicles.map(v => ({ value: v.id, label: v.licence_plate }));
+    const driverOptions = drivers.map(d => ({ value: d.id, label: d.name }));
+    const agencyOptions = agencies.map(a => ({ value: a.id, label: a.name }));
+    
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    const customStyles = {
+        control: (provided) => ({ ...provided, backgroundColor: isDarkMode ? '#374151' : '#f3f4f6', borderColor: isDarkMode ? '#4b5563' : '#d1d5db' }),
+        singleValue: (provided) => ({ ...provided, color: isDarkMode ? '#ffffff' : '#1f2937' }),
+        input: (provided) => ({ ...provided, color: isDarkMode ? '#ffffff' : '#1f2937' }),
+        placeholder: (provided) => ({ ...provided, color: '#9ca3af' }),
+        menu: (provided) => ({ ...provided, backgroundColor: isDarkMode ? '#1f2937' : '#ffffff', zIndex: 9999 }),
+        option: (provided, state) => ({ ...provided, backgroundColor: state.isSelected ? '#2563eb' : (state.isFocused ? (isDarkMode ? '#3b82f6' : '#e5e7eb') : 'transparent'), color: state.isSelected || state.isFocused ? '#ffffff' : (isDarkMode ? '#e5e7eb' : '#1f2937') }),
+    };
 
-  const openArticlesModal = () => setIsArticlesModalOpen(true);
-  const closeArticlesModal = () => setIsArticlesModalOpen(false);
+    const canOpenAddPackages = data.departure_location_id && data.arrival_location_id;
 
-  const handleSaveSelectedArticles = (selectedItems) => {
-    setData('articles', selectedItems);
-  };
+    return (
+        <>
+            <Modal isOpen={isOpen} onClose={handleClose} title="Créer un Bordereau de Route">
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Agence de départ */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Agence de départ <span className="text-red-500">*</span>
+                            </label>
+                            <Select
+                                name="departure_location_id"
+                                options={agencyOptions}
+                                value={agencyOptions.find(opt => opt.value === data.departure_location_id)}
+                                onChange={(selectedOption) => setData('departure_location_id', selectedOption?.value)}
+                                className="mt-1"
+                                placeholder="Sélectionner..."
+                                isClearable={false}
+                                isDisabled={!isDirection}
+                                styles={customStyles}
+                            />
+                            {errors.departure_location_id && <div className="text-red-500 text-sm mt-1">{errors.departure_location_id}</div>}
+                        </div>
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+                        {/* Agence d'arrivée */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Agence d'arrivée <span className="text-red-500">*</span>
+                            </label>
+                            <Select
+                                name="arrival_location_id"
+                                options={agencyOptions}
+                                value={agencyOptions.find(opt => opt.value === data.arrival_location_id)}
+                                onChange={(selectedOption) => setData('arrival_location_id', selectedOption?.value)}
+                                className="mt-1"
+                                placeholder="Sélectionner..."
+                                styles={customStyles}
+                            />
+                            {errors.arrival_location_id && <div className="text-red-500 text-sm mt-1">{errors.arrival_location_id}</div>}
+                        </div>
 
-    if (!data.articles || data.articles.length === 0) {
-      Swal.fire({
-        title: 'Attention !',
-        text: 'Veuillez sélectionner au moins un article à transférer.',
-        icon: 'warning',
-        confirmButtonText: 'OK'
-      });
-      return;
-    }
+                        {/* Véhicule */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Véhicule <span className="text-red-500">*</span>
+                            </label>
+                            <Select
+                                name="vehicle_id"
+                                options={vehicleOptions}
+                                value={vehicleOptions.find(opt => opt.value === data.vehicle_id)}
+                                onChange={(selectedOption) => setData('vehicle_id', selectedOption?.value)}
+                                className="mt-1"
+                                placeholder="Sélectionner..."
+                                styles={customStyles}
+                            />
+                            {errors.vehicle_id && <div className="text-red-500 text-sm mt-1">{errors.vehicle_id}</div>}
+                        </div>
 
-    if (roadbill) {
-      put(route(routeName, roadbill.id), {
-        preserveScroll: true,
-        onError: (validationErrors) => {
-          Swal.fire({
-            title: 'Erreur !',
-            text: 'Veuillez corriger les erreurs dans le formulaire.',
-            icon: 'error',
-            confirmButtonText: 'OK'
-          });
-          console.error("Validation Errors:", validationErrors);
-        },
-      });
-    } else {
-      post(route(routeName), {
-        preserveScroll: true,
-        onError: (validationErrors) => {
-          Swal.fire({
-            title: 'Erreur !',
-            text: 'Veuillez corriger les erreurs dans le formulaire.',
-            icon: 'error',
-            confirmButtonText: 'OK'
-          });
-          console.error("Validation Errors:", validationErrors);
-        },
-      });
-    }
-  };
+                        {/* Chauffeur */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Chauffeur <span className="text-red-500">*</span>
+                            </label>
+                            <Select
+                                name="driver_id"
+                                options={driverOptions}
+                                value={driverOptions.find(opt => opt.value === data.driver_id)}
+                                onChange={(selectedOption) => setData('driver_id', selectedOption?.value)}
+                                className="mt-1"
+                                placeholder="Sélectionner..."
+                                styles={customStyles}
+                            />
+                            {errors.driver_id && <div className="text-red-500 text-sm mt-1">{errors.driver_id}</div>}
+                        </div>
 
-  const customStyles = {
-    control: (provided, state) => ({
-      ...provided,
-      backgroundColor: '#f3f4f6',
-      borderColor: errors[state.selectProps.name] ? '#ef4444' : '#d1d5db',
-      color: '#1f2937',
-      borderRadius: '0.375rem',
-      boxShadow: state.isFocused ? '0 0 0 1px #3b82f6' : null,
-      minHeight: '42px',
+                        {/* Co-Chauffeur */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Co-Chauffeur
+                            </label>
+                            <Select
+                                name="co_driver_id"
+                                options={driverOptions}
+                                value={driverOptions.find(opt => opt.value === data.co_driver_id)}
+                                onChange={(selectedOption) => setData('co_driver_id', selectedOption?.value)}
+                                className="mt-1"
+                                placeholder="Sélectionner..."
+                                isClearable
+                                styles={customStyles}
+                            />
+                            {errors.co_driver_id && <div className="text-red-500 text-sm mt-1">{errors.co_driver_id}</div>}
+                        </div>
+                        
+                        {/* Date de départ */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Date de départ <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="date"
+                                name="departure_date"
+                                value={data.departure_date}
+                                onChange={(e) => setData('departure_date', e.target.value)}
+                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                            />
+                            {errors.departure_date && <div className="text-red-500 text-sm mt-1">{errors.departure_date}</div>}
+                        </div>
+                    </div>
+                    
+                    <div className="mt-6">
+                        <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">Articles à ajouter</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Veuillez d'abord sélectionner les agences de départ et d'arrivée.</p>
+                        <button
+                            type="button"
+                            onClick={() => setIsAddPackagesModalOpen(true)}
+                            className={`mt-2 bg-purple-500 text-white font-bold uppercase text-sm px-6 py-3 rounded shadow hover:shadow-lg transition-colors duration-150 ${!canOpenAddPackages ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            disabled={!canOpenAddPackages}
+                        >
+                            Ajouter des articles
+                        </button>
+                    </div>
 
-      '.dark &': {
-        backgroundColor: '#374151',
-        borderColor: errors[state.selectProps.name] ? '#ef4444' : '#4b5563',
-        color: '#ffffff',
-      },
-      '&:hover': {
-        borderColor: errors[state.selectProps.name] ? '#ef4444' : '#6b7280',
-        '.dark &': {
-          borderColor: errors[state.selectProps.name] ? '#ef4444' : '#60a5fa',
-        },
-      },
-    }),
-    singleValue: (provided) => ({
-      ...provided,
-      color: '#1f2937',
-      '.dark &': {
-        color: '#ffffff',
-      },
-    }),
-    input: (provided) => ({
-      ...provided,
-      color: '#1f2937',
-      '.dark &': {
-        color: '#ffffff',
-      },
-    }),
-    placeholder: (provided) => ({
-      ...provided,
-      color: '#9ca3af',
-      '.dark &': {
-        color: '#9ca3af',
-      },
-    }),
-    menu: (provided) => ({
-      ...provided,
-      backgroundColor: '#ffffff',
-      borderRadius: '0.375rem',
-      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)',
-      zIndex: 9999,
-      
-      '.dark &': {
-        backgroundColor: '#1f2937',
-      },
-    }),
-    option: (provided, state) => ({
-      ...provided,
-      backgroundColor: state.isSelected ? '#2563eb' : (state.isFocused ? '#3b82f6' : 'transparent'),
-      color: state.isSelected || state.isFocused ? '#ffffff' : '#1f2937',
+                    {data.packages.length > 0 && (
+                        <div className="mt-4">
+                            <h4 className="text-md font-medium text-gray-700 dark:text-gray-300">Articles ajoutés :</h4>
+                            <ul className="mt-2 space-y-2">
+                                {data.packages.map((pkg, index) => (
+                                    <li key={index} className="flex justify-between items-center bg-gray-100 dark:bg-gray-800 p-3 rounded-md">
+                                        <span className="text-sm text-gray-800 dark:text-gray-200">
+                                            {pkg.qty} x {pkg.article_name} (Départ : {pkg.departure_agency_name} &rarr; Arrivée : {pkg.arrival_agency_name})
+                                        </span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
 
-      '.dark &': {
-        backgroundColor: state.isSelected ? '#2563eb' : (state.isFocused ? '#3b82f6' : 'transparent'),
-        color: state.isSelected || state.isFocused ? '#ffffff' : '#e5e7eb',
-      },
-    }),
-    indicatorSeparator: (provided) => ({
-      ...provided,
-      backgroundColor: '#9ca3af',
-      '.dark &': {
-        backgroundColor: '#6b7280',
-      },
-    }),
-    dropdownIndicator: (provided) => ({
-      ...provided,
-      color: '#6b7280',
-      '.dark &': {
-        color: '#9ca3af',
-      },
-      '&:hover': {
-        color: '#3b82f6',
-      },
-    }),
-    clearIndicator: (provided) => ({
-      ...provided,
-      color: '#6b7280',
-      '&:hover': {
-        color: '#ef4444',
-      },
-    }),
-  };
-
-  return (
-    <>
-      <Modal isOpen={isOpen} onClose={onClose} title={roadbill ? "Modifier le Bordereau de Route" : "Créer un Nouveau Bordereau de Route"}>
-        <Form onSubmit={handleSubmit} className="space-y-4">
-          {/* Champ Véhicule */}
-          <div>
-            <Label htmlFor="roadbill-vehicle_id">Véhicule <span className="text-red-500">*</span></Label>
-            <Select
-              id="roadbill-vehicle_id"
-              name="vehicle_id"
-              options={vehicleOptions}
-              value={vehicleOptions.find(option => option.value === data.vehicle_id) || null}
-              onChange={(selectedOption) => setData('vehicle_id', selectedOption ? selectedOption.value : '')}
-              isDisabled={processing}
-              placeholder="Sélectionner un véhicule"
-              isClearable
-              styles={customStyles}
-              classNamePrefix="react-select"
+                    <div className="flex items-center justify-end p-6 border-t border-solid border-gray-200 rounded-b dark:border-gray-700 mt-4">
+                        <button
+                            type="button"
+                            className="text-red-500 background-transparent font-bold uppercase px-6 py-2 text-sm outline-none focus:outline-none mr-1 mb-1"
+                            onClick={handleClose}
+                        >
+                            Annuler
+                        </button>
+                        <button
+                            type="submit"
+                            className="bg-blue-500 text-white active:bg-blue-600 font-bold uppercase text-sm px-6 py-3 rounded shadow hover:shadow-lg outline-none focus:outline-none"
+                            disabled={isSubmitting || processing}
+                        >
+                            {isSubmitting ? 'Création...' : 'Créer le Bordereau'}
+                        </button>
+                    </div>
+                </form>
+            </Modal>
+            
+            <AddPackagesModal
+                isOpen={isAddPackagesModalOpen}
+                onClose={() => setIsAddPackagesModalOpen(false)}
+                articles={articles}
+                agencyOptions={agencyOptions}
+                onAddPackages={handleAddPackages}
+                departureAgencyId={data.departure_location_id}
+                arrivalAgencyId={data.arrival_location_id}
             />
-            {errors.vehicle_id && <div className="text-red-500 text-sm mt-1">{errors.vehicle_id}</div>}
-          </div>
-
-          {/* Conteneur pour Chauffeur et Co-Chauffeur */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Champ Chauffeur Principal */}
-            <div>
-              <Label htmlFor="roadbill-driver_id">Chauffeur Principal <span className="text-red-500">*</span></Label>
-              <Select
-                id="roadbill-driver_id"
-                name="driver_id"
-                options={driverOptions}
-                value={driverOptions.find(option => option.value === data.driver_id) || null}
-                onChange={(selectedOption) => setData('driver_id', selectedOption ? selectedOption.value : '')}
-                isDisabled={processing}
-                placeholder="Sélectionner un chauffeur"
-                isClearable
-                styles={customStyles}
-                classNamePrefix="react-select"
-              />
-              {errors.driver_id && <div className="text-red-500 text-sm mt-1">{errors.driver_id}</div>}
-            </div>
-
-            {/* Champ Co-Chauffeur (facultatif) */}
-            <div>
-              <Label htmlFor="roadbill-co_driver_id">Co-Chauffeur</Label>
-              <Select
-                id="roadbill-co_driver_id"
-                name="co_driver_id"
-                options={driverOptions}
-                value={driverOptions.find(option => option.value === data.co_driver_id) || null}
-                onChange={(selectedOption) => setData('co_driver_id', selectedOption ? selectedOption.value : '')}
-                isDisabled={processing}
-                placeholder="Aucun co-chauffeur"
-                isClearable
-                styles={customStyles}
-                classNamePrefix="react-select"
-              />
-              {errors.co_driver_id && <div className="text-red-500 text-sm mt-1">{errors.co_driver_id}</div>}
-            </div>
-          </div>
-
-          {/* Conteneur pour Agence de Départ et Agence d'Arrivée */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Affichage du nom de l'agence de départ non-modifiable */}
-            <div>
-              <Label htmlFor="roadbill-departure_location_id">Agence de Départ <span className="text-red-500">*</span></Label>
-              <p className="mt-1 block w-full rounded-md bg-gray-100 border-gray-300 shadow-sm px-3 py-2 text-gray-700 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200">
-                {userAgencyName}
-              </p>
-              <input type="hidden" name="departure_location_id" value={data.departure_location_id} />
-            </div>
-
-            {/* Champ Agence d'Arrivée */}
-            <div>
-              <Label htmlFor="roadbill-arrival_location_id">Agence d'Arrivée <span className="text-red-500">*</span></Label>
-              <Select
-                id="roadbill-arrival_location_id"
-                name="arrival_location_id"
-                options={agencyOptions}
-                value={agencyOptions.find(option => option.value === data.arrival_location_id) || null}
-                onChange={(selectedOption) => setData('arrival_location_id', selectedOption ? selectedOption.value : '')}
-                isDisabled={processing}
-                placeholder="Sélectionner une agence d'arrivée"
-                isClearable
-                styles={customStyles}
-                classNamePrefix="react-select"
-              />
-              {errors.arrival_location_id && <div className="text-red-500 text-sm mt-1">{errors.arrival_location_id}</div>}
-            </div>
-          </div>
-
-          {/* Champ Date de Départ */}
-          <div>
-            <Label htmlFor="roadbill-departure_date">Date de Départ <span className="text-red-500">*</span></Label>
-            <Input
-              type="datetime-local"
-              id="roadbill-departure_date"
-              name="departure_date"
-              value={data.departure_date}
-              onChange={(e) => setData('departure_date', e.target.value)}
-              disabled={processing}
-              error={!!errors.departure_date}
-              hint={errors.departure_date}
-              required
-            />
-          </div>
-
-          {/* Champ Date d'Arrivée (facultatif) */}
-          <div className='hidden'>
-            <Label htmlFor="roadbill-arrival_date">Date d'Arrivée</Label>
-            <Input
-              type="datetime-local"
-              id="roadbill-arrival_date"
-              name="arrival_date"
-              value={data.arrival_date}
-              onChange={(e) => setData('arrival_date', e.target.value)}
-              disabled={processing}
-              error={!!errors.arrival_date}
-              hint={errors.arrival_date}
-            />
-          </div>
-
-          {/* Champ Type */}
-          <div>
-            <Label htmlFor="roadbill-type">Type <span className="text-red-500">*</span></Label>
-            <Select
-              id="roadbill-type"
-              name="type"
-              options={typeOptions}
-              value={typeOptions.find(option => option.value === data.type) || null}
-              onChange={(selectedOption) => setData('type', selectedOption ? selectedOption.value : '')}
-              isDisabled={processing}
-              placeholder="Sélectionner un type"
-              styles={customStyles}
-              classNamePrefix="react-select"
-            />
-            {errors.type && <div className="text-red-500 text-sm mt-1">{errors.type}</div>}
-          </div>
-
-          {/* Champ Note (Commentaire) */}
-          <div className='hidden'>
-            <Label htmlFor="roadbill-note">Note (Commentaire)</Label>
-            <textarea
-              id="roadbill-note"
-              name="note"
-              value={data.note}
-              onChange={(e) => setData('note', e.target.value)}
-              disabled={processing}
-              className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.note ? 'border-red-500' : ''}`}
-              rows="3"
-            ></textarea>
-            {errors.note && <div className="text-red-500 text-sm mt-1">{errors.note}</div>}
-          </div>
-
-          {/* Bouton pour ouvrir la modale de sélection d'articles */}
-          <div className="mt-6">
-            <button
-              type="button"
-              onClick={openArticlesModal}
-              className="w-full bg-indigo-600 text-white active:bg-indigo-700 font-bold uppercase text-sm px-6 py-3 rounded shadow hover:shadow-lg outline-none focus:outline-none ease-linear transition-all duration-150"
-            >
-              Sélectionner les Articles ({data.articles.length})
-            </button>
-            {errors.articles && <div className="text-red-500 text-sm mt-1">{errors.articles}</div>}
-          </div>
-
-          {/* Pied de la modale (boutons de soumission) */}
-          <div className="flex items-center justify-end p-6 border-t border-solid border-gray-200 rounded-b dark:border-gray-700 mt-4">
-            <button
-              type="button"
-              className="text-red-500 background-transparent font-bold uppercase px-6 py-2 text-sm outline-none focus:outline-none mr-1 mb-1 ease-linear transition-all duration-150"
-              onClick={onClose}
-              disabled={processing}
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              className="bg-blue-500 text-white active:bg-blue-600 font-bold uppercase text-sm px-6 py-3 rounded shadow hover:shadow-lg outline-none focus:outline-none ease-linear transition-all duration-150"
-              disabled={processing}
-            >
-              {processing ? (
-                <>
-                  <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
-                  {roadbill ? 'Mise à jour...' : 'Création...'}
-                </>
-              ) : (
-                roadbill ? 'Modifier le bordereau' : 'Créer le bordereau'
-              )}
-            </button>
-          </div>
-        </Form>
-      </Modal>
-
-      {/* Modale de sélection des articles */}
-      <ArticlesSelectionModal
-        isOpen={isArticlesModalOpen}
-        onClose={closeArticlesModal}
-        articles={articles}
-        onSaveArticles={handleSaveSelectedArticles}
-        initialSelectedArticles={data.articles}
-      />
-    </>
-  );
+        </>
+    );
 };
 
-export default RoadbillFormModal;
+export default BrouteFormModal;
