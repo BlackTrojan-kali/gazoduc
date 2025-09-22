@@ -1,3 +1,5 @@
+// resources/js/components/Modals/Sales/NewSaleModal.jsx
+
 import React, { useState, useEffect, useMemo } from 'react';
 import Select from 'react-select';
 import Swal from 'sweetalert2';
@@ -5,8 +7,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFilePdf, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import Modal from '../Modal'; // Assurez-vous que ce chemin est correct
 
-const ExportInvoicePdfModal = ({ isOpen, onClose, clients, agencies, banks }) => { // Ajout de la prop `banks`
-    // État pour les filtres d'exportation
+const ExportInvoicePdfModal = ({ isOpen, onClose, clients, agencies, banks }) => {
     const [exportFilters, setExportFilters] = useState({
         selectedClient: '',
         selectedAgency: '',
@@ -18,7 +19,6 @@ const ExportInvoicePdfModal = ({ isOpen, onClose, clients, agencies, banks }) =>
     const [isExporting, setIsExporting] = useState(false);
     const [isDarkMode, setIsDarkMode] = useState(false);
 
-    // Effet pour détecter le mode sombre
     useEffect(() => {
         const observer = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
@@ -32,7 +32,6 @@ const ExportInvoicePdfModal = ({ isOpen, onClose, clients, agencies, banks }) =>
         return () => observer.disconnect();
     }, []);
 
-    // Définition des variables CSS pour les couleurs en fonction du thème
     const colors = useMemo(() => {
         return {
             '--text-color': isDarkMode ? 'rgb(249 250 251 / 0.9)' : 'rgb(31 41 55)',
@@ -43,7 +42,6 @@ const ExportInvoicePdfModal = ({ isOpen, onClose, clients, agencies, banks }) =>
         };
     }, [isDarkMode]);
 
-    // Styles personnalisés pour react-select
     const customStyles = useMemo(() => ({
         control: (baseStyles, state) => ({
             ...baseStyles,
@@ -71,10 +69,8 @@ const ExportInvoicePdfModal = ({ isOpen, onClose, clients, agencies, banks }) =>
         clearIndicator: (baseStyles) => ({ ...baseStyles, color: colors['--placeholder-color'], '&:hover': { color: '#EF4444' } }),
     }), [isDarkMode, colors]);
 
-
-    // Mise en forme des options pour react-select
     const clientOptions = useMemo(() => 
-        clients?.map(client => ({ value: client.id, label: client.name })) || [],
+        [{ value: '', label: 'Tous les clients' }, ...clients?.map(client => ({ value: client.id, label: client.name })) || []],
         [clients]
     );
     const agencyOptions = useMemo(() => 
@@ -87,17 +83,14 @@ const ExportInvoicePdfModal = ({ isOpen, onClose, clients, agencies, banks }) =>
         { value: 'vente', label: 'Vente' },
     ], []);
 
-    // Options pour le filtre de banque (dynamique)
     const bankOptions = useMemo(() => 
-        banks?.map(bank => ({ value: bank.id, label: bank.name })) || [],
+        [{ value: '', label: 'Toutes les banques' }, ...banks?.map(bank => ({ value: bank.id, label: bank.name })) || []],
         [banks]
     );
 
-    // Gère la soumission du formulaire d'exportation
     const handleExport = () => {
         setIsExporting(true);
 
-        // Changement de la route pour correspondre à la fonction d'exportation des versements
         const exportUrl = route('payments.export', {
             client_id: exportFilters.selectedClient || null,
             agency_id: exportFilters.selectedAgency || null,
@@ -107,7 +100,6 @@ const ExportInvoicePdfModal = ({ isOpen, onClose, clients, agencies, banks }) =>
             end_date: exportFilters.endDate || null,
         });
 
-        // Ouvre l'URL dans un nouvel onglet pour déclencher le téléchargement
         window.open(exportUrl, '_blank');
 
         Swal.fire(
@@ -116,11 +108,9 @@ const ExportInvoicePdfModal = ({ isOpen, onClose, clients, agencies, banks }) =>
             'info'
         );
 
-        // Réinitialise l'état et ferme la modale après un court délai
         setTimeout(() => {
             setIsExporting(false);
             onClose();
-            // Réinitialiser les filtres après l'exportation
             setExportFilters({
                 selectedClient: '',
                 selectedAgency: '',
@@ -132,7 +122,6 @@ const ExportInvoicePdfModal = ({ isOpen, onClose, clients, agencies, banks }) =>
         }, 1500);
     };
 
-    // Réinitialise les filtres lorsque la modale est ouverte pour la première fois ou si elle est fermée/rouverte
     useEffect(() => {
         if (isOpen) {
             setExportFilters({
@@ -159,7 +148,6 @@ const ExportInvoicePdfModal = ({ isOpen, onClose, clients, agencies, banks }) =>
                 '--bg-menu': colors['--bg-menu'],
                 '--bg-option-hover': colors['--bg-option-hover']
             }}>
-                {/* Filtre par Client */}
                 <div>
                     <label htmlFor="export-client-filter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Client
@@ -168,7 +156,7 @@ const ExportInvoicePdfModal = ({ isOpen, onClose, clients, agencies, banks }) =>
                         id="export-client-filter"
                         value={clientOptions.find(option => option.value === exportFilters.selectedClient) || null}
                         onChange={(selectedOption) => setExportFilters(prev => ({ ...prev, selectedClient: selectedOption ? selectedOption.value : '' }))}
-                        options={[ ...clientOptions]}
+                        options={clientOptions}
                         isClearable={true}
                         styles={customStyles}
                         className="w-full text-sm dark:bg-gray-900 dark:text-white/90"
@@ -176,7 +164,6 @@ const ExportInvoicePdfModal = ({ isOpen, onClose, clients, agencies, banks }) =>
                     />
                 </div>
 
-                {/* Filtre par Agence */}
                 <div>
                     <label htmlFor="export-agency-filter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Agence
@@ -185,7 +172,7 @@ const ExportInvoicePdfModal = ({ isOpen, onClose, clients, agencies, banks }) =>
                         id="export-agency-filter"
                         value={agencyOptions.find(option => option.value === exportFilters.selectedAgency) || null}
                         onChange={(selectedOption) => setExportFilters(prev => ({ ...prev, selectedAgency: selectedOption ? selectedOption.value : '' }))}
-                        options={[ ...agencyOptions]}
+                        options={agencyOptions}
                         isClearable={true}
                         styles={customStyles}
                         className="w-full text-sm dark:bg-gray-900 dark:text-white/90"
@@ -193,7 +180,6 @@ const ExportInvoicePdfModal = ({ isOpen, onClose, clients, agencies, banks }) =>
                     />
                 </div>
 
-                {/* Filtre par Type */}
                 <div>
                     <label htmlFor="export-type-filter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Type
@@ -210,7 +196,6 @@ const ExportInvoicePdfModal = ({ isOpen, onClose, clients, agencies, banks }) =>
                     />
                 </div>
                 
-                {/* Filtre par Banque */}
                 <div>
                     <label htmlFor="export-bank-filter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Banque
@@ -219,7 +204,7 @@ const ExportInvoicePdfModal = ({ isOpen, onClose, clients, agencies, banks }) =>
                         id="export-bank-filter"
                         value={bankOptions.find(option => option.value === exportFilters.selectedBank) || null}
                         onChange={(selectedOption) => setExportFilters(prev => ({ ...prev, selectedBank: selectedOption ? selectedOption.value : '' }))}
-                        options={[{ value: '', label: 'Toutes les banques' }, ...bankOptions]} // Ajout de l'option "Toutes les banques"
+                        options={bankOptions}
                         isClearable={true}
                         styles={customStyles}
                         className="w-full text-sm dark:bg-gray-900 dark:text-white/90"
@@ -227,8 +212,6 @@ const ExportInvoicePdfModal = ({ isOpen, onClose, clients, agencies, banks }) =>
                     />
                 </div>
 
-
-                {/* Filtre par Date de début */}
                 <div>
                     <label htmlFor="export-start-date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Date de début
@@ -247,7 +230,6 @@ const ExportInvoicePdfModal = ({ isOpen, onClose, clients, agencies, banks }) =>
                     />
                 </div>
 
-                {/* Filtre par Date de fin */}
                 <div>
                     <label htmlFor="export-end-date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Date de fin
@@ -267,7 +249,6 @@ const ExportInvoicePdfModal = ({ isOpen, onClose, clients, agencies, banks }) =>
                 </div>
             </div>
 
-            {/* Boutons d'action */}
             <div className="flex justify-end mt-6 space-x-2">
                 <button
                     type="button"

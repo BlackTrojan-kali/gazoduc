@@ -52,6 +52,7 @@ const EditCiterneStockModal = ({ isOpen, onClose, stockToEdit }) => {
           showConfirmButton: false,
           timer: 1500
         })
+        reset()
       },
       onError: (validationErrors) => {
         Swal.fire({

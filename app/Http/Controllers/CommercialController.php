@@ -69,49 +69,81 @@ class CommercialController extends Controller
         }
     }
     //
-    public function index(){
-          // Récupérer l'agence de l'utilisateur connecté
-        $agencyId = Auth::user()->agency_id;
 
-        // Obtenir le mois et l'année en cours
-        $now = Carbon::now();
-        $startOfMonth = $now->copy()->startOfMonth();
-        $endOfMonth = $now->copy()->endOfMonth();
-
-        // Récupérer les factures pour l'agence et le mois en cours
-        // et agréger le total_amount par jour
-        $dailySales = Facture::where('agency_id', $agencyId)
-                              ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
-                              ->orderBy('created_at')
-                              ->get()
-                              ->groupBy(function($date) {
-                                  return Carbon::parse($date->created_at)->format('Y-m-d'); // Grouper par jour
-                              })
-                              ->map(function ($day) {
-                                  return $day->sum('total_amount'); // Somme des montants pour chaque jour
-                              });
-
-        // Préparer les données pour le graphique :
-        // Assurer que tous les jours du mois sont présents, même si aucune vente
-        $daysInMonth = $now->daysInMonth;
-        $salesData = [];
-        $totalMonthlySales = 0; // Calculer le chiffre d'affaires total du mois
-
-        for ($i = 1; $i <= $daysInMonth; $i++) {
-            $date = $now->copy()->day($i)->format('Y-m-d');
-            $amount = $dailySales->has($date) ? $dailySales[$date] : 0;
-            $salesData[] = [
-                'date' => Carbon::parse($date)->format('d M'), // Format pour l'affichage (ex: 01 Jan)
-                'amount' => $amount,
-            ];
-            $totalMonthlySales += $amount; // Accumuler le total mensuel
+        public function index()
+        {
+            // Récupérer l'agence de l'utilisateur connecté
+            $agencyId = Auth::user()->agency_id;
+    
+            // Obtenir le mois et l'année en cours
+            $now = Carbon::now();
+            $startOfMonth = $now->copy()->startOfMonth();
+            $endOfMonth = $now->copy()->endOfMonth();
+    
+            // --- PARTIE 1 : CHIFFRE D'AFFAIRE POUR LES VENTES (invoice_type = "vente") ---
+            $dailySalesVente = Facture::where('agency_id', $agencyId)
+                                      ->where('invoice_type', 'vente')
+                                      ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
+                                      ->orderBy('created_at')
+                                      ->get()
+                                      ->groupBy(function($date) {
+                                          return Carbon::parse($date->created_at)->format('Y-m-d');
+                                      })
+                                      ->map(function ($day) {
+                                          return $day->sum('total_amount');
+                                      });
+    
+            // Préparer les données pour le graphique des ventes
+            $salesDataVente = [];
+            $totalMonthlySalesVente = 0;
+            $daysInMonth = $now->daysInMonth;
+    
+            for ($i = 1; $i <= $daysInMonth; $i++) {
+                $date = $now->copy()->day($i)->format('Y-m-d');
+                $amount = $dailySalesVente->has($date) ? $dailySalesVente[$date] : 0;
+                $salesDataVente[] = [
+                    'date' => Carbon::parse($date)->format('d M'),
+                    'amount' => $amount,
+                ];
+                $totalMonthlySalesVente += $amount;
+            }
+    
+            // --- PARTIE 2 : CHIFFRE D'AFFAIRE POUR LES CONSIGNES (invoice_type = "consigne") ---
+            $dailySalesConsigne = Facture::where('agency_id', $agencyId)
+                                         ->where('invoice_type', 'consigne')
+                                         ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
+                                         ->orderBy('created_at')
+                                         ->get()
+                                         ->groupBy(function($date) {
+                                             return Carbon::parse($date->created_at)->format('Y-m-d');
+                                         })
+                                         ->map(function ($day) {
+                                             return $day->sum('total_amount');
+                                         });
+    
+            // Préparer les données pour le graphique des consignes
+            $salesDataConsigne = [];
+            $totalMonthlySalesConsigne = 0;
+    
+            for ($i = 1; $i <= $daysInMonth; $i++) {
+                $date = $now->copy()->day($i)->format('Y-m-d');
+                $amount = $dailySalesConsigne->has($date) ? $dailySalesConsigne[$date] : 0;
+                $salesDataConsigne[] = [
+                    'date' => Carbon::parse($date)->format('d M'),
+                    'amount' => $amount,
+                ];
+                $totalMonthlySalesConsigne += $amount;
+            }
+    
+            return inertia("Commercial/ComIndex", [
+                'dailySalesDataVente' => $salesDataVente,
+                'totalMonthlySalesVente' => $totalMonthlySalesVente,
+                'dailySalesDataConsigne' => $salesDataConsigne,
+                'totalMonthlySalesConsigne' => $totalMonthlySalesConsigne,
+                'currentMonth' => $now->format('F Y'),
+            ]);
         }
-
-        return inertia("Commercial/ComIndex", [
-            'dailySalesData' => $salesData,
-            'totalMonthlySales' => $totalMonthlySales,
-            'currentMonth' => $now->format('F Y'),]);
-    }
+    
     public function sales()
     {
         // Récupération des factures filtrées par l'agence de l'utilisateur

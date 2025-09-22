@@ -105,7 +105,7 @@ const MovementFormModal = ({ isOpen, onClose, articles, agencies }) => {
           showConfirmButton: false,
           timer: 1500
         });
-
+        reset()
         reset({
             article_id: null,
             agency_id: '',

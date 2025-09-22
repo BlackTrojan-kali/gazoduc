@@ -26,7 +26,7 @@ const navItems = [
     name: "Ventes",
     subItems: [
       { name: "Factures", path: "/commercial-page-sales", pro: false },
-      { name: "Ventes", path: "/sales/items", pro: false },
+      { name: "Articles Vendues", path: "/sales/items", pro: false },
     ],
   },
  

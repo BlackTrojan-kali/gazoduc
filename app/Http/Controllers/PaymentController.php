@@ -266,23 +266,28 @@ class PaymentController extends Controller
             return back()->with('error', 'Une erreur est survenue lors de la suppression. Veuillez réessayer, monsieur.' . $e->getMessage());
         }
     }
-
- public function exportPaymentsToPdf(Request $request)
+    public function exportPaymentsToPdf(Request $request)
     {
         // Récupérer tous les filtres de la requête envoyés par le composant React
         $filters = $request->all();
 
         // Initialiser la requête Eloquent pour les versements.
-        // On charge les relations 'factures' et 'client' directement depuis le modèle Payment.
-        $query = Payment::with(['factures', 'client',"bank"]);
+        // On charge les relations 'factures', 'client' et 'bank'
+        $query = Payment::with(['factures', 'client', 'bank']);
         
         // Appliquer les filtres de manière conditionnelle en fonction des paramètres reçus
         
-        // Filtre par l'agence de l'utilisateur authentifié
-        $query->where('agency_id',$request->input("agency_id"));
-        $query->where("type",$request->input("invoice_type"));
+        // Filtre par Agence (si l'ID de l'agence est fourni)
+        $query->when($request->filled('agency_id'), function ($q) use ($request) {
+            $q->where('agency_id', $request->input('agency_id'));
+        });
+
+        // Filtre par type de versement (si le type est fourni)
+        $query->when($request->filled('invoice_type'), function ($q) use ($request) {
+            $q->where('type', $request->input('invoice_type'));
+        });
+
         // Filtre par Client (si l'ID du client est fourni)
-        // La relation client étant directe, on filtre directement sur 'client_id'
         $query->when($request->filled('client_id'), function ($q) use ($request) {
             $q->where('client_id', $request->input('client_id'));
         });
@@ -301,10 +306,12 @@ class PaymentController extends Controller
         
         // Exécuter la requête pour obtenir la liste des versements filtrés
         $versements = $query->get();
+        
         // Générer le PDF en chargeant la vue Blade et en lui passant les données
         $pdf = Pdf::loadView('PDF.VersementPDFVIew', compact('versements', 'filters'));
 
         // Télécharger le fichier PDF avec un nom spécifique
         return $pdf->download('rapport_versements_factures.pdf');
     }
+
 }

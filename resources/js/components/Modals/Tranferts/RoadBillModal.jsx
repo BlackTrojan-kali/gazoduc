@@ -37,9 +37,7 @@ const RoadbillFormModal = ({ isOpen, onClose, roadbill, routeName, vehicles, dri
   const driverOptions = drivers.map(d => ({ value: d.id, label: d.name }));
   const agencyOptions = agencies.map(a => ({ value: a.id, label: a.name }));
   const typeOptions = [
-    { value: 'ramassage', label: 'Ramassage' },
     { value: 'livraison', label: 'Livraison' },
-    { value: 'transit', label: 'Transit' },
   ];
 
   useEffect(() => {

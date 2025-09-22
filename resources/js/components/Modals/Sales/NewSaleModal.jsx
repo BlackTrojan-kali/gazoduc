@@ -1,9 +1,7 @@
-// resources/js/components/Modals/Sales/NewSaleModal.jsx
-
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faPlus, faTrash, faRedo } from '@fortawesome/free-solid-svg-icons';
-import { useForm } from '@inertiajs/react';
+import { useForm, router } from '@inertiajs/react';
 import Swal from 'sweetalert2';
 import Select from 'react-select';
 
@@ -17,10 +15,9 @@ const NewSaleModal = ({ isOpen, onClose, clients, articles }) => {
 
   const [selectedArticleOption, setSelectedArticleOption] = useState(null);
   const [articleQuantity, setArticleQuantity] = useState(1);
-  const [quantityError, setQuantityError] = useState(''); // Nouvel état pour l'erreur de quantité
+  const [quantityError, setQuantityError] = useState('');
   const [selectedClientOption, setSelectedClientOption] = useState(null);
 
-  // Prépare les options pour React Select
   const clientOptions = clients.map(client => ({
     value: client.id,
     label: `${client.name}`,
@@ -31,7 +28,6 @@ const NewSaleModal = ({ isOpen, onClose, clients, articles }) => {
     label: article.name,
   }));
 
-  // Styles personnalisés pour React Select
   const selectStyles = {
     control: (baseStyles, state) => ({
       ...baseStyles,
@@ -69,17 +65,15 @@ const NewSaleModal = ({ isOpen, onClose, clients, articles }) => {
 
   const handleArticleSelect = (selectedOption) => {
     setSelectedArticleOption(selectedOption);
-    setArticleQuantity(1); // Réinitialise la quantité à 1 quand un nouvel article est sélectionné
-    setQuantityError(''); // Efface l'erreur précédente
+    setArticleQuantity(1);
+    setQuantityError('');
   };
 
-  // Nouvelle fonction pour gérer le changement de quantité
   const handleQuantityChange = (e) => {
     const value = parseInt(e.target.value);
-
     if (isNaN(value) || value <= 0) {
       setQuantityError('La quantité doit être un nombre positif.');
-      setArticleQuantity(value); // Permet d'afficher la valeur invalide
+      setArticleQuantity(value);
     } else {
       setQuantityError('');
       setArticleQuantity(value);
@@ -87,7 +81,6 @@ const NewSaleModal = ({ isOpen, onClose, clients, articles }) => {
   };
 
   const handleAddItem = () => {
-    // Vérifie l'erreur de quantité avant d'ajouter
     if (quantityError) {
       Swal.fire('Erreur', quantityError, 'error');
       return;
@@ -120,22 +113,20 @@ const NewSaleModal = ({ isOpen, onClose, clients, articles }) => {
 
     setSelectedArticleOption(null);
     setArticleQuantity(1);
-    setQuantityError(''); // Efface l'erreur après l'ajout
+    setQuantityError('');
   };
 
   const handleRemoveItem = (indexToRemove) => {
     setData('items', data.items.filter((_, index) => index !== indexToRemove));
   };
 
-  const totalAmountDisplay = "Calculé au backend";
-
   const handleResetForm = () => {
-    reset(); // Réinitialise l'état du formulaire Inertia
-    setSelectedClientOption(null); // Réinitialise l'état du Select client
-    setSelectedArticleOption(null); // Réinitialise l'état du Select article
-    setArticleQuantity(1); // Réinitialise la quantité d'article
-    setQuantityError(''); // Réinitialise l'erreur de quantité
-    setData('items', []); // ************ AJOUT/MODIFICATION ICI ************
+    reset();
+    setSelectedClientOption(null);
+    setSelectedArticleOption(null);
+    setArticleQuantity(1);
+    setQuantityError('');
+    setData('items', []);
   };
 
   const handleSubmit = (e) => {
@@ -149,17 +140,17 @@ const NewSaleModal = ({ isOpen, onClose, clients, articles }) => {
       Swal.fire('Erreur', 'Veuillez ajouter au moins un article à la facture.', 'error');
       return;
     }
-
-    // Vérification finale de la quantité si l'utilisateur n'a pas déclenché handleAddItem
     if (articleQuantity <= 0) {
-        Swal.fire('Erreur', 'La quantité de l\'article actuel doit être un nombre positif.', 'error');
-        return;
+      Swal.fire('Erreur', 'La quantité de l\'article actuel doit être un nombre positif.', 'error');
+      return;
     }
 
     post(route('compage.store'), data, {
       onSuccess: () => {
         Swal.fire('Succès', 'Facture créée avec succès, monsieur !', 'success');
-        onClose();
+        handleResetForm(); // Réinitialisation AVANT fermeture
+        onClose();         // Fermeture de la modal
+        router.reload();   // Rechargement
       },
       onError: (err) => {
         console.error('Erreur de création de facture:', err);
@@ -258,7 +249,7 @@ const NewSaleModal = ({ isOpen, onClose, clients, articles }) => {
                   id="quantity"
                   value={articleQuantity}
                   onChange={handleQuantityChange}
-                  min="0" // Le min attr HTML est là pour l'UX, mais la vraie validation se fait en JS
+                  min="0"
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-800 dark:border-gray-700 dark:text-white focus:ring-blue-500 focus:border-blue-500"
                 />
                 {quantityError && <div className="text-red-500 text-sm mt-1">{quantityError}</div>}
@@ -273,32 +264,22 @@ const NewSaleModal = ({ isOpen, onClose, clients, articles }) => {
             </div>
           </div>
 
-          {/* Tableau des Articles de la Facture */}
+          {/* Tableau des Articles */}
           <div className="overflow-x-auto border rounded-lg dark:border-gray-700">
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-800">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Article
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Quantité
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Actions
-                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Article</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Quantité</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                 {data.items.length > 0 ? (
                   data.items.map((item, index) => (
                     <tr key={index}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                        {item.name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                        {item.quantity}
-                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{item.name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{item.quantity}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                         <button
                           type="button"
@@ -325,7 +306,7 @@ const NewSaleModal = ({ isOpen, onClose, clients, articles }) => {
           {/* Total Général */}
           <div className="flex justify-end pr-4 py-2 bg-gray-50 dark:bg-gray-800 rounded-b-lg">
             <p className="text-xl font-bold text-gray-900 dark:text-white">
-              Total Général: {totalAmountDisplay}
+              Total Général: Calculé au backend
             </p>
           </div>
 

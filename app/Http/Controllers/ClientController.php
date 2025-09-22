@@ -20,10 +20,10 @@ class ClientController extends Controller
             "client_category_id"=>"required",
             "client_type"=>"required",
             "name"=>"string | required",
-            "phone_number"=>"string | required",
-            "email_address"=>"string | required",
-            "address"=>"string | required",
-            "NUI"=>"string | required",
+            "phone_number"=>"string |nullable",
+            "email_address"=>"string  |nullable",
+            "address"=>"string  |nullable",
+            "NUI"=>"string  |nullable",
         ]);
 
         $client = new Client();
