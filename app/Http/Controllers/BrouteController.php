@@ -50,7 +50,6 @@ class BrouteController extends Controller
 
         // Utilisation d'une transaction pour garantir l'atomicité
         DB::beginTransaction();
-
         try {
             // Création du bordereau de route
             $roadbill = new Bordereau_route();
@@ -68,7 +67,7 @@ class BrouteController extends Controller
             $roadbill->status = 'en_cours'; // Statut par défaut
             
             $roadbill->save();
-
+            $arrival = Agency::findOrFail($roadbill->arrival_location_id);
             // Attachement des articles au bordereau de route et décrémentation des stocks
             $articlesToAttach = [];
             foreach ($request->articles as $articleData) {
@@ -97,7 +96,7 @@ class BrouteController extends Controller
                 $movement->stock = $stock->quantity;
                 $movement->source_location = Auth::user()->role->name;
                 $movement->destination_location = "confert bordereau de route";
-                $movement->description = "sortie transfert automatique #".$roadbill->id;
+                $movement->description = "sortie transfert automatique #".$roadbill->id." ".$arrival->name;
                 
 
                 $movement->save();
@@ -131,7 +130,7 @@ class BrouteController extends Controller
         DB::beginTransaction();
 
         try {
-            $roadbill = Bordereau_route::with('articles')->findOrFail($id);
+            $roadbill = Bordereau_route::with('articles',"arrival")->findOrFail($id);
             
             // Vérification du statut avant de procéder à la suppression
             if ($roadbill->status !== 'en_cours') {
@@ -152,7 +151,7 @@ class BrouteController extends Controller
             }
 
             // Supprimer les mouvements associés au bordereau avec une description exacte
-            $description = "sortie transfert automatique #" . $roadbill->id;
+            $description = "sortie transfert automatique #" . $roadbill->id." ".$roadbill->arrival->name;
             Mouvement::where('description', $description)->delete();
 
             // Supprimer les relations et le bordereau

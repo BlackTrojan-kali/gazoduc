@@ -90,21 +90,18 @@
             text-align: right; /* Aligne les quantités à droite */
         }
 
-        /* Largeurs spécifiques pour les colonnes (ajustées pour les nouvelles colonnes) */
-        /* Total de 100% à distribuer entre les colonnes */
-        /* Les largeurs ici concernent les colonnes individuelles de la seconde ligne d'en-tête */
+        /* Largeurs spécifiques pour les colonnes (ajustées pour la nouvelle structure) */
         .movements-table th:nth-child(1), .movements-table td:nth-child(1) { width: 10%; } /* Date */
-        .movements-table th:nth-child(2), .movements-table td:nth-child(2) { width: 12%; } /* Article */
-        .movements-table th:nth-child(3), .movements-table td:nth-child(3) { width: 8%; }  /* Agence */
-        .movements-table th:nth-child(4), .movements-table td:nth-child(4) { width: 7%; }  /* Entrée */
-        .movements-table th:nth-child(5), .movements-table td:nth-child(5) { width: 7%; }  /* Sortie */
-        .movements-table th:nth-child(6), .movements-table td:nth-child(6) { width: 7%; }  /* Perte */
-        .movements-table th:nth-child(7), .movements-table td:nth-child(7) { width: 7%; }  /* Achat */
-        .movements-table th:nth-child(8), .movements-table td:nth-child(8) { width: 7%; }  /* Repreuve */
-        .movements-table th:nth-child(9), .movements-table td:nth-child(9) { width: 7%; }  /* Consigne */
-        .movements-table th:nth-child(10), .movements-table td:nth-child(10) { width: 10%; } /* Stock Actuel */
+        .movements-table th:nth-child(2), .movements-table td:nth-child(2) { width: 7%; }  /* Perte */
+        .movements-table th:nth-child(3), .movements-table td:nth-child(3) { width: 7%; }  /* Achat */
+        .movements-table th:nth-child(4), .movements-table td:nth-child(4) { width: 7%; }  /* Repreuve */
+        .movements-table th:nth-child(5), .movements-table td:nth-child(5) { width: 7%; }  /* Consigne */
+        .movements-table th:nth-child(6), .movements-table td:nth-child(6) { width: 12%; } /* Article */
+        .movements-table th:nth-child(7), .movements-table td:nth-child(7) { width: 7%; }  /* Entrée */
+        .movements-table th:nth-child(8), .movements-table td:nth-child(8) { width: 7%; }  /* Sortie */
+        .movements-table th:nth-child(9), .movements-table td:nth-child(9) { width: 10%; } /* Stock Actuel */
+        .movements-table th:nth-child(10), .movements-table td:nth-child(10) { width: 8%; }  /* Agence */
         .movements-table th:nth-child(11), .movements-table td:nth-child(11) { width: 18%; } /* Infos. */
-        /* Total: 10 + 12 + 8 + 7 + 7 + 7 + 7 + 7 + 7 + 10 + 18 = 100% */
 
 
         /* Styles pour la ligne de total */
@@ -182,20 +179,20 @@
             <thead>
                 <tr>
                     <th rowspan="2">Date</th>
+                    <th colspan="4">Qualification</th>
                     <th rowspan="2">Article</th>
-                    <th rowspan="2">Agence</th>
-                    <th colspan="2">Flux</th> {{-- Colspan pour Entrée/Sortie --}}
-                    <th colspan="4">Qualification</th> {{-- Colspan pour Perte/Achat/Repreuve/Consigne --}}
+                    <th colspan="2">Flux</th>
                     <th rowspan="2">Stock Actuel</th>
+                    <th rowspan="2">Agence</th> {{-- Déplacé ici --}}
                     <th rowspan="2">Infos.</th>
                 </tr>
                 <tr>
-                    <th>Entrée</th>
-                    <th>Sortie</th>
                     <th>Perte</th>
                     <th>Achat</th>
                     <th>Repreuve</th>
                     <th>Consigne</th>
+                    <th>Entrée</th>
+                    <th>Sortie</th>
                 </tr>
             </thead>
             <tbody>
@@ -208,29 +205,9 @@
                     $totalConsigne = 0;
                 @endphp
                 @foreach($movements as $movement)
-                {{-- Ajout d'une classe conditionnelle pour les lignes supprimées --}}
                 <tr class="{{ $movement->deleted_at ? 'deleted-row' : '' }}">
                     <td>{{ \Carbon\Carbon::parse($movement->created_at)->format('d/m/Y H:i') }}</td>
-                    <td>{{ $movement->article->name ?? 'N/A' }}</td>
-                    <td>{{ $movement->agency->name ?? 'N/A' }}</td>
-
-                    <td class="qty-cell">
-                        @if($movement->movement_type === 'entree')
-                            {{ $movement->quantity }}
-                            @php $totalEntree += $movement->quantity; @endphp
-                        @else
-                            0
-                        @endif
-                    </td>
-                    <td class="qty-cell">
-                        @if($movement->movement_type === 'sortie')
-                            {{ $movement->quantity }}
-                            @php $totalSortie += $movement->quantity; @endphp
-                        @else
-                            0
-                        @endif
-                    </td>
-
+                    
                     <td class="qty-cell">
                         @if($movement->qualification === 'perte')
                             {{ $movement->quantity }}
@@ -264,7 +241,27 @@
                         @endif
                     </td>
 
+                    <td>{{ $movement->article->name ?? 'N/A' }}</td>
+
+                    <td class="qty-cell">
+                        @if($movement->movement_type === 'entree')
+                            {{ $movement->quantity }}
+                            @php $totalEntree += $movement->quantity; @endphp
+                        @else
+                            0
+                        @endif
+                    </td>
+                    <td class="qty-cell">
+                        @if($movement->movement_type === 'sortie')
+                            {{ $movement->quantity }}
+                            @php $totalSortie += $movement->quantity; @endphp
+                        @else
+                            0
+                        @endif
+                    </td>
+                    
                     <td>{{ $movement->stock ?? 'N/A' }}</td>
+                    <td>{{ $movement->agency->name ?? 'N/A' }}</td> {{-- Déplacé ici --}}
                     <td>
                         {{ $movement->description ?? 'Aucune' }}
                         <br/>
@@ -274,14 +271,16 @@
                 @endforeach
                 {{-- Ligne de Total --}}
                 <tr class="total-row">
-                    <td colspan="3" class="total-label">Total :</td> {{-- 3 colonnes pour Date, Article, Agence --}}
-                    <td class="total-qty-cell">{{ $totalEntree }}</td>
-                    <td class="total-qty-cell">{{ $totalSortie }}</td>
+                    <td colspan="1" class="total-label">Total :</td>
                     <td class="total-qty-cell">{{ $totalPerte }}</td>
                     <td class="total-qty-cell">{{ $totalAchat }}</td>
                     <td class="total-qty-cell">{{ $totalRepreuve }}</td>
                     <td class="total-qty-cell">{{ $totalConsigne }}</td>
-                    <td></td> {{-- Vide pour le Stock Actuel (pas de total significatif) --}}
+                    <td></td> {{-- Vide pour l'article --}}
+                    <td class="total-qty-cell">{{ $totalEntree }}</td>
+                    <td class="total-qty-cell">{{ $totalSortie }}</td>
+                    <td></td> {{-- Vide pour le Stock Actuel --}}
+                    <td></td> {{-- Vide pour l'agence --}}
                     <td></td> {{-- Vide pour Infos. --}}
                 </tr>
             </tbody>

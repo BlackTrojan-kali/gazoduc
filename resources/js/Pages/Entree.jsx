@@ -64,19 +64,11 @@ console.log(auth);
         inertiaDelete(route('magasin.move.delete', movementId), {
           preserveScroll: true,
           onSuccess: () => {
-            Swal.fire(
-              'Supprimé !',
-              'Le mouvement a été supprimé avec succès et le stock ajusté.',
-              'success'
-            );
+          
           },
           onError: (errors) => {
             console.error('Erreur de suppression:', errors);
-            Swal.fire(
-              'Erreur !',
-              'Une erreur est survenue lors de la suppression du mouvement. ' + (errors.message || 'Veuillez réessayer.'),
-              'error'
-            );
+           
           },
         });
       }
