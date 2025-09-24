@@ -24,7 +24,7 @@ const ArticleModal = ({ isOpen, onClose, entreprises, simpleArticles, article = 
         { value: 'produit', label: 'Produit' },
         { value: 'matiere_premiere', label: 'Matière Première' },
         { value: 'produit_fini', label: 'Produit Fini' },
-        { value: 'service', label: 'Service' },
+        { value: 'produit_petrolier', label: 'Produit Petrolier' },
     ];
 
     const articleUnits = [

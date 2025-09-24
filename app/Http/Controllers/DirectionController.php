@@ -10,7 +10,7 @@ class DirectionController extends Controller
     //
     public function index(){
         $stocks = Stock::where("storage_type","!=","gaz")
-        ->with("article",'agency')
+        ->with("article",'agency',"citerne")
         ->get();  
         return Inertia("Direction/DirIndex",compact("stocks"));
     }

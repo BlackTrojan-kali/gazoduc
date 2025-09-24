@@ -39,4 +39,7 @@ class MagasinController extends Controller
         
         return Inertia("Magasin/MagCiterne",compact("stocks","agencies","articles","citernesMobiles","citernesFixes"));
     }
+    public function licence(){
+        return Inertia("SelectLicence");
+    }
 }

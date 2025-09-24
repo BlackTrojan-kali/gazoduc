@@ -173,7 +173,7 @@ const Articles = ({ articles, entreprises,simpleArticles }) => {
                       <TableCell>{article.name}</TableCell>
                       <TableCell>{article.type}</TableCell>
                       <TableCell>{article.unit}</TableCell>
-                      <TableCell>{article.weight_per_unit} kg</TableCell>
+                      <TableCell>{article.weight_per_unit} {article.unit}</TableCell>
                       <TableCell>{article.entreprise ? article.entreprise.name : 'N/A'}</TableCell>
                       <TableCell className="py-3 text-gray-500 text-theme-sm gap-2 flex dark:text-gray-400">
                         <button

@@ -73,9 +73,17 @@ const DirIndex = () => {
                           className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700 transition-shadow duration-200"
                         >
                           <div className="flex items-center justify-between">
-                            <span className="text-base font-semibold text-gray-800 dark:text-white/90 truncate">
-                              {articleName}
-                            </span>
+                            <div>
+                                <span className="text-base font-semibold text-gray-800 dark:text-white/90 truncate">
+                                  {articleName}
+                                </span>
+                                {/* Affiche le nom de la citerne si le stock y est lié */}
+                                {stock.citerne && (
+                                    <span className="block text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                      Cuve: {stock.citerne.name}
+                                    </span>
+                                )}
+                            </div>
                             <span className="text-sm font-bold text-gray-600 dark:text-gray-300 ml-4">
                               {currentQuantity}
                             </span>

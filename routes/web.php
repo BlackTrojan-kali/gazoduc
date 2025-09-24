@@ -120,12 +120,18 @@ Route::middleware([MagasinMiddleware::class,isArchivedMiddleWare::class])->group
    Route::post("/magasin-citernes-depotage",[CiterneController::class,"depotage"])->name("magasin.depotage");
    Route::post("/magasin-citerne-releve/{stock}",[CiterneController::class,"releve"])->name("magasin.releve");
    //mouvement
+
+//select licence type
+Route::get("/magasin-choose-licence",[MagasinController::class,"licence"])->name("magasin.licence");
+//carburants routes
+
 });
 
 //common routes to all users
 Route::middleware(isAuthenticatedMiddleware::class)->group(function(){
 
    Route::post("/magasin-citernes-reception",[CiterneController::class,"reception"])->name("magasin.reception");
+
    //releves routes
         Route::get("/releves",[ReleveController::class,"index"])->name("releves.index");
         Route::get("/releves-export",[ReleveController::class,"export"])->name("releves.export");
