@@ -124,6 +124,8 @@ Route::middleware([MagasinMiddleware::class,isArchivedMiddleWare::class])->group
 //select licence type
 Route::get("/magasin-choose-licence",[MagasinController::class,"licence"])->name("magasin.licence");
 //carburants routes
+Route::get('/fuel_index', [MagasinController::class, 'fuel_index'])->name('magasin.fuel_index');
+Route::get('/fuel_citerne_index', [MagasinController::class, 'fuel_citerne_index'])->name('magasin.fuel_citerne_index');
 
 });
 
@@ -252,6 +254,20 @@ Route::middleware([ProductionMiddleware::class,isArchivedMiddleWare::class])->gr
     Route::delete("/production-delete/{idProd}",[ProductionController::class,"delete"])->name("prodMove.delete");
     
 });
+
+
+Route::post('/update-licence-session', function (Request $request) {
+    // Validez le type de licence
+    $request->validate([
+        'licence_type' => ['required', 'string', 'in:carburant,gaz'],
+    ]);
+
+    // Enregistrez le choix de l'utilisateur dans la session
+    session(['licence_choice' => $request->licence_type]);
+
+    // Retourne une réponse pour qu'Inertia ne fasse pas de rechargement complet de la page
+    return back(); 
+})->name('update.licence.session');
 
 //ceo routes
 Route::middleware(CEOMiddleware::class)->group(function(){

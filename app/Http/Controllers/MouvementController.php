@@ -99,7 +99,7 @@ class MouvementController extends Controller
             return back()->with('error', 'Échec de l\'enregistrement du mouvement : ' . $e->getMessage())->withInput();
         }
     }
-    public function moves(Request $request, $type)
+    public function moves(Request $request, $type,$fuel)
     {
         $user = Auth::user();
         $userRoleName = $user->role->name;

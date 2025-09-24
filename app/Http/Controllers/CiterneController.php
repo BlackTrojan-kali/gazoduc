@@ -182,7 +182,7 @@ class CiterneController extends Controller
 public function depotage(Request $request)
 {
     $request->validate([
-        "citerne_mobile_id" => "required|exists:citernes,id", // Ajout de la validation 'exists'
+        "citerne_mobile_id" => "required|exists:vehicules,id", // Ajout de la validation 'exists'
         "article_id" => "required|exists:articles,id",             // Ajout de la validation 'exists'
         "quantity" => "required|numeric|min:0.01",                 // 'min:0.01' pour éviter des quantités négatives ou nulles
         "agency_id" => "required|exists:agencies,id",               // Ajout de la validation 'exists'
@@ -243,6 +243,7 @@ public function depotage(Request $request)
 // app/Http/Controllers/StockController.php (rappel)
 public function releve(Request $request, Stock $stock)
 {
+
     $validatedData = $request->validate([
         'theorical_quantity' => ['required', 'numeric', 'min:0'], // Assurez-vous que ce champ peut être envoyé
         'quantity' => ['required', 'numeric', 'min:0'],           // Assurez-vous que ce champ peut être envoyé
@@ -253,9 +254,15 @@ public function releve(Request $request, Stock $stock)
 
         // Vous pouvez ajouter une logique pour ne valider la capacité que si 'quantity' est le champ modifié,
         // ou simplement toujours valider la 'quantity' par rapport à la capacité.
+        if($stock->citerne->type == "gaz"){
         if ($stock->citerne && $validatedData['quantity'] > $stock->citerne->capacity_kg) {
             return back()->with('error' ,'La quantité relevée ne peut pas dépasser la capacité maximale de la citerne.')
                          ->withInput();
+        }}else{
+            if ($stock->citerne && $validatedData['quantity'] > $stock->citerne->capacity_liter) {
+                return back()->with('error' ,'La quantité relevée ne peut pas dépasser la capacité maximale de la citerne.')
+                             ->withInput();
+            }   
         }
         DB::beginTransaction();
         $stock->update([

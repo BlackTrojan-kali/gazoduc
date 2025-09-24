@@ -71,7 +71,7 @@ const EditCiterneStockModal = ({ isOpen, onClose, stockToEdit }) => {
       {stockToEdit ? (
         <form onSubmit={handleSubmit} className="space-y-4">
           <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-            Capacité maximale de la citerne : <span className="font-bold">{stockToEdit.citerne?.capacity_kg} kg</span>
+            Capacité maximale de la citerne : <span className="font-bold">{stockToEdit.citerne?.capacity_kg || stockToEdit.citerne?.capacity_liter} l ou kg</span>
           </p>
 
           <label htmlFor="agency_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -82,7 +82,7 @@ const EditCiterneStockModal = ({ isOpen, onClose, stockToEdit }) => {
             id="theorical_quantity"
             type="number"
             step="0.01"
-            label="Quantité Théorique (Kg)"
+            label="Quantité Théorique (Kg ou L)"
             value={data.theorical_quantity}
             onChange={handleChange}
             error={errors.theorical_quantity}
@@ -99,7 +99,7 @@ const EditCiterneStockModal = ({ isOpen, onClose, stockToEdit }) => {
             id="quantity"
             type="number"
             step="0.01"
-            label="Quantité Relevée (Kg)"
+            label="Quantité Relevée (Kg ou L)"
             value={data.quantity}
             onChange={handleChange}
             error={errors.quantity}

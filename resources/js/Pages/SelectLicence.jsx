@@ -14,7 +14,7 @@ const SelectLicence = () => {
       type: 'carburant',
       label: 'Gérer le Carburant',
       description: 'Gérez le stock et la distribution de produits pétroliers.',
-      href: '/dashboard/carburant', // Lien de destination pour cet exemple
+      href: '/fuel_index', // Lien de destination pour cet exemple
       icon: (
         <svg
           className="w-12 h-12 text-blue-500"
