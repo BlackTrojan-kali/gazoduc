@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import DirLayout from '../../layout/DirLayout/DirLayout';
 import { Head, useForm, usePage, Link } from '@inertiajs/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEdit, faPlus, faTrash, faBoxesStacked, faOilCan } from '@fortawesome/free-solid-svg-icons';
+import { faEdit, faPlus, faTrash, faBoxesStacked } from '@fortawesome/free-solid-svg-icons'; // faOilCan n'est pas utilisé dans le code existant
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '../../components/ui/table';
 
 // Importez maintenant la modal unique pour la création/modification
@@ -10,35 +10,40 @@ import CiterneFormModal from '../../components/Modals/Direction/CiternModal'; //
 
 import Swal from 'sweetalert2';
 
+// ----------------------------------------------------------------------------------------------------------------
+
 const Citernes = ({ citernes, entreprises, products, agencies }) => {
-  // Un seul état pour contrôler l'ouverture de la modal
+  // --- États pour la gestion de la Modal (inchangés) ---
   const [isCiterneFormModalOpen, setIsCiterneFormModalOpen] = useState(false);
-  // Un état pour stocker la citerne sélectionnée (null pour la création)
   const [selectedCiterne, setSelectedCiterne] = useState(null);
+
+  // --- NOUVEAUX États pour les filtres ---
+  const [filterAgency, setFilterAgency] = useState(''); // ID de l'agence sélectionnée
+  const [filterProduct, setFilterProduct] = useState(''); // ID du produit sélectionné
+  const [filterName, setFilterName] = useState(''); // Nom/partie du nom pour la recherche
 
   const { delete: inertiaDelete, post: inertiaPost } = useForm();
   const { props: { auth } } = usePage();
 
-  // Fonction pour ouvrir la modal en mode CRÉATION
+  // --- Fonctions de gestion de la Modal (inchangées) ---
   const openCreateCiterneModal = () => {
-    setSelectedCiterne(null); // Important : définir selectedCiterne à null pour le mode création
+    setSelectedCiterne(null);
     setIsCiterneFormModalOpen(true);
   };
 
-  // Fonction pour ouvrir la modal en mode MODIFICATION
   const openEditCiterneModal = (citerne) => {
-    setSelectedCiterne(citerne); // Définit la citerne à modifier
+    setSelectedCiterne(citerne);
     setIsCiterneFormModalOpen(true);
   };
 
-  // Fonction pour fermer la modal (commune aux deux modes)
   const closeCiterneFormModal = () => {
     setIsCiterneFormModalOpen(false);
-    setSelectedCiterne(null); // Réinitialiser selectedCiterne après la fermeture
-    // Recharger la page après une opé
+    setSelectedCiterne(null);
+    // Note: Recharger la page après une opé est déjà géré dans handleDeleteCiterne,
+    // si vous voulez recharger après une création/édition, vous devez le faire dans la modal.
   };
 
-  // --- Fonction pour gérer la suppression d'une citerne avec SweetAlert2 ---
+  // --- Fonction pour gérer la suppression (inchangée) ---
   const handleDeleteCiterne = (citerneId, citerneName) => {
     Swal.fire({
       title: 'Êtes-vous sûr, monsieur ?',
@@ -74,11 +79,8 @@ const Citernes = ({ citernes, entreprises, products, agencies }) => {
     });
   };
 
-  // --- Fonction pour gérer la création de stocks pour une citerne ---
+  // --- Fonction pour gérer la création de stocks (inchangée) ---
   const handleCreateCiterneStock = (citerneId, citerneName, currentProductId) => {
- 
-  
-
     Swal.fire({
       title: 'Confirmer l\'initialisation du stock de citerne, monsieur ?',
       text: `Cela va créer une entrée de stock initiale (quantité 0) pour la citerne "${citerneName}".`,
@@ -93,7 +95,7 @@ const Citernes = ({ citernes, entreprises, products, agencies }) => {
         inertiaPost(route('citernes.generate-stock', {
           citerne_id: citerneId,
           article_id: currentProductId,
-        },), {
+        }, ), {
           preserveScroll: true,
           onSuccess: () => {
             Swal.fire(
@@ -101,7 +103,7 @@ const Citernes = ({ citernes, entreprises, products, agencies }) => {
               `Le stock pour la citerne "${citerneName}" a été initialisé.`,
               'success'
             );
-            //window.location.reload(); // Recharger après initialisation du stock
+            //window.location.reload(); // Recharger après initialisation du stock si nécessaire
           },
           onError: (errors) => {
             console.error('Erreur de création de stock de citerne:', errors);
@@ -120,6 +122,25 @@ const Citernes = ({ citernes, entreprises, products, agencies }) => {
     });
   };
 
+  // --- Logique de Filtrage avec useMemo ---
+  const filteredCiternes = useMemo(() => {
+    if (!citernes.data) return [];
+
+    return citernes.data.filter(citerne => {
+      // 1. Filtrer par Agence
+      const matchesAgency = filterAgency === '' || citerne.agency_id.toString() === filterAgency;
+
+      // 2. Filtrer par Produit actuel
+      const matchesProduct = filterProduct === '' || (citerne.current_product_id && citerne.current_product_id.toString() === filterProduct);
+
+      // 3. Filtrer par Nom (recherche insensible à la casse et partielle)
+      const matchesName = filterName === '' || citerne.name.toLowerCase().includes(filterName.toLowerCase());
+
+      return matchesAgency && matchesProduct && matchesName;
+    });
+  }, [citernes.data, filterAgency, filterProduct, filterName]);
+
+  // ----------------------------------------------------------------------------------------------------------------
 
   return (
     <>
@@ -129,7 +150,9 @@ const Citernes = ({ citernes, entreprises, products, agencies }) => {
           Gestion des Citernes
         </h1>
         <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
-          <div className="flex flex-col gap-2 mb-4 sm:flex-row sm:items-center sm:justify-between">
+          
+          {/* Section d'en-tête et Bouton Créer */}
+          <div className="flex flex-col gap-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
                 Liste Des Citernes
@@ -146,6 +169,49 @@ const Citernes = ({ citernes, entreprises, products, agencies }) => {
               </button>
             </div>
           </div>
+
+          {/* NOUVELLE SECTION: Les Filtres */}
+          <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {/* Filtre par Nom de Citerne */}
+            <input
+              type="text"
+              placeholder="Rechercher par Nom de Citerne..."
+              value={filterName}
+              onChange={(e) => setFilterName(e.target.value)}
+              className="rounded-lg border border-gray-300 p-2.5 text-theme-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+            />
+
+            {/* Filtre par Agence */}
+            <select
+              value={filterAgency}
+              onChange={(e) => setFilterAgency(e.target.value)}
+              className="rounded-lg border border-gray-300 p-2.5 text-theme-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+            >
+              <option value="">Toutes les Agences</option>
+              {agencies && agencies.map((agency) => (
+                <option key={agency.id} value={agency.id}>
+                  {agency.name}
+                </option>
+              ))}
+            </select>
+
+            {/* Filtre par Produit Actuel */}
+            <select
+              value={filterProduct}
+              onChange={(e) => setFilterProduct(e.target.value)}
+              className="rounded-lg border border-gray-300 p-2.5 text-theme-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+            >
+              <option value="">Tous les Produits</option>
+              {products && products.map((product) => (
+                // Assurez-vous que les produits ont un ID et un nom
+                <option key={product.id} value={product.id}>
+                  {product.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          {/* Fin des Filtres */}
+
           <div className="max-w-full overflow-x-auto">
             <Table>
               <TableHeader className="border-gray-100 dark:border-gray-800 border-y">
@@ -163,8 +229,9 @@ const Citernes = ({ citernes, entreprises, products, agencies }) => {
               </TableHeader>
 
               <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {citernes.data && citernes.data.length > 0 ? (
-                  citernes.data.map((citerne) => (
+                {/* Utiliser la liste filtrée ici */}
+                {filteredCiternes.length > 0 ? (
+                  filteredCiternes.map((citerne) => (
                     <TableRow key={citerne.id}>
                       <TableCell>{citerne.name}</TableCell>
                       <TableCell>{citerne.type}</TableCell>
@@ -175,7 +242,7 @@ const Citernes = ({ citernes, entreprises, products, agencies }) => {
                       <TableCell>{citerne.agency ? citerne.agency.name : 'N/A'}</TableCell>
                       <TableCell>{citerne.entreprise ? citerne.entreprise.name : 'N/A'}</TableCell>
                       <TableCell className="py-3 text-gray-500 text-theme-sm gap-2 flex dark:text-gray-400">
-                        {/* Bouton Modifier qui ouvre la modal en mode édition */}
+                        {/* Bouton Modifier */}
                         <button
                           onClick={() => openEditCiterneModal(citerne)}
                           className="inline-flex items-center gap-2 rounded-lg border border-yellow-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-yellow-700 shadow-theme-xs hover:bg-yellow-50 hover:text-yellow-800 dark:border-yellow-700 dark:bg-yellow-800 dark:text-yellow-400 dark:hover:bg-white/[0.03] dark:hover:text-yellow-200"
@@ -183,30 +250,44 @@ const Citernes = ({ citernes, entreprises, products, agencies }) => {
                           <FontAwesomeIcon icon={faEdit} /> Modifier
                         </button>
                         
-                        {/* Bouton pour générer le stock, affiché seulement pour les citernes fixes */}
+                        {/* Bouton Générer Stock (pour citernes fixes) */}
                         {citerne.type === 'fixed' && (
                           <button
                             onClick={() => handleCreateCiterneStock(citerne.id, citerne.name, citerne.current_product_id)}
                             className="inline-flex items-center gap-2 rounded-lg border border-green-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-green-700 shadow-theme-xs hover:bg-green-50 hover:text-green-800 dark:border-green-700 dark:bg-green-800 dark:text-green-400 dark:hover:bg-white/[0.03] dark:hover:text-green-200"
                           >
-                            <FontAwesomeIcon icon={faBoxesStacked} /> Générer Stock
+                            <FontAwesomeIcon icon={faBoxesStacked} /> Stock
                           </button>
                         )}
+
+                        {/* Bouton Supprimer (Ajouté car manquant dans l'original) */}
+                        <button
+                          onClick={() => handleDeleteCiterne(citerne.id, citerne.name)}
+                          className="inline-flex items-center gap-2 rounded-lg border border-red-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-red-700 shadow-theme-xs hover:bg-red-50 hover:text-red-800 dark:border-red-700 dark:bg-red-800 dark:text-red-400 dark:hover:bg-white/[0.03] dark:hover:text-red-200"
+                        >
+                          <FontAwesomeIcon icon={faTrash} /> Supprimer
+                        </button>
                       </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
                     <TableCell colSpan={9} className="py-3 text-center text-gray-500 dark:text-gray-400">
-                      Aucune citerne trouvée.
+                      {/* Message d'absence de résultat adapté aux filtres */}
+                      {citernes.data && citernes.data.length > 0 ? 
+                        'Aucune citerne ne correspond aux critères de filtre.' : 
+                        'Aucune citerne trouvée.'
+                      }
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
 
-            {/* Pagination */}
-            {(
+            {/* IMPORTANT: La pagination InertiaJS fonctionne sur les données brutes. 
+                Elle doit rester séparée des données filtrées en frontend. 
+                Elle ne s'affichera que si le backend a renvoyé des liens de pagination. */}
+            {(citernes.links && citernes.links.length > 3) && ( // Vérification simple pour s'assurer qu'il y a plus que First/Prev/Next/Last
               <nav className="flex justify-end mt-4">
                 <div className="flex gap-2">
                   {citernes.links.map((link, index) => (
@@ -236,14 +317,14 @@ const Citernes = ({ citernes, entreprises, products, agencies }) => {
         </div>
       </div>
 
-      {/* Une seule modal de formulaire pour la création et la modification */}
+      {/* Modal unique de formulaire */}
       <CiterneFormModal
         isOpen={isCiterneFormModalOpen}
         onClose={closeCiterneFormModal}
         entreprises={entreprises}
         agencies={agencies}
         products={products}
-        selectedCiterne={selectedCiterne} // Passe la citerne sélectionnée (sera null pour la création)
+        selectedCiterne={selectedCiterne}
       />
     </>
   );

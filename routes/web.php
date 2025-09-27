@@ -45,6 +45,7 @@ use App\Http\Middleware\ProductionMiddleware;
 use App\Http\Middleware\RegionaMiddleware;
 use App\Http\Middleware\isArchivedMiddleWare;
 use App\Models\Mouvement;
+use Illuminate\Http\Request;
 
 //auth routes
 Route::get('/login',[AuthController::class,"loginPage"] )->name("login");
@@ -254,20 +255,6 @@ Route::middleware([ProductionMiddleware::class,isArchivedMiddleWare::class])->gr
     Route::delete("/production-delete/{idProd}",[ProductionController::class,"delete"])->name("prodMove.delete");
     
 });
-
-
-Route::post('/update-licence-session', function (Request $request) {
-    // Validez le type de licence
-    $request->validate([
-        'licence_type' => ['required', 'string', 'in:carburant,gaz'],
-    ]);
-
-    // Enregistrez le choix de l'utilisateur dans la session
-    session(['licence_choice' => $request->licence_type]);
-
-    // Retourne une réponse pour qu'Inertia ne fasse pas de rechargement complet de la page
-    return back(); 
-})->name('update.licence.session');
 
 //ceo routes
 Route::middleware(CEOMiddleware::class)->group(function(){

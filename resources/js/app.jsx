@@ -3,6 +3,7 @@ import { createInertiaApp } from '@inertiajs/react'
 import { createRoot } from 'react-dom/client'
 import { SidebarProvider } from './context/SidebarContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { LincenceContextProvider } from './context/LicenceChoiceContext';
 
 createInertiaApp({
   resolve: name => {
@@ -13,7 +14,9 @@ createInertiaApp({
     createRoot(el).render(
     <SidebarProvider>
       <ThemeProvider>
+      <LincenceContextProvider>
     <App {...props} />
+    </LincenceContextProvider>
     </ThemeProvider>
     </SidebarProvider>)
   },
