@@ -5,11 +5,12 @@ import ToastProvider from "../../components/ui/alert/ToastProvider";
 import MagFuelSidebar from "./MagFuelSidebar";
 import MagFuelBackdrop from "./MagFuelBackdrop";
 import MagFuelHeader from "./MagFuelHeader";
+import { usePage } from "@inertiajs/react";
 const LayoutContent = ({children}) => {
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
-
+  
   return (
-    <div className="min-h-screen xl:flex">
+    <div className="min-h-screen xl:flex"> 
       <div>
         <MagFuelSidebar/>
         <MagFuelBackdrop/>

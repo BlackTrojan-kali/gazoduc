@@ -99,7 +99,7 @@ class MouvementController extends Controller
             return back()->with('error', 'Échec de l\'enregistrement du mouvement : ' . $e->getMessage())->withInput();
         }
     }
-    public function moves(Request $request, $type,$fuel)
+    public function moves(Request $request, $type)
     {
         $user = Auth::user();
         $userRoleName = $user->role->name;
@@ -203,6 +203,10 @@ class MouvementController extends Controller
         ->where("storage_type",Auth::user()->role->name)->first();
         if (str_contains($move->description, "sortie transfert automatique #") ){
             return back()->with("warning","veillez supprimer le bordereau de route pour supprimer cette sortie");
+        }
+        if(str_contains($move->description , "mouvement automatique pour vente")){
+            return back()->with("warning","veillez supprimer la vente  pour supprimer ce mouvement");
+            
         }
         try{
         DB::beginTransaction();

@@ -8,6 +8,8 @@ use App\Models\ArticleCategoryPrice;
 use App\Models\Client;
 use App\Models\Facture;
 use App\Models\FactureItem;
+use App\Models\Mouvement;
+use App\Models\Stock;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
@@ -177,16 +179,15 @@ class CommercialController extends Controller
             'items' => 'required|array|min:1',
             'items.*.article_id' => 'required|exists:articles,id',
             'items.*.quantity' => 'required|integer|min:1',
+            "licence" => "string|required|in:carburant,gaz",
         ]);
-
         $clientId = $request->client_id;
         $agencyId = Auth::user()->agency_id;
         $saleType = $request->type; // 'vente' ou 'consigne'
-
         // Étape cruciale : Récupérer la catégorie du client
         $client = Client::findOrFail($clientId);
         $clientCategoryId = $client->client_category_id; // Assurez-vous que votre modèle Client a cette colonne
-
+if($request->licence == "gaz"){
         DB::beginTransaction();
         try {
             $totalAmount = 0;
@@ -227,7 +228,7 @@ class CommercialController extends Controller
                 'status' => 'pending', // Ou un autre statut par défaut si nécessaire
                 'invoice_type' => $saleType,
             ]);
-
+            
             // Création des articles de la facture manuellement (sans $fillable)
             foreach ($processedItems as $item) {
                 $factureItem = new FactureItem();
@@ -255,6 +256,123 @@ class CommercialController extends Controller
 
             return back()->with('error' , 'Impossible d\'enregistrer la vente. ' . $e->getMessage());
         }
+    }else{
+        DB::beginTransaction();
+        try {
+            $totalAmount = 0;
+            $processedItems = [];
+
+            // Traitement de chaque article dans la vente
+            foreach ($request->items as $itemData) {
+                $articleId = $itemData['article_id'];
+                $quantity = $itemData['quantity'];
+
+                // Récupérer le prix unitaire approprié (normal ou consigne)
+                // en utilisant la catégorie du client
+                $unitPrice = $this->getUnitPriceForArticle(
+                    $articleId,
+                    $clientCategoryId, // Passe la catégorie du client
+                    $agencyId,
+                    $saleType
+                );
+
+                $subtotal = $quantity * $unitPrice;
+                $totalAmount += $subtotal;
+
+                $processedItems[] = [
+                    'article_id' => $articleId,
+                    'quantity' => $quantity,
+                    'unit_price' => $unitPrice,
+                    'subtotal' => $subtotal,
+                ];
+            }
+            
+
+            // Création de la facture
+            $facture = Facture::create([
+                'client_id' => $clientId,
+                'user_id' => Auth::user()->id,
+                'agency_id' => $agencyId,
+                'total_amount' => $totalAmount,
+                'currency' => $request->currency,
+                'status' => 'pending', // Ou un autre statut par défaut si nécessaire
+                'invoice_type' => $saleType,
+            ]);
+  
+            // Création des articles de la facture manuellement (sans $fillable)
+            foreach ($processedItems as $item) {
+                
+                $factureItem = new FactureItem();
+                $factureItem->facture_id = $facture->id;
+                $factureItem->article_id = $item['article_id'];
+                $factureItem->quantity = $item['quantity'];
+                $factureItem->unit_price = $item['unit_price'];
+                $factureItem->subtotal = $item['subtotal'];
+                // Ajoutez ici d'autres champs si nécessaire
+                $factureItem->save(); // Sauvegarde l'item manuellement
+           }
+            //creation du mouvement 
+            if($saleType == "vente"){
+                foreach($processedItems as $item){
+                    $stock = Stock::where("article_id",$item["article_id"])->where("agency_id",Auth::user()->agency_id)->where("storage_type",Auth::user()->role->name)->with("article")->first();
+                    if($stock->quantity < $item["quantity"]){
+                        throw new Exception("quantite en stock insufisante pour".$stock->article->name);
+                    }else{
+                        $mouvement = new Mouvement();
+                        $mouvement->article_id = $item["article_id"];
+                        $mouvement->agency_id = Auth::user()->agency_id;
+                        $mouvement->entreprise_id = Auth::user()->entreprise_id;
+                        $mouvement->recorded_by_user_id = Auth::user()->id;
+                        $mouvement->movement_type = "sortie";
+                        $mouvement->quantity = $item["quantity"];
+                        $mouvement->stock = $stock->quantity - $item["quantity"];
+                        $mouvement->qualification = "vente";
+                        $mouvement->source_location = Auth::user()->role->name;
+                        $mouvement->description =  "mouvement automatique pour vente";
+                        $mouvement->facture_id = $facture->id;
+                        $mouvement->save();
+                        $stock->quantity -= $item["quantity"];
+                        $stock->save();
+                        if ($stock->article->type = "produit_fini"){
+                            $stock_parent_article = Stock::where("article_id",$stock->article->article_id)->where("agency_id",Auth::user()->agency_id)->where("storage_type",Auth::user()->role->name)->with("article")->first();
+                        
+                            $mouvement = new Mouvement();
+                            $mouvement->article_id = $stock->article->article_id;
+                            $mouvement->agency_id = Auth::user()->agency_id;
+                            $mouvement->entreprise_id = Auth::user()->entreprise_id;
+                            $mouvement->recorded_by_user_id = Auth::user()->id;
+                            $mouvement->movement_type = "entree";
+                            $mouvement->quantity = $item["quantity"];
+                            $mouvement->stock = $stock_parent_article->quantity + $item["quantity"];
+                            $mouvement->qualification = "vente";
+                            $mouvement->source_location = Auth::user()->role->name;
+                            $mouvement->description =  "mouvement automatique pour vente";
+                            $mouvement->facture_id = $facture->id;
+                            $mouvement->save();
+                      
+                            $stock_parent_article->quantity += $item["quantity"];
+                            $stock_parent_article->save();
+                        }
+                    }
+                }
+            }else{
+
+            }
+            DB::commit(); // Confirme la transaction
+            return back()->with('success', 'Vente enregistrée avec succès, monsieur.');
+        } catch (Exception $e) {
+            DB::rollBack(); // Annule la transaction en cas d'erreur
+            Log::error('Erreur lors de la création de la vente: ' . $e->getMessage(), [
+                'request_data' => $request->all(),
+                'user_id' => Auth::id(),
+                'agency_id' => $agencyId,
+                'client_id' => $clientId,
+                'client_category_id' => $clientCategoryId ?? 'N/A', // Inclure la catégorie si elle est définie
+            ]);
+
+            return back()->with('error' , 'Impossible d\'enregistrer la vente. ' . $e->getMessage());
+        }
+    }
     }
 
   

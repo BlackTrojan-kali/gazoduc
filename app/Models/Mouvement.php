@@ -9,7 +9,15 @@ class Mouvement extends Model
 {
     use SoftDeletes;
     //
-    
+    protected $fillable = [
+        'article_id',
+        'agency_id',
+        'entreprise_id',
+        'recorded_by_user_id',
+        'movement_type',
+        'quantity', // Quantité négative pour la sortie
+        'facture_id',
+    ];
     public function article(){
         return $this->belongsTo(Article::class,"article_id");
     }

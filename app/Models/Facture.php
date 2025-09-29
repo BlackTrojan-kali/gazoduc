@@ -16,6 +16,7 @@ class Facture extends Model
                 'currency',
                 'status', // Ou un autre statut par défaut si nécessaire
                 'invoice_type',
+                "licence",
     ];
     public function client(){
         return $this->belongsTo(Client::class,"client_id");

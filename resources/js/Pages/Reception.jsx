@@ -13,6 +13,8 @@ import ReceptionHistoryPDFExcelModal from '../components/Modals/RecHistModal';
 import ProdLayout from '../layout/ProdLayout/ProdLayout';
 import RegLayout from '../layout/RegLayout/RegLayout';
 import DirLayout from '../layout/DirLayout/DirLayout';
+import useLicenceChoice from '../hooks/useLicenceChoice';
+import MagFuelLayout from '../layout/FuelLayout/MagFuelLayout';
 
 const PageContent = ({ receptions: initialReceptions, agencies }) => {
   const { delete: inertiaDelete, processing } = useForm();
@@ -347,6 +349,7 @@ const PageContent = ({ receptions: initialReceptions, agencies }) => {
 
 const Reception = ({ receptions, agencies }) => {
   const { auth } = usePage().props;
+  const {licence} = useLicenceChoice()
   if (auth.user.role === "production") {
     return (
       <ProdLayout>
@@ -355,12 +358,21 @@ const Reception = ({ receptions, agencies }) => {
     );
   }
 
-  if (auth.user.role === "magasin") {
+  if (auth.user.role === "magasin") 
+    {
+      if (licence == "gas"){
     return (
       <MagLayout>
         <PageContent receptions={receptions} agencies={agencies} />
       </MagLayout>
     );
+  }else{
+    return(
+      <MagFuelLayout>
+        <PageContent receptions={receptions} agencies={agencies} />  
+      </MagFuelLayout>
+    )
+  }
   }
 
   if (auth.user.role === "controleur") {

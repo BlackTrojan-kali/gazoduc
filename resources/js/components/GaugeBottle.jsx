@@ -8,16 +8,6 @@ const GaugeBottle = ({ quantity, maxCapacity, label, showLabel = true }) => {
 
   const percentage = Math.min(100, (currentQuantity / totalCapacity) * 100);
 
-  // --- Ajoutez ces lignes pour le débogage ---
-  console.log(`Label: ${label}`);
-  console.log(`  quantity (raw):`, quantity);
-  console.log(`  maxCapacity (raw):`, maxCapacity);
-  console.log(`  currentQuantity (processed):`, currentQuantity);
-  console.log(`  totalCapacity (processed):`, totalCapacity);
-  console.log(`  Calculated percentage: ${percentage}%`);
-  // ------------------------------------------
-
-  // ... (le reste de votre code)
 
   let gaugeColorClass = 'bg-blue-500'; // Couleur par défaut
   if (currentQuantity < totalCapacity * 0.1) {

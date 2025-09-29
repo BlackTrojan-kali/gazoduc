@@ -8,13 +8,13 @@ import ReceptionFormModal from '../../components/Modals/Magasin/ReceptionModal';
 import DepotageFormModal from '../../components/Modals/Magasin/DepotageModal';
 import EditCiterneStockModal from '../../components/Modals/Magasin/ReleveModal'; // Nom de la modal mis à jour
 import MagFuelLayout from '../../layout/FuelLayout/MagFuelLayout';
+import useLicenceChoice from '../../hooks/useLicenceChoice';
 
 const MagFuelCiterne = ({ stocks, articles, cuves, agencies, cuvesFixes, citernesMobiles }) => {
   const [isReceptionModalOpen, setIsReceptionModalModalOpen] = useState(false);
   const [isDepotageModalOpen, setIsDepotageModalOpen] = useState(false);
   const [isEditStockModalOpen, setIsEditStockModalOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState(null);
-
   const openReceptionModal = () => {
     setIsReceptionModalModalOpen(true);
   };

@@ -13,6 +13,8 @@ import Select from 'react-select'; // Import du composant Select
 import MagLayout from '../layout/MagLayout/MagLayout';
 import ProdLayout from '../layout/ProdLayout/ProdLayout';
 import RegLayout from '../layout/RegLayout/RegLayout';
+import useLicenceChoice from '../hooks/useLicenceChoice';
+import MagFuelLayout from '../layout/FuelLayout/MagFuelLayout';
 
 // --- Composant PageContent: Contient la logique principale de la page ---
 const PageContent = ({ movements, articles, agencies, services }) => {
@@ -384,7 +386,7 @@ console.log(auth);
 const Entree = ({ movements, articles, agencies, services }) => {
     const { auth } = usePage().props;
     const userRole = auth.user.role;
-
+    const {licence} = useLicenceChoice();
     if (userRole === "production") {
         return (
             <ProdLayout>
@@ -393,11 +395,19 @@ const Entree = ({ movements, articles, agencies, services }) => {
         );
     }
     if (userRole === "magasin") {
+      if (licence=="gaz"){
         return (
             <MagLayout>
                 <PageContent movements={movements} articles={articles} agencies={agencies} services={services} />
             </MagLayout>
         );
+      }else{
+        return (
+          <MagFuelLayout>
+                  <PageContent movements={movements} articles={articles} agencies={agencies} services={services} />
+          </MagFuelLayout>
+        )
+      }
     }
     if (userRole === "controleur" || userRole === "direction") {
        return (

@@ -204,19 +204,21 @@ Route::middleware(isAuthenticatedMiddleware::class)->group(function(){
 
 Route::post('/notifications/{notification}/mark-as-read', [NotificationController::class, 'markAsRead'])->name('notifications.markAsRead');
 Route::post('/notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.markAllAsRead');
+
+ //commercial routes
+ Route::get("/commercial-page-index",[CommercialController::class,"index"])->name("compage.index");
+ Route::get("/commercial-page-sales",[CommercialController::class,"sales"])->name("compage.sales");
+ Route::post("/commercial-page-sales-store",[CommercialController::class,"store"])->name("compage.store");
+ //payment routes
+ Route::post("/payment-store",[PaymentController::class,"store"])->name("payments.store");
+ Route::put("/payment-update/{PID}",[PaymentController::class,"update"])->name("payments.update");
+ Route::post("/payment-associate/",[PaymentController::class,"associate"])->name("payments.associate");
+ Route::post('/payments/disassociate', [PaymentController::class, 'disassociate'])->name('payments.disassociate');
+ Route::delete('/payments/{payment}', [PaymentController::class, 'destroy'])->name('payments.destroy');
+
 });
 Route::middleware([CommercialMiddleware::class,isArchivedMiddleWare::class])->group(function(){
-    //commercial routes
-    Route::get("/commercial-page-index",[CommercialController::class,"index"])->name("compage.index");
-    Route::get("/commercial-page-sales",[CommercialController::class,"sales"])->name("compage.sales");
-    Route::post("/commercial-page-sales-store",[CommercialController::class,"store"])->name("compage.store");
-    //payment routes
-    Route::post("/payment-store",[PaymentController::class,"store"])->name("payments.store");
-    Route::put("/payment-update/{PID}",[PaymentController::class,"update"])->name("payments.update");
-    Route::post("/payment-associate/",[PaymentController::class,"associate"])->name("payments.associate");
-    Route::post('/payments/disassociate', [PaymentController::class, 'disassociate'])->name('payments.disassociate');
-    Route::delete('/payments/{payment}', [PaymentController::class, 'destroy'])->name('payments.destroy');
-});
+   });
 Route::middleware(IsAdminMiddleware::class)->group(function(){
    //regional routes
     Route::get("/regional",[UserController::class,"index_regional"])->name("regional");

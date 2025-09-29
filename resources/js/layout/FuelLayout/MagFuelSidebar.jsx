@@ -3,7 +3,7 @@ import { Link, usePage } from "@inertiajs/react"; // <--- IMPORT usePage HERE
 
 import { useSidebar } from "../../context/SidebarContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronDown, faDashboard, faDotCircle, faDriversLicense, faGlobe,  faRepeat,  faUser,  } from "@fortawesome/free-solid-svg-icons";
+import { faChevronDown, faDashboard, faDollar, faDotCircle, faDriversLicense, faGlobe,  faRepeat,  faUser,  } from "@fortawesome/free-solid-svg-icons";
 
 
 const navItems = [
@@ -19,18 +19,26 @@ const navItems = [
     icon:  <FontAwesomeIcon icon={faRepeat} />,
     name: "Mouvements",
       subItems: [
-      { name: "entrees", path: "/magasin-moves/entree/fuel", pro: false },
-      { name: "sorties", path: "/magasin-moves/sortie/fuel", pro: false },
-      { name: "releves", path: "/releves/fuel", pro: false },
-      { name: "depotages", path: "/depotages/fuel", pro: false },
-      { name: "reception", path: "/receptions/fuel", pro: false },
+      { name: "entrees", path: "/magasin-moves/entree", pro: false },
+      { name: "sorties", path: "/magasin-moves/sortie", pro: false },
+      { name: "releves", path: "/releves", pro: false },
+      { name: "depotages", path: "/depotages", pro: false },
+      { name: "reception", path: "/receptions", pro: false },
     ],
   },
   {
     icon:  <FontAwesomeIcon icon={faDriversLicense} />,
     name: "Bordereaux de Route",
     subItems: [
-      { name: "liste", path: "/broute-index/fuel", pro: false },
+      { name: "liste", path: "/broute-index", pro: false },
+    ],
+  },
+  {
+    icon:  <FontAwesomeIcon icon={faDollar} />,
+    name: "Ventes",
+    subItems: [
+      { name: "Factures", path: "/commercial-page-sales", pro: false },
+      { name: "Articles Vendues", path: "/sales/items", pro: false },
     ],
   },
  

@@ -10,7 +10,7 @@ use App\Models\Stock;
 use App\Models\Vehicule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-
+use App\Models\Client;
 class MagasinController extends Controller
 {
     // Original index function
@@ -51,9 +51,9 @@ class MagasinController extends Controller
         ->get();  
          $articles = Article::where("entreprise_id",Auth::user()->entreprise_id)->where("type","!=","matiere_premiere")->where("type","!=","produit_petrolier")->get();
         $agencies = Agency::where("id",Auth::user()->agency_id)->where("entreprise_id",Auth::user()->entreprise_id)->get();
-        $fuel = true;
+        $clients = Client::all();
         
-        return Inertia("Fuel/MagFuelIndex",compact("stocks","articles","agencies", "fuel"));
+        return Inertia("Fuel/MagFuelIndex",compact("stocks","articles","agencies", "clients"));
     }
 
     // New citerne_index function for fuel logic

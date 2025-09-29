@@ -2,14 +2,16 @@ import React, { useState } from 'react';
 import MagFuelLayout from '../../layout/FuelLayout/MagFuelLayout';
 import { Head, usePage } from '@inertiajs/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faCartPlus } from '@fortawesome/free-solid-svg-icons'; // Importation de faCartPlus
 
 import MovementFormModal from '../../components/Modals/Magasin/MoveModal';
+import NewSaleModal from '../../components/Modals/Sales/NewSaleModal'; // ⬅️ IMPORTATION DE LA MODAL DE VENTE
 
-const MagFuelIndex = ({ stocks, articles, agencies }) => {
+const MagFuelIndex = ({ stocks, articles, agencies, clients }) => { // ⬅️ N'oubliez pas de passer 'clients' via Inertia
   // Définir la quantité maximale pour la jauge
   const MAX_QUANTITY_FOR_GAUGE = 10000;
   const [isMovementModalOpen, setIsMovementModalOpen] = useState(false);
+  const [isSaleModalOpen, setIsSaleModalOpen] = useState(false); // ⬅️ NOUVEL ÉTAT POUR LA MODAL DE VENTE
 
   const openMovementModal = () => {
     setIsMovementModalOpen(true);
@@ -17,6 +19,15 @@ const MagFuelIndex = ({ stocks, articles, agencies }) => {
 
   const closeMovementModal = () => {
     setIsMovementModalOpen(false);
+  };
+  
+  // ⬅️ NOUVELLES FONCTIONS POUR LA MODAL DE VENTE
+  const openSaleModal = () => {
+    setIsSaleModalOpen(true);
+  };
+
+  const closeSaleModal = () => {
+    setIsSaleModalOpen(false);
   };
 
   return (
@@ -27,6 +38,7 @@ const MagFuelIndex = ({ stocks, articles, agencies }) => {
           Vue d'Ensemble des Stocks de Carburant
         </h1>
 
+        {/* ------------------------------------- */}
         {/* --- Bloc des actions (Header) --- */}
         <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 mb-6 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -36,6 +48,16 @@ const MagFuelIndex = ({ stocks, articles, agencies }) => {
               </h3>
             </div>
             <div className="flex items-center gap-3">
+              {/* ⬅️ NOUVEAU BOUTON POUR LA VENTE */}
+              <button
+                onClick={openSaleModal}
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-blue-600 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-blue-700 dark:border-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600"
+              >
+                <FontAwesomeIcon icon={faCartPlus} /> {/* J'utilise faCartPlus, mais faPlus est aussi possible */}
+                Créer une Vente
+              </button>
+              
+              {/* BOUTON EXISTANT POUR LE MOUVEMENT */}
               <button
                 onClick={openMovementModal}
                 className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 dark:border-brand-700 dark:bg-brand-700 dark:hover:bg-brand-600"
@@ -47,8 +69,10 @@ const MagFuelIndex = ({ stocks, articles, agencies }) => {
           </div>
         </div>
         {/* --- Fin du bloc des actions --- */}
+        {/* ------------------------------------- */}
 
         {stocks && stocks.length > 0 ? (
+          // ... Le code d'affichage des stocks reste inchangé ...
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {stocks.map((stock) => {
               const articleName = stock.article ? stock.article.name : 'Article inconnu';
@@ -103,6 +127,14 @@ const MagFuelIndex = ({ stocks, articles, agencies }) => {
         onClose={closeMovementModal}
         articles={articles}
         agencies={agencies}
+      />
+      
+      {/* ⬅️ LA NOUVELLE MODAL DE VENTE */}
+      <NewSaleModal
+        isOpen={isSaleModalOpen}
+        onClose={closeSaleModal}
+        articles={articles}
+        clients={clients} // Assurez-vous que 'clients' est passé à ce composant parent
       />
     </>
   );

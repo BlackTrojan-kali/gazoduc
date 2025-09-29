@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
 import ComLayout from '../../layout/ComLayout/ComLayout';
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '../../components/ui/table';
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFilePdf } from '@fortawesome/free-solid-svg-icons';
 import ExportItemsModal from '../../components/Modals/Sales/ExportItemModal'; // Import de la modale d'exportation
+import MagFuelLayout from '../../layout/FuelLayout/MagFuelLayout';
 
 // Fonction utilitaire pour le formatage des nombres
 const number_format = (number, decimals, decPoint, thousandsSep) => {
@@ -31,7 +32,7 @@ const number_format = (number, decimals, decPoint, thousandsSep) => {
     return s.join(dec);
 };
 
-const ComItems = ({ factureItems, articles, agencies, onPageChange, onFilterChange }) => {
+const PageContent = ({ factureItems, articles, agencies, onPageChange, onFilterChange }) => {
     // Utilisation d'un seul objet d'état pour tous les filtres
     const [filters, setFilters] = useState({
         selectedArticle: '',
@@ -295,6 +296,21 @@ const ComItems = ({ factureItems, articles, agencies, onPageChange, onFilterChan
         </>
     );
 };
-
-ComItems.layout = page => <ComLayout children={page} />;
+const ComItems = ({ factureItems, articles, agencies, onPageChange, onFilterChange })=>{
+    const {auth} = usePage().props
+    if (auth.user.role == "commercial"){
+        return(
+            <ComLayout>
+                <PageContent factureItems={factureItems} articles={articles} agencies={agencies} onPageChange={onPageChange} onFilterChange={onFilterChange}/>
+            </ComLayout>
+        )
+    }
+    if(auth.user.role == "magasin"){
+        return(
+            <MagFuelLayout>
+                <PageContent factureItems={factureItems} articles={articles} agencies={agencies} onPageChange={onPageChange} onFilterChange={onFilterChange}/>
+            </MagFuelLayout>
+        )
+    }
+}
 export default ComItems;

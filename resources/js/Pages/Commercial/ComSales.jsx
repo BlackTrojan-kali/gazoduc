@@ -11,8 +11,9 @@ import Select from 'react-select';
 import InvoiceDetailsModal from '../../components/Modals/Sales/InvoiceDetailModal';
 import NewSaleModal from '../../components/Modals/Sales/NewSaleModal';
 import ExportSalesModal from '../../components/Modals/Sales/ExportSalesModal'; // Import de la nouvelle modale
+import MagFuelLayout from '../../layout/FuelLayout/MagFuelLayout';
 
-const ComSales = ({ factures, clients, articles, agencies }) => {
+const PageContent = ({ factures, clients, articles, agencies }) => {
   const { delete: inertiaDelete } = useForm();
   const { auth } = usePage().props; // Get auth.user from Inertia's page props
 
@@ -460,6 +461,21 @@ const ComSales = ({ factures, clients, articles, agencies }) => {
     </>
   );
 };
-
-ComSales.layout = page => <ComLayout children={page} />;
+const  ComSales = ({ factures, clients, articles, agencies })=>{
+  const {auth}= usePage().props
+  if(auth.user.role == "commercial"){
+    return(
+      <ComLayout>
+        <PageContent factures={factures} clients={clients} articles={articles} agencies={agencies}/>
+      </ComLayout>
+    )
+  }
+  if(auth.user.role = "magasin"){
+    return(
+    <MagFuelLayout>
+    <PageContent factures={factures} clients={clients} articles={articles} agencies={agencies}/>
+    </MagFuelLayout>
+    )
+  }
+}
 export default ComSales;

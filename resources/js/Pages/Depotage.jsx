@@ -12,6 +12,8 @@ import Input from '../components/form/input/InputField';
 import DepotageHistoryPDFExcelModal from '../components/Modals/DepHistModal';
 import RegLayout from '../layout/RegLayout/RegLayout';
 import DirLayout from '../layout/DirLayout/DirLayout';
+import useLicenceChoice from '../hooks/useLicenceChoice';
+import MagFuelLayout from '../layout/FuelLayout/MagFuelLayout';
 
 const PageContent = ({ depotages: initialDepotages, agencies }) => {
   const { delete: inertiaDelete, processing } = useForm();
@@ -365,12 +367,22 @@ const PageContent = ({ depotages: initialDepotages, agencies }) => {
 };
 const Depotage = ({depotages,agencies})=>{
   const {auth} = usePage().props
+  const {licence} = useLicenceChoice()
   if(auth.user.role == "magasin"){
+    if(licence == "gaz"){
     return (
       <MagLayout>
         <PageContent depotages={depotages} agencies={agencies}/>
       </MagLayout>
     )
+  }else{
+    return(
+      <MagFuelLayout>
+        
+        <PageContent depotages={depotages} agencies={agencies}/>
+      </MagFuelLayout>
+    )
+  }
   }
 
   if(auth.user.role == "controleur"){

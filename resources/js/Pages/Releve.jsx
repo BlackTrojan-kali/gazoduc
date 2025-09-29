@@ -9,6 +9,8 @@ import Input from '../components/form/input/InputField';
 import ReleveHistoryPDFExcelModal from '../components/Modals/ReleveHistModal';
 import RegLayout from '../layout/RegLayout/RegLayout';
 import DirLayout from '../layout/DirLayout/DirLayout';
+import useLicenceChoice from '../hooks/useLicenceChoice';
+import MagFuelLayout from '../layout/FuelLayout/MagFuelLayout';
 
 const PageContent = ({ releves: initialReleves, agencies }) => { // 'filters' est retiré des props
   // --- États pour la modale d'exportation ---
@@ -264,12 +266,21 @@ const PageContent = ({ releves: initialReleves, agencies }) => { // 'filters' es
 
 const Releve =({releves,agencies})=>{
   const  {auth} = usePage().props
+  const {licence} = useLicenceChoice()
   if(auth.user.role == "magasin"){
+    if(licence == "gaz"){
     return (
       <MagLayout title="releves">
         <PageContent releves={releves} agencies={agencies}/>
       </MagLayout>
     )
+  }else{
+    return(
+      <MagFuelLayout>
+        <PageContent releves={releves} agencies={agencies}/>
+      </MagFuelLayout>
+    )
+  }
   }
    if(auth.user.role == "controleur"){
     return (

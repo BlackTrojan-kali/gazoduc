@@ -4,6 +4,8 @@ import ToastProvider from "../../components/ui/alert/ToastProvider";
 import ComHeader from "./ComHeader";
 import ComBackdrop from "./ComBackdrop";
 import ComSidebar from "./ComSidebar";
+import { useEffect } from "react";
+import useLicenceChoice from "../../hooks/useLicenceChoice";
 const LayoutContent = ({children}) => {
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
 
@@ -28,6 +30,10 @@ const LayoutContent = ({children}) => {
 };
 
 const ComLayout= ({children}) => {
+  const {handleChangeLicence} = useLicenceChoice()
+  useEffect(()=>{
+    handleChangeLicence("gaz");
+  },[])
   return (
     <SidebarProvider>
       <LayoutContent>

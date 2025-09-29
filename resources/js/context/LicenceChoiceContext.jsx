@@ -1,30 +1,31 @@
-import React, { createContext, useState } from "react"; // 👈 Correction 1: Import de useState
-import { usePage } from "@inertiajs/react"; // 👈 Correction 2: Import de usePage pour lire les props Inertia
+import { usePage } from "@inertiajs/react";
+import React, { createContext, useEffect, useState } from "react"; 
+// L'import de usePage n'est plus nécessaire ici si vous n'utilisez pas les props Inertia
+// import { usePage } from "@inertiajs/react"; 
 
 export const LicenceContext = createContext({});
 
-export function LicenceContextProvider({ children }){ // 👈 Correction 3: Faute de frappe (Lincence -> Licence)
+export function LicenceContextProvider({ children }){
     
-    // -----------------------------------------------------------
-    // NOUVELLE LOGIQUE : Récupérer la valeur initiale depuis Inertia
-    // -----------------------------------------------------------
-    const { props } = usePage();
-    const initialLicence = props.licence_choice; // Lit la prop partagée par Laravel (ex: 'carburant' ou 'gaz')
-    // -----------------------------------------------------------
 
-    // Utilise la valeur initiale d'Inertia comme état de départ
-    const [licence, setLicence] = useState(initialLicence); 
+    // 1. Initialiser l'état en lisant directement localStorage
+    // Cela garantit que l'état initial est la valeur persistante (ou "gaz" par défaut).
+    const [licence, setLicence] = useState(() => {
+        const storedLicence = localStorage.getItem("licence");
+        return storedLicence || "gaz";
+    });
     
-    // Note: Dans une application Inertia, la mise à jour de cet état local (handleChangeLicence) 
-    // devrait toujours être couplée à une requête backend pour mettre à jour la session Laravel, 
-    // puis rafraîchir la page (comme fait dans SelectLicence).
-    
+ 
     const handleChangeLicence = (value) =>{
         setLicence(value);
-        // Souvent, ici, vous appelleriez une fonction qui fait une requête 
-        // Inertia.post('/update-licence-session', { licence_type: value });
+        // Persistance immédiate dans localStorage
+        localStorage.setItem("licence", value);
+        
+        // Note: C'est l'endroit idéal pour déclencher l'action Inertia/Laravel
+        // si vous voulez que ce choix persiste dans la session serveur
     }
 
+    // 4. Utilisation du contexte inchangée
     return(
         <LicenceContext.Provider value={{licence, handleChangeLicence}}> 
             {children}

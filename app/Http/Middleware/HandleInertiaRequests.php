@@ -38,10 +38,7 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             
-            // --- AJOUT DE LA VARIABLE licence_choice ---
-            'licence_choice' => fn () => $request->session()->get('licence_choice'),
-            // ---------------------------------------------
-            
+         
             'auth' => [
                 'user' => $request->user() ? [
                     'id' => $request->user()->id,
@@ -50,7 +47,7 @@ class HandleInertiaRequests extends Middleware
                     'email' => $request->user()->email,
                     'role' => $request->user()->role->name ?? null, 
                     "agency"=>$request->user()->agency ?? null,
-                    "entreprise"=>$request->user()->entreprise ?? null,
+                    "entreprice"=>$request->user()->entreprise ?? null,
                     "modif_days"=>$request->user()->modif_days,
                     "notifications" => $request->user()->unreadNotifications()->latest()->limit(20)->get(),
                 ] : null,

@@ -20,6 +20,7 @@ return new class extends Migration
             $table->unsignedBigInteger("agency_id");
             $table->foreign("agency_id")->on("agencies")->references("id");
             $table->decimal("total_amount",14,2);
+            $table->string("licence")->nullable()->comment("carburant ou gaz");
             $table->string("currency");
             $table->string("invoice_type");
             $table->string("status");
