@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\EntrepriseController;
 use App\Http\Controllers\FactureController;
+use App\Http\Controllers\FuelController as ControllersFuelController;
 use App\Http\Controllers\LicenceController;
 use App\Http\Controllers\MagasinController;
 use App\Http\Controllers\MouvementController;
@@ -121,6 +122,8 @@ Route::middleware([MagasinMiddleware::class,isArchivedMiddleWare::class])->group
    Route::post("/magasin-citernes-depotage",[CiterneController::class,"depotage"])->name("magasin.depotage");
    Route::post("/magasin-citerne-releve/{stock}",[CiterneController::class,"releve"])->name("magasin.releve");
    //mouvement
+   //sale fuel
+   Route::post("/magasin-post-sale-fuel",[ControllersFuelController::class,"store"])->name("fuel.store");
 
 //select licence type
 Route::get("/magasin-choose-licence",[MagasinController::class,"licence"])->name("magasin.licence");
@@ -175,7 +178,7 @@ Route::middleware(isAuthenticatedMiddleware::class)->group(function(){
     Route::get('/sales/export-pdf', [FactureController::class, 'exportPdf'])->name('sales.export.pdf');
     Route::get('/sales/items', [FactureController::class, 'sales'])->name('sales.items');
     Route::get('/facture-items/export-item-pdf', [FactureController::class, 'exportItemPdf'])->name('facture-items.export.pdf');
-    Route::delete('/factures/delete/{idFac}', [FactureController::class, 'delete'])->name('factures.delete');
+    Route::delete('/factures/delete/{idFac}/{licence}', [FactureController::class, 'delete'])->name('factures.delete');
     //payment routes
     Route::get("/payment-index",[PaymentController::class,"index"])->name("payment.index");
     Route::get("/payment-export",[PaymentController::class,"exportPaymentsToPdf"])->name("payments.export");

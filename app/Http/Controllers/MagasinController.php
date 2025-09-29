@@ -36,7 +36,7 @@ class MagasinController extends Controller
         $articles = Article::where("entreprise_id",Auth::user()->entreprise_id)->where("type","matiere_premiere")->get();
         $citernesMobiles = Vehicule::where("archived",0)->where("type","Camion-citerne")->get();
          $citernesFixes = Citerne::where("entreprise_id",Auth::user()->entreprise_id)->where("agency_id",Auth::user()->agency_id)->where("type","fixed")->with("entreprise","agency","article")->get();
-        
+       
         return Inertia("Magasin/MagCiterne",compact("stocks","agencies","articles","citernesMobiles","citernesFixes"));
     }
     public function licence(){
@@ -52,14 +52,13 @@ class MagasinController extends Controller
          $articles = Article::where("entreprise_id",Auth::user()->entreprise_id)->where("type","!=","matiere_premiere")->where("type","!=","produit_petrolier")->get();
         $agencies = Agency::where("id",Auth::user()->agency_id)->where("entreprise_id",Auth::user()->entreprise_id)->get();
         $clients = Client::all();
-        
         return Inertia("Fuel/MagFuelIndex",compact("stocks","articles","agencies", "clients"));
     }
 
     // New citerne_index function for fuel logic
     public function fuel_citerne_index(){
         $stocks = Stock::where("agency_id",Auth::user()->agency_id)
-        ->Where("storage_type","carburant")
+        ->where("storage_type","carburant")
         ->with("article","citerne")
         ->get();
         $agencies = Agency::where("id",Auth::user()->agency_id)->where("entreprise_id",Auth::user()->entreprise_id)->get();
@@ -68,8 +67,8 @@ class MagasinController extends Controller
         $citernesMobiles = Vehicule::where("archived",0)->where("type","Camion-citerne")->get();
          $cuvesFixes = Citerne::where("entreprise_id",Auth::user()->entreprise_id)->where("agency_id",Auth::user()->agency_id)->where("type","carburant")->with("entreprise","agency","article")->get();
        
-         $fuel = true;
+         $clients = Client::all();
         
-        return Inertia("Fuel/MagFuelCiterne",compact("stocks","agencies","articles","citernesMobiles","cuvesFixes", "fuel"));
+        return Inertia("Fuel/MagFuelCiterne",compact("clients","stocks","agencies","articles","citernesMobiles","cuvesFixes"));
     }
 }

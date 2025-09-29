@@ -356,7 +356,29 @@ if($request->licence == "gaz"){
                     }
                 }
             }else{
-
+                foreach($processedItems as $item){
+                    $stock = Stock::where("article_id",$item["article_id"])->where("agency_id",Auth::user()->agency_id)->where("storage_type",Auth::user()->role->name)->with("article")->first();
+                    if($stock->quantity < $item["quantity"]){
+                        throw new Exception("quantite en stock insufisante pour".$stock->article->name);
+                    }else{
+                        $mouvement = new Mouvement();
+                        $mouvement->article_id = $item["article_id"];
+                        $mouvement->agency_id = Auth::user()->agency_id;
+                        $mouvement->entreprise_id = Auth::user()->entreprise_id;
+                        $mouvement->recorded_by_user_id = Auth::user()->id;
+                        $mouvement->movement_type = "sortie";
+                        $mouvement->quantity = $item["quantity"];
+                        $mouvement->stock = $stock->quantity - $item["quantity"];
+                        $mouvement->qualification = "vente";
+                        $mouvement->source_location = Auth::user()->role->name;
+                        $mouvement->description =  "mouvement automatique pour vente";
+                        $mouvement->facture_id = $facture->id;
+                        $mouvement->save();
+                        $stock->quantity -= $item["quantity"];
+                        $stock->save();
+                       
+                    }
+                }
             }
             DB::commit(); // Confirme la transaction
             return back()->with('success', 'Vente enregistrée avec succès, monsieur.');

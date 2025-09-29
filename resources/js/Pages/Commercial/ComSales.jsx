@@ -12,6 +12,7 @@ import InvoiceDetailsModal from '../../components/Modals/Sales/InvoiceDetailModa
 import NewSaleModal from '../../components/Modals/Sales/NewSaleModal';
 import ExportSalesModal from '../../components/Modals/Sales/ExportSalesModal'; // Import de la nouvelle modale
 import MagFuelLayout from '../../layout/FuelLayout/MagFuelLayout';
+import useLicenceChoice from '../../hooks/useLicenceChoice';
 
 const PageContent = ({ factures, clients, articles, agencies }) => {
   const { delete: inertiaDelete } = useForm();
@@ -94,7 +95,7 @@ const PageContent = ({ factures, clients, articles, agencies }) => {
   const closeExportModal = () => {
     setIsExportModalOpen(false);
   };
-
+const {licence} = useLicenceChoice();
   // --- Fonction de Suppression de Facture ---
   const handleDeleteFacture = (facture) => { // Pass the full facture object
     if (!canDelete(facture.created_at)) {
@@ -117,7 +118,7 @@ const PageContent = ({ factures, clients, articles, agencies }) => {
       cancelButtonText: 'Annuler'
     }).then((result) => {
       if (result.isConfirmed) {
-        inertiaDelete(route('factures.delete', facture.id), { // Use facture.id here
+        inertiaDelete(route('factures.delete', [facture.id,licence]), { // Use facture.id here
           preserveScroll: true,
           onSuccess: () => {
             Swal.fire(
@@ -138,7 +139,6 @@ const PageContent = ({ factures, clients, articles, agencies }) => {
       }
     });
   };
-
   // --- Fonction d'Impression mise à jour pour télécharger le PDF ---
   const handlePrintFacture = (factureId) => {
     window.open(route('factures.print', { facture: factureId }), '_blank');

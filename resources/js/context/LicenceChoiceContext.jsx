@@ -8,8 +8,6 @@ export const LicenceContext = createContext({});
 export function LicenceContextProvider({ children }){
     
 
-    // 1. Initialiser l'état en lisant directement localStorage
-    // Cela garantit que l'état initial est la valeur persistante (ou "gaz" par défaut).
     const [licence, setLicence] = useState(() => {
         const storedLicence = localStorage.getItem("licence");
         return storedLicence || "gaz";

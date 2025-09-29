@@ -7,6 +7,8 @@ use App\Models\Article;
 use App\Models\Client;
 use App\Models\Facture;
 use App\Models\FactureItem;
+use App\Models\Mouvement;
+use App\Models\Stock;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -50,10 +52,90 @@ class FactureController extends Controller
         // Télécharge le fichier PDF avec un nom spécifique
         return $pdf->download('facture-' . $facture->id . '.pdf');
     }
-    public function delete($idFac){
-        $idFac = Facture::findOrFail($idFac);
-        $idFac->delete();
-        return back()->with("warning","facture supprimee avec success");
+    public function delete($idFac, $licence)
+    {
+        // Bloc 1 : Suppression simple pour la licence 'gaz'
+        if ($licence == "gaz") {
+            // Utilisation d'une variable plus claire pour l'objet
+            $facture_a_supprimer = Facture::findOrFail($idFac); 
+            $facture_a_supprimer->delete();
+            return back()->with("warning", "facture supprimee avec success");
+        } 
+        
+        // Bloc 2 : Suppression avec restauration de stock pour les autres licences
+        else {
+            // Récupération de la facture avec ses mouvements et les articles associés
+            $facture = Facture::where("id", $idFac)->with("mouvement.article")->first();
+    
+            if ($facture->invoice_type == "vente") {
+                foreach ($facture->mouvement as $move) {
+                    // 1. Récupération du stock de l'article de la facture
+                    $stock = Stock::where("article_id", $move->article_id)
+                                  ->where("agency_id", Auth::user()->agency_id)
+                                  ->where("storage_type", Auth::user()->role->name)
+                                  ->first();
+    
+                    // Vérification de l'existence du stock avant modification (robustesse)
+                    if ($stock) {
+                        // Augmentation du stock de la quantité du mouvement (remise en stock)
+                        $stock->quantity += intval($move->quantity);
+                        
+                        // 2. Traitement spécifique pour les 'produit_fini'
+                        if ($move->article->type == "produit_fini") {
+                            // Récupération du stock de l'article parent (matière première/composant)
+                            $parent_stock = Stock::where('article_id', $move->article->article_id)
+                                                 ->where("agency_id", Auth::user()->agency_id)
+                                                 ->where("storage_type", Auth::user()->role->name)
+                                                 ->first();
+                            
+                            // Vérification de l'existence du stock parent (robustesse)
+                            if ($parent_stock) {
+                            
+                                // Remise en stock de la quantité d'article parent consommée
+                                $parent_stock->quantity -=  intval($move->quantity); // CHANGEMENT DE LOGIQUE: Si on supprime une vente, on remet le produit fini ET on remet la matière première
+                                $parent_stock->save();
+                            }
+                        }
+                        
+                        // LIGNE CRUCIALE CORRIGÉE : Sauvegarde de la mise à jour du stock de l'article
+                        $stock->save();
+                    }
+                }
+                
+                // Suppression de la facture après la restauration des stocks
+                $facture->delete();
+    
+                // Retour avec un message de succès
+                return back()->with("success", "Facture supprimee et stocks mis a jour avec success.");
+    
+            } else {
+                // Gérer le cas où la facture n'est pas trouvée (pour le bloc 'else')
+                
+                foreach ($facture->mouvement as $move) {
+                    // 1. Récupération du stock de l'article de la facture
+                    $stock = Stock::where("article_id", $move->article_id)
+                                  ->where("agency_id", Auth::user()->agency_id)
+                                  ->where("storage_type", Auth::user()->role->name)
+                                  ->first();
+    
+                    // Vérification de l'existence du stock avant modification (robustesse)
+                    if ($stock) {
+                        // Augmentation du stock de la quantité du mouvement (remise en stock)
+                        $stock->quantity += intval($move->quantity);
+                        
+                        
+                        // LIGNE CRUCIALE CORRIGÉE : Sauvegarde de la mise à jour du stock de l'article
+                        $stock->save();
+                    }
+                }
+                
+                // Suppression de la facture après la restauration des stocks
+                $facture->delete();
+    
+                // Retour avec un message de succès
+                return back()->with("success", "Facture supprimee et stocks mis a jour avec success.");
+            }
+        }
     }
      public function exportPdf(Request $request)
     {
