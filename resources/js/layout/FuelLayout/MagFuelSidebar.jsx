@@ -40,6 +40,13 @@ const navItems = [
       { name: "Factures", path: "/commercial-page-sales", pro: false },
       { name: "Articles Vendues", path: "/sales/items", pro: false },
     ],
+  }, 
+   {
+    icon:  <FontAwesomeIcon icon={faDollar} />,
+    name: "Ventes Carburant",
+    subItems: [
+      { name: "Historique ventes", path: "/fuel-sales-hitory", pro: false },
+    ],
   },
  
 ];

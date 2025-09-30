@@ -150,13 +150,13 @@ Route::middleware(isAuthenticatedMiddleware::class)->group(function(){
         Route::delete("/receptions/{idRec}",[receptionController::class,"delete"])->name("receptions.delete");
         Route::get("/receptions-pdf",[receptionController::class,"export"])->name("receptions.export");
 
-   Route::post("/magasin-move",[MouvementController::class,"store"])->name("magasin.move.store");
-   Route::get("/magasin-moves/{type}",[MouvementController::class,"moves"])->name("magasin.moves");
-   Route::delete("/magasin-move-delete/{idmov}",[MouvementController::class,"delete"])->name("magasin.move.delete");
-    Route::get('/movements/generate-report', [MouvementController::class, 'generateReport'])->name('movements.generateReport');
+       Route::post("/magasin-move",[MouvementController::class,"store"])->name("magasin.move.store");
+       Route::get("/magasin-moves/{type}",[MouvementController::class,"moves"])->name("magasin.moves");
+       Route::delete("/magasin-move-delete/{idmov}",[MouvementController::class,"delete"])->name("magasin.move.delete");
+        Route::get('/movements/generate-report', [MouvementController::class, 'generateReport'])->name('movements.generateReport');
     //production
         Route::get("/prod-history-pdf",[ProductionController::class,"export"])->name("prod.export");
-    Route::get("/prod-history",[ProductionController::class,"prod_history"])->name("prod.hist");
+        Route::get("/prod-history",[ProductionController::class,"prod_history"])->name("prod.hist");
     //clients routes
     Route::get("/client-index",[ClientController::class,"index"])->name("client.index");
     Route::post("/client-store",[ClientController::class,"store"])->name("client.store");
@@ -218,7 +218,11 @@ Route::post('/notifications/mark-all-as-read', [NotificationController::class, '
  Route::post("/payment-associate/",[PaymentController::class,"associate"])->name("payments.associate");
  Route::post('/payments/disassociate', [PaymentController::class, 'disassociate'])->name('payments.disassociate');
  Route::delete('/payments/{payment}', [PaymentController::class, 'destroy'])->name('payments.destroy');
+//fuel sales routes
 
+Route::get("/fuel-sales-hitory",[ControllersFuelController::class,"history"])->name("fuel.sales");
+Route::get('/fuel-sales/export/pdf', [ControllersFuelController::class, 'exportPdf'])->name('fuel.export.pdf');
+ 
 });
 Route::middleware([CommercialMiddleware::class,isArchivedMiddleWare::class])->group(function(){
    });
