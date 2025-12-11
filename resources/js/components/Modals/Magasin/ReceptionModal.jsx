@@ -20,7 +20,6 @@ const ReceptionFormModal = ({ isOpen, onClose, articles, citernesMobiles, agenci
     origin: '', // This field might be pre-filled based on context or selected manually
     licence:licence,
   });
-
   // Reset form data when modal opens or closes
   useEffect(() => {
     if (isOpen) {

@@ -59,7 +59,6 @@ const ReleveHistoryPDFExcelModal = ({ isOpen, onClose, agencies,licence }) => {
         type: reportType, // 'pdf' ou 'excel'
         licence:licence,
       };
-
       const url = route('releves.export', params); // Assurez-vous que cette route existe dans Laravel
 
       // Redirection vers l'URL générée pour déclencher le téléchargement

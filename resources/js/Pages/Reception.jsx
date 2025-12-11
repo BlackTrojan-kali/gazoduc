@@ -352,7 +352,6 @@ const PageContent = ({ receptions: initialReceptions, agencies,licence }) => {
 const Reception = ({ receptions, agencies }) => {
   const { auth } = usePage().props;
   const {licence,DirLicence} = useLicenceChoice()
-
   if (auth.user.role === "production") {
     return (
       <ProdLayout>
@@ -373,7 +372,7 @@ const Reception = ({ receptions, agencies }) => {
   }else{
     return(
       <MagFuelLayout>
-        <PageContent licence={DirLicence} receptions={receptions} agencies={agencies} />  
+        <PageContent licence={licence} receptions={receptions} agencies={agencies} />  
       </MagFuelLayout>
     )
   }
@@ -382,7 +381,7 @@ const Reception = ({ receptions, agencies }) => {
   if (auth.user.role === "controleur") {
     return (
       <RegLayout>
-        <PageContent receptions={receptions} agencies={agencies} />
+        <PageContent licence={DirLicence} receptions={receptions} agencies={agencies} />
       </RegLayout>
     );
   }
@@ -391,13 +390,13 @@ const Reception = ({ receptions, agencies }) => {
    if(DirLicence == "gaz"){
     return(
       <DirLayout>
-        <PageContent receptions={receptions} agencies={agencies} />
+        <PageContent licence={DirLicence} receptions={receptions} agencies={agencies} />
       </DirLayout>
     )
   }else{
     return(
       <DirFuelLayout>
-        <PageContent receptions={receptions} agencies={agencies} />
+        <PageContent licence={DirLicence} receptions={receptions} agencies={agencies} />
       </DirFuelLayout>
     )
   }

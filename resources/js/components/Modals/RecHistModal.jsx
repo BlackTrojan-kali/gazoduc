@@ -48,6 +48,7 @@ const ReceptionHistoryPDFExcelModal = ({ isOpen, onClose, agencies, currentFilte
     // Ajout des paramètres déterminés
     params.append('file_type', fileType);
     params.append('type_mouvement', movementType);
+    params.append('licence', licence);
 
     // La route 'receptions.export' est celle qui gère les deux types d'exportation.
     // L'URL est construite en ajoutant les paramètres de recherche.

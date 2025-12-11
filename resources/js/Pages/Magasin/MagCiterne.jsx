@@ -8,6 +8,7 @@ import { faPlus, faEdit, faClipboardCheck } from '@fortawesome/free-solid-svg-ic
 import ReceptionFormModal from '../../components/Modals/Magasin/ReceptionModal';
 import DepotageFormModal from '../../components/Modals/Magasin/DepotageModal';
 import EditCiterneStockModal from '../../components/Modals/Magasin/ReleveModal'; // Importez la modal d'édition
+import useLicenceChoice from '../../hooks/useLicenceChoice';
  
 const MagCiterne = ({ stocks, articles, citernes, agencies, citernesFixes, citernesMobiles }) => {
   const [isReceptionModalOpen, setIsReceptionModalModalOpen] = useState(false);
@@ -15,6 +16,7 @@ const MagCiterne = ({ stocks, articles, citernes, agencies, citernesFixes, citer
   const [isEditStockModalOpen, setIsEditStockModalOpen] = useState(false); // État pour la modal de modification
   const [selectedStock, setSelectedStock] = useState(null); // Stock en cours de modification
 
+  const {licence,DirLicence} = useLicenceChoice()
   const openReceptionModal = () => {
     setIsReceptionModalModalOpen(true);
   };
@@ -155,6 +157,7 @@ const MagCiterne = ({ stocks, articles, citernes, agencies, citernesFixes, citer
         articles={articles}
         citernesMobiles={citernesMobiles}
         agencies={agencies}
+        licence={licence}
       />
 
       <DepotageFormModal
@@ -164,13 +167,15 @@ const MagCiterne = ({ stocks, articles, citernes, agencies, citernesFixes, citer
         citernesFixes={citernesFixes}
         articles={articles}
         agencies={agencies}
+        licence={licence}
       />
 
       {/* La modal de modification de stock (utilisée pour les deux actions) */}
       <EditCiterneStockModal
         isOpen={isEditStockModalOpen}
         onClose={closeEditStockModal}
-        stockToEdit={selectedStock} // Passe le stock sélectionné et le type d'action
+        stockToEdit={selectedStock} // Passe le stock sélectionné et le type d'
+        licence={licence}
       />
     </>
   );

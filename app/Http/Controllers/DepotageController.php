@@ -58,6 +58,7 @@ class DepotageController extends Controller
         if ($isWithDeleted) {
             $query->withTrashed();
         }
+        
 
         $query->with(['agency', 'citerne_mobile', 'citerne_fixe', 'article', 'user'])
               ->whereBetween('created_at', [$startDate, $endDate]);
@@ -70,9 +71,9 @@ class DepotageController extends Controller
         }else{
             $agencyId = $request->input("agency_id");    
         }
-        
+if($agencyId){        
          $query->where('agency_id', $agencyId);
-
+}
          // Récupération des données finales, triées par date de dépotage
         $depotages = $query->orderBy('created_at', 'asc')->get();
         // 3. Génération du rapport selon le format demandé

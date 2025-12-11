@@ -40,13 +40,14 @@ class receptionController extends Controller
             'file_type' => 'required|in:pdf,excel',
             // Le type de mouvement pour gérer les soft-deletes (global_no_delete, global_with_delete)
             'type_mouvement' => 'required|in:global_no_delete,global_with_delete',
+            "licence"=>"string| nullable"
         ]);
         $startDate = $request->input('start_date') ? Carbon::parse($request->input('start_date'))->startOfDay() : null;
         $endDate = $request->input('end_date') ? Carbon::parse($request->input('end_date'))->endOfDay() : null;
         $agencyId = $request->input('agency_id');
         $fileType = $request->input('file_type');
         $movementType = $request->input('type_mouvement');
-
+        $licence = $request->input("licence");
         // 2. Construction de la requête de base pour récupérer les réceptions
         $query = Reception::query()->with(['citerne', 'agency', 'article', 'user']);
 
@@ -62,6 +63,10 @@ class receptionController extends Controller
 
         if ($startDate && $endDate) {
             $query->whereBetween('created_at', [$startDate, $endDate]);
+        }
+        if($licence){
+
+            $query->where('type', $licence);
         }
         
         // 5. Restriction par agence pour les utilisateurs non "direction"

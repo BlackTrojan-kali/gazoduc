@@ -18,7 +18,8 @@ const MagFuelCiterne = ({ stocks, articles, clients, agencies, cuvesFixes,pompes
     const [isEditStockModalOpen, setIsEditStockModalOpen] = useState(false);
     const [isFuelSaleModalOpen, setIsFuelSaleModalOpen] = useState(false); // 👈 Nouvel état
     const [selectedStock, setSelectedStock] = useState(null);
-   console.log(pompes)
+    
+      const {licence,DirLicence} = useLicenceChoice()
     const openReceptionModal = () => {
         setIsReceptionModalModalOpen(true);
     };
@@ -183,6 +184,7 @@ const MagFuelCiterne = ({ stocks, articles, clients, agencies, cuvesFixes,pompes
                 articles={articles}
                 citernesMobiles={citernesMobiles}
                 agencies={agencies}
+                licence={licence}
             />
 
             <DepotageFormModal
@@ -192,12 +194,14 @@ const MagFuelCiterne = ({ stocks, articles, clients, agencies, cuvesFixes,pompes
                 citernesFixes={cuvesFixes}
                 articles={articles}
                 agencies={agencies}
+                licence={licence}
             />
 
             <EditCiterneStockModal
                 isOpen={isEditStockModalOpen}
                 onClose={closeEditStockModal}
                 stockToEdit={selectedStock}
+                licence={licence}
             />
             
             {/* 3. INTÉGRATION DE LA MODALE DE VENTE */}

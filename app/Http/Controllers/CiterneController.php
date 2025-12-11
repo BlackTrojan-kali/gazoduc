@@ -199,7 +199,7 @@ public function depotage(Request $request)
 
         // 1. Enregistrement du dépotage
         $depotage = new Depotage();
-        $depotage->type= $request->licences;
+        $depotage->type= $request->licence;
         $depotage->citerne_mobile_id = $request->citerne_mobile_id;
         $depotage->article_id = $request->article_id;
         $depotage->quantity = $request->quantity;
