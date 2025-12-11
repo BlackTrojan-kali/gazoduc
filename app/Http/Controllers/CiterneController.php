@@ -214,14 +214,18 @@ public function depotage(Request $request)
                           ->where("article_id", $request->article_id) // Important: Filtrer aussi par article
                           ->first();
 
-
+        $article = Article::find($request->article_id);
         // Récupérer la capacité maximale de la citerne fixe
         // Nous chargeons la relation 'citerne' ici pour être sûr d'avoir la capacité à jour
         $citerneFixe = $stockFixe->citerne ?? Citerne::find($request->citerne_fixe_id); // Fallback si non déjà chargé
-        $maxCapacityKg = $citerneFixe ? $citerneFixe->capacity_kg : 0;
-
+        if($article->type !="produit_petrolier"){
+        $maxCapacityKg = $citerneFixe ? $citerneFixe->capacity_kg  : 0;
+        }else{
+        $maxCapacityKg = $citerneFixe ? $citerneFixe->capacity_liter  : 0;
+            
+        }
         $newTotalQuantity = $stockFixe->quantity + $request->quantity;
-
+        
         if ($maxCapacityKg > 0 && $newTotalQuantity > $maxCapacityKg) {
             DB::rollBack();
             return back()->with("error", "La citerne de destination sera pleine ou dépassera sa capacité maximale après ce dépotage.");

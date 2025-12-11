@@ -49,6 +49,7 @@ class StockController extends Controller
                                 'name' => $citerneName,
                                 'current_product_id' => $articleId,
                                 'agency_id' => $agency->id,
+                                "capacity_kg"=>10000,
                                 "capacity_liter"=>10000,
                                 'entreprise_id' => $entrepriseId,
                                 'type' => 'carburant', // Assuming type is 'carburant' for fuel products

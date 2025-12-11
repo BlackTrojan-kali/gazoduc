@@ -27,6 +27,7 @@ const EditCiterneStockModal = ({ isOpen, onClose, stockToEdit,licence }) => {
         id: stockToEdit.id,
         theorical_quantity: stockToEdit.theorical_quantity,
         quantity: stockToEdit.quantity,
+        licence:licence
       });
     } else {
       reset(); // Réinitialise si aucun stock n'est sélectionné (modal fermée)

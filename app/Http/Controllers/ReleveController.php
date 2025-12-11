@@ -21,7 +21,7 @@ class ReleveController extends Controller
             ->paginate(15);
             $agencies = Agency::all();
         if(Auth::user()->role->name != "direction"){
-           $releves  = CiterneReading::where("agency_id",Auth::user()->agency_id)->orderBy("created_at","desc")->with("citerne","agency","user")
+           $releves  = CiterneReading::where("type",$type)->where("agency_id",Auth::user()->agency_id)->orderBy("created_at","desc")->with("citerne","agency","user")
             ->paginate(15);
             $agencies = Agency::where("id",Auth::user()->agency_id)->get();
         }
@@ -36,7 +36,7 @@ class ReleveController extends Controller
         $agencyId = $request->input('agency_id');
         $reportType = $request->input('type', 'pdf'); // Par défaut 'pdf'
            $licence = $request->input("licence");
-     
+
         // Validation de base des dates
         if (empty($startDate) || empty($endDate)) {
             return redirect()->back()->withErrors(['message' => 'Les dates de début et de fin sont requises pour l\'exportation, monsieur.']);
@@ -54,7 +54,6 @@ class ReleveController extends Controller
         if($licence){
             $query->where("type",$licence);
         }
-
         // Restriction par agence pour les utilisateurs non "direction"
         // Assurez-vous que le rôle est correctement défini et géré dans votre modèle User
         if ( Auth::user()->role->name !== "direction") {
