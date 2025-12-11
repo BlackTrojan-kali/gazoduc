@@ -120,7 +120,7 @@ class BrouteController extends Controller
     {
         $roadbill = Bordereau_route::with(['vehicule', 'chauffeur', 'co_chauffeur', 'articles',"departure","arrival"])
             ->findOrFail($id);
-
+    
         $entreprise = Entreprise::where("id",Auth::user()->entreprise_id)->first();
         $pdf = Pdf::loadView('PDF.BroutePdfView', compact('roadbill',"entreprise"));
         
@@ -248,7 +248,7 @@ class BrouteController extends Controller
         // 2. Construction de la requête de base pour les bordereaux de route
         // Utilisation du modèle Bordereau_route et des noms de relations corrects
         $query = Bordereau_route::with('articles', 'vehicule', 'chauffeur', 'co_chauffeur', 'departure', 'arrival');
-
+        
         // Application des filtres
         // Utilisation de Carbon pour gérer les dates et heures de manière précise
         if ($startDate) {
@@ -282,7 +282,6 @@ class BrouteController extends Controller
                     }
                 }
             }
-
             // Génération du PDF pour un article spécifique
             $article = Article::find($articleId); // Pour récupérer le nom de l'article
             $pdf = Pdf::loadView('PDF.filtered_roadbills_by_article', compact('filteredRoadbills', 'article', 'totalQuantity', 'startDate', 'endDate'));

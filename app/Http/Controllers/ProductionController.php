@@ -94,8 +94,8 @@ class ProductionController extends Controller
 
         public function prod_history(){
                 $prodMoves = ProductionHistory::orderBy("created_at","desc")->with("citerne","article","agency","user")->paginate(15);
-                $citernes = Citerne::all();
-                $articles = Article::where("type","!=","matiere_premiere")->get();
+                $citernes = Citerne::where("product_type","gaz")->get();
+                $articles = Article::where("type","!=","matiere_premiere")->where("type","!=","produit_petrolier")->get();
                 $agencies =Agency::all();
             if(Auth::user()->role->name  != "direction"){
                 $prodMoves = ProductionHistory::where("agency_id",Auth::user()->agency_id)->orderBy("created_at","desc")->with("citerne","article","agency","user")->paginate(15);

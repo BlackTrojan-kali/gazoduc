@@ -33,9 +33,9 @@ const navItems = [
       icon:  <FontAwesomeIcon icon={faSave} />,
       name: "Magasins",
         subItems: [
-        { name: "releves", path: "/releves", pro: false },
-        { name: "depotages", path: "/depotages", pro: false },
-        { name: "reception", path: "/receptions", pro: false },
+        { name: "releves", path: "/releves/carburant", pro: false },
+        { name: "depotages", path: "/depotages/carburant", pro: false },
+        { name: "reception", path: "/receptions/carburant", pro: false },
       ],
     },
     {

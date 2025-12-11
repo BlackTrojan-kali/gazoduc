@@ -15,11 +15,11 @@ use Maatwebsite\Excel\Facades\Excel;
 class DepotageController extends Controller
 {
     //
-    public function index(){
-            $depotages = Depotage::with("agency","citerne_mobile","citerne_fixe","article","user")->paginate(150);
+    public function index($type){
+            $depotages = Depotage::where("type",$type)->with("agency","citerne_mobile","citerne_fixe","article","user")->paginate(150);
             $agencies = Agency::all();
         if(Auth::user()->role->name != "direction"){
-            $depotages = Depotage::where("agency_id",Auth::user()->agency_id)->with("agency","citerne_mobile","citerne_fixe","article","user")->paginate(100);
+            $depotages = Depotage::where("type",$type)->where("agency_id",Auth::user()->agency_id)->with("agency","citerne_mobile","citerne_fixe","article","user")->paginate(100);
             $agencies = Agency::where("id",Auth::user()->agency_id)->get();
         }
         return Inertia("Depotage",compact("depotages","agencies"));
@@ -43,13 +43,16 @@ class DepotageController extends Controller
         $endDate = Carbon::parse($request->input('end_date'))->endOfDay();
        $format = $request->input('format', 'pdf'); // Utiliser 'format' pour être plus générique
         $isWithDeleted = filter_var($request->input('isWithDeleted'), FILTER_VALIDATE_BOOLEAN); // Gérer le paramètre pour les soft deletes
-        
+        $licence = $request->input("licence");
         // Validation de base des dates
         if (empty($startDate) || empty($endDate)) {
             return redirect()->back()->withErrors(['message' => 'Les dates de début et de fin sont requises pour l\'exportation, monsieur.']);
         }
         // 2. Construction de la requête pour récupérer les dépotages
         $query = Depotage::query();
+        if($licence){
+            $query->where("type",$licence);
+        }
 
         // Appliquer withTrashed() si l'option est activée
         if ($isWithDeleted) {

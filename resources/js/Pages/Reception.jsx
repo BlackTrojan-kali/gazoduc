@@ -17,7 +17,7 @@ import useLicenceChoice from '../hooks/useLicenceChoice';
 import MagFuelLayout from '../layout/FuelLayout/MagFuelLayout';
 import DirFuelLayout from '../layout/DirFuelLayout/DirFuelLayout';
 
-const PageContent = ({ receptions: initialReceptions, agencies }) => {
+const PageContent = ({ receptions: initialReceptions, agencies,licence }) => {
   const { delete: inertiaDelete, processing } = useForm();
   const { props: { auth } } = usePage(); // Ajoutez la récupération de l'utilisateur authentifié
 
@@ -343,6 +343,7 @@ const PageContent = ({ receptions: initialReceptions, agencies }) => {
         onClose={closeExportModal}
         agencies={agencies}
         currentFilters={filterState}
+        licence={licence}
       />
     </>
   );
@@ -355,7 +356,7 @@ const Reception = ({ receptions, agencies }) => {
   if (auth.user.role === "production") {
     return (
       <ProdLayout>
-        <PageContent receptions={receptions} agencies={agencies} />
+        <PageContent licence={licence} receptions={receptions} agencies={agencies} />
       </ProdLayout>
     );
   }
@@ -366,13 +367,13 @@ const Reception = ({ receptions, agencies }) => {
     
     return (
       <MagLayout>
-        <PageContent receptions={receptions} agencies={agencies} />
+        <PageContent licence={licence} receptions={receptions} agencies={agencies} />
       </MagLayout>
     );
   }else{
     return(
       <MagFuelLayout>
-        <PageContent receptions={receptions} agencies={agencies} />  
+        <PageContent licence={DirLicence} receptions={receptions} agencies={agencies} />  
       </MagFuelLayout>
     )
   }

@@ -7,13 +7,14 @@ import Input from '../form/input/InputField';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFileExport } from '@fortawesome/free-solid-svg-icons';
 
-const ReceptionHistoryPDFExcelModal = ({ isOpen, onClose, agencies, currentFilters }) => {
+const ReceptionHistoryPDFExcelModal = ({ isOpen, onClose, agencies, currentFilters,licence }) => {
   const { data, setData, post, processing, errors } = useForm({
     agency_id: currentFilters?.agency_id || '',
     start_date: currentFilters?.start_date || '',
     end_date: currentFilters?.end_date || '',
     // La valeur par défaut est mise à jour pour refléter le choix initial
     export_format: 'pdf',
+    licence:licence,
   });
 
   const handleChange = (e) => {

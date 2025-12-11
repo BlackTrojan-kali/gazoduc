@@ -171,14 +171,14 @@ Route::get('/fuel-articles', [ArticleController::class, 'fuel_index'])->name('fu
 Route::get('/fuel-citernes', [CiterneController::class, 'fuel_index'])->name('fuel_citerne.index');
 
    //releves routes
-        Route::get("/releves",[ReleveController::class,"index"])->name("releves.index");
+        Route::get("/releves/{type}",[ReleveController::class,"index"])->name("releves.index");
         Route::get("/releves-export",[ReleveController::class,"export"])->name("releves.export");
         //Depotage routes
-        Route::get("/depotages",[DepotageController::class,"index"])->name("depotages.index");
+        Route::get("/depotages/{type}",[DepotageController::class,"index"])->name("depotages.index");
         Route::get("/depotages-export",[DepotageController::class,"export"])->name("depotages.export");
         Route::delete("/depotages/{idDep}",[DepotageController::class,"delete"])->name("depotages.delete");
         //receptions routes
-        Route::get("/receptions",[receptionController::class,"index"])->name("receptions.index");
+        Route::get("/receptions/{type}",[receptionController::class,"index"])->name("receptions.index");
         Route::delete("/receptions/{idRec}",[receptionController::class,"delete"])->name("receptions.delete");
         Route::get("/receptions-pdf",[receptionController::class,"export"])->name("receptions.export");
 

@@ -16,8 +16,8 @@ use Maatwebsite\Excel\Facades\Excel;
 class ReleveController extends Controller
 {
     //
-    public function index(){
-           $releves  = CiterneReading::orderBy("created_at","desc")->with("citerne","agency","user")
+    public function index($type){
+           $releves  = CiterneReading::where("type",$type)->orderBy("created_at","desc")->with("citerne","agency","user")
             ->paginate(15);
             $agencies = Agency::all();
         if(Auth::user()->role->name != "direction"){
@@ -35,7 +35,8 @@ class ReleveController extends Controller
         $endDate = Carbon::parse($request->input('end_date'))->endOfDay();
         $agencyId = $request->input('agency_id');
         $reportType = $request->input('type', 'pdf'); // Par défaut 'pdf'
-
+           $licence = $request->input("licence");
+     
         // Validation de base des dates
         if (empty($startDate) || empty($endDate)) {
             return redirect()->back()->withErrors(['message' => 'Les dates de début et de fin sont requises pour l\'exportation, monsieur.']);
@@ -45,21 +46,23 @@ class ReleveController extends Controller
         $query = CiterneReading::query()
             ->with(['citerne', 'agency', 'user']) // Charger les relations nécessaires
             ->whereBetween('reading_date', [$startDate, $endDate]); // Filtrer par la date de lecture
-
+        
         // Filtrage par agence si un agency_id est fourni
         if ($agencyId) {
             $query->where('agency_id', $agencyId);
         }
+        if($licence){
+            $query->where("type",$licence);
+        }
 
         // Restriction par agence pour les utilisateurs non "direction"
         // Assurez-vous que le rôle est correctement défini et géré dans votre modèle User
-        if (Auth::check() && Auth::user()->role !== "direction") {
+        if ( Auth::user()->role->name !== "direction") {
             $query->where("agency_id", Auth::user()->agency_id);
         }
-
         // Récupération des données finales
         $releves = $query->orderBy('reading_date', 'asc')->get();
-
+        
         // 3. Génération du rapport selon le type demandé
         if ($reportType === 'excel') {
             // Pour Excel, nous utilisons Maatwebsite/Excel

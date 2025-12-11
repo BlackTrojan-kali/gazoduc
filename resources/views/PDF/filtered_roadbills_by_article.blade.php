@@ -45,7 +45,7 @@
             @foreach ($filteredRoadbills as $item)
                 <tr>
                     <td>{{ $item['roadbill']->id }}</td>
-                    <td>{{ $item['roadbill']->vehicle->licence_plate ?? 'N/A' }}</td>
+                    <td>{{ $item['roadbill']->vehicule->licence_plate ?? 'N/A' }}</td>
                     <td>{{ $item['roadbill']->chauffeur->name ?? 'N/A' }}</td>
                     <td>{{ $item['roadbill']->departure->name ?? 'N/A' }}</td>
                     <td>{{ $item['roadbill']->arrival->name ?? 'N/A' }}</td>

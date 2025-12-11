@@ -110,7 +110,7 @@
             @foreach ($sales as $sale)
                 <tr>
                     <td>{{ \Carbon\Carbon::parse($sale->date)->format('d/m/Y') }}</td>
-                    <td>{{ $sale->invoice_number }}</td>
+                    <td>{{ "#".$sale->id }}</td>
                     <td>{{ $sale->client->name }}</td>
                     <td>{{ $sale->agency->name }}</td>
                     <td>

@@ -21,6 +21,7 @@ return new class extends Migration
             $table->decimal("theorical_quantity");
             $table->decimal("measured_quantity");
             $table->decimal("difference");
+            $table->string("type")->nullable();
             $table->dateTime("reading_date")->default(DB::raw("CURRENT_TIMESTAMP"));
             $table->foreign("stock_id")->on("stocks")->references("id");
             $table->foreign("user_id")->on("users")->references("id");

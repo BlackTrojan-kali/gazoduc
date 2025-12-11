@@ -9,7 +9,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner } from '@fortawesome/free-solid-svg-icons';
 import Input from '../../form/input/InputField';
 import Button from '../../ui/button/Button';
-const ReceptionFormModal = ({ isOpen, onClose, articles, citernesMobiles, agencies }) => {
+const ReceptionFormModal = ({ isOpen, onClose, articles, citernesMobiles, agencies,licence }) => {
   const { props: { auth } } = usePage(); // To get the authenticated user's ID
   const { data, setData, post, processing, errors, reset } = useForm({
     citerne_mobile_id: '',
@@ -18,6 +18,7 @@ const ReceptionFormModal = ({ isOpen, onClose, articles, citernesMobiles, agenci
     destination_agency_id: '',
     recorded_id_user: auth.user ? auth.user.id : '', // Pre-fill with authenticated user's ID
     origin: '', // This field might be pre-filled based on context or selected manually
+    licence:licence,
   });
 
   // Reset form data when modal opens or closes

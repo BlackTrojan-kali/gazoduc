@@ -7,7 +7,7 @@
         body {
             font-family: 'DejaVu Sans', sans-serif;
             font-size: 10px;
-            margin: 20px;
+            margin: 10px;
         }
         table {
             width: 100%;

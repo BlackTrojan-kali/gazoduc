@@ -8,7 +8,7 @@ import Swal from 'sweetalert2';
 import Input from '../form/input/InputField';
 import Select from '../form/form-elements/SelectInputs'; // Assurez-vous que ce chemin est correct pour votre composant Select
 
-const ReleveHistoryPDFExcelModal = ({ isOpen, onClose, agencies }) => {
+const ReleveHistoryPDFExcelModal = ({ isOpen, onClose, agencies,licence }) => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [selectedAgencyId, setSelectedAgencyId] = useState(''); // État pour l'ID de l'agence sélectionnée
@@ -57,6 +57,7 @@ const ReleveHistoryPDFExcelModal = ({ isOpen, onClose, agencies }) => {
         end_date: endDate,
         agency_id: selectedAgencyId || undefined, // Passe l'ID de l'agence ou undefined
         type: reportType, // 'pdf' ou 'excel'
+        licence:licence,
       };
 
       const url = route('releves.export', params); // Assurez-vous que cette route existe dans Laravel

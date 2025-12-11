@@ -16,7 +16,7 @@ import useLicenceChoice from '../hooks/useLicenceChoice';
 import MagFuelLayout from '../layout/FuelLayout/MagFuelLayout';
 import DirFuelLayout from '../layout/DirFuelLayout/DirFuelLayout';
 
-const PageContent = ({ depotages: initialDepotages, agencies }) => {
+const PageContent = ({ depotages: initialDepotages, agencies, licence }) => {
   const { delete: inertiaDelete, processing } = useForm();
   const { props: { auth } } = usePage(); // Ajoutez la récupération de l'utilisateur authentifié
 
@@ -351,6 +351,7 @@ const PageContent = ({ depotages: initialDepotages, agencies }) => {
         isOpen={isExportModalOpen}
         onClose={closeExportModal}
         agencies={agencies}
+        licence={licence}
         // Passez les données de filtre actuelles à la modale
         currentFilters={filterState}
       />
@@ -364,14 +365,14 @@ const Depotage = ({depotages,agencies})=>{
     if(licence == "gaz"){
     return (
       <MagLayout>
-        <PageContent depotages={depotages} agencies={agencies}/>
+        <PageContent depotages={depotages} agencies={agencies} licence={licence}/>
       </MagLayout>
     )
   }else{
     return(
       <MagFuelLayout>
         
-        <PageContent depotages={depotages} agencies={agencies}/>
+        <PageContent licence={licence} depotages={depotages} agencies={agencies}/>
       </MagFuelLayout>
     )
   }
@@ -380,7 +381,7 @@ const Depotage = ({depotages,agencies})=>{
   if(auth.user.role == "controleur"){
     return (
       <RegLayout>
-        <PageContent depotages={depotages} agencies={agencies}/>
+        <PageContent licence={DirLicence} depotages={depotages} agencies={agencies}/>
       </RegLayout>
     )
   }
@@ -388,13 +389,13 @@ const Depotage = ({depotages,agencies})=>{
      if(DirLicence == "gaz"){
     return(
       <DirLayout>
-        <PageContent depotages={depotages} agencies={agencies}/>
+        <PageContent licence={DirLicence} depotages={depotages} agencies={agencies}/>
       </DirLayout>
     )
   }else{
     return(
       <DirFuelLayout>
-        <PageContent depotages={depotages} agencies={agencies}/>
+        <PageContent licence={DirLicence} depotages={depotages} agencies={agencies}/>
       </DirFuelLayout>
     )
   }

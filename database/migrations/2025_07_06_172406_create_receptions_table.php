@@ -20,6 +20,7 @@ return new class extends Migration
             $table->unsignedBigInteger("destination_agency_id")->nullable();
             $table->unsignedBigInteger("recorded_id_user");
             $table->string("origin")->nullable();
+            $table->string("type")->nullable();
             $table->foreign("citerne_mobile_id")->on("vehicules")->references("id");
             $table->foreign("article_id")->on("articles")->references("id");
             $table->foreign("destination_agency_id")->on("agencies")->references("id");

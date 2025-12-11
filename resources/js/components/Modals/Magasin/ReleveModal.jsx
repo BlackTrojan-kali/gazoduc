@@ -9,7 +9,7 @@ import { faSpinner } from '@fortawesome/free-solid-svg-icons';
 import Input from '../../form/input/InputField';
 import Button from '../../ui/button/Button';
 
-const EditCiterneStockModal = ({ isOpen, onClose, stockToEdit }) => {
+const EditCiterneStockModal = ({ isOpen, onClose, stockToEdit,licence }) => {
   // Initialise le formulaire avec les données du stock à modifier
   // ou des valeurs par défaut si stockToEdit est null (quand la modal est fermée)
   const { data, setData, post, processing, errors, reset } = useForm({
@@ -17,6 +17,7 @@ const EditCiterneStockModal = ({ isOpen, onClose, stockToEdit }) => {
     theorical_quantity: stockToEdit ? stockToEdit.theorical_quantity : '', // Notez "theoritical_quantity"
     quantity: stockToEdit ? stockToEdit.quantity : '', // Notez "quantity" (stock relevé)
     // Pas besoin de citerne_id ici si on le passe via l'URL de la requête PUT/PATCH
+    licence:licence
   });
 
   // Réinitialise les données du formulaire lorsque stockToEdit change (quand une nouvelle citerne est sélectionnée)

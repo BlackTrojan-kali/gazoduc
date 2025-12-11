@@ -10,7 +10,7 @@ import Input from '../../form/input/InputField';
 import Button from '../../ui/button/Button';
 import Select from 'react-select';
 
-const DepotageFormModal = ({ isOpen, onClose, citernesMobiles, citernesFixes, articles, agencies }) => {
+const DepotageFormModal = ({ isOpen, onClose, citernesMobiles, citernesFixes, articles, agencies,licence }) => {
   const { props: { auth } } = usePage();
   const { data, setData, post, processing, errors, reset } = useForm({
     citerne_mobile_id: '',
@@ -19,6 +19,7 @@ const DepotageFormModal = ({ isOpen, onClose, citernesMobiles, citernesFixes, ar
     agency_id: '',
     recorded_by_user_id: auth.user ? auth.user.id : '',
     quantity: '',
+    licence:licence,
   });
 
   const articleOptions = useMemo(() => articles.map(article => ({

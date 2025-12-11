@@ -8,7 +8,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner, faFilePdf, faFileExcel } from '@fortawesome/free-solid-svg-icons';
 import Select from 'react-select';
 
-const DepotageHistoryPDFExcelModal = ({ isOpen, onClose, agencies }) => {
+const DepotageHistoryPDFExcelModal = ({ isOpen, onClose, agencies,licence }) => {
   const { auth } = usePage().props;
   const userRole = auth.user.role;
   const isDirection = userRole === 'direction';
@@ -24,6 +24,7 @@ const DepotageHistoryPDFExcelModal = ({ isOpen, onClose, agencies }) => {
     end_date: '',
     agency_id: null,
     file_type: 'pdf',
+    licence:licence,
   });
 
   // --- Début de la modification ---

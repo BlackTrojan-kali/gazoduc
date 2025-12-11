@@ -167,9 +167,11 @@ class CiterneController extends Controller
            "destination_agency_id"=>"required",
            "recorded_id_user"=>"required",
            "origin"=>"string|required", 
+           "licence"=>"string|nullable",
         ]);
 
     $reception = new Reception();
+    $reception->type= $request->licence;
     $reception->citerne_mobile_id = $request->citerne_mobile_id;
     $reception->article_id = $request->article_id;
     $reception->received_quantity = $request->received_quantity;
@@ -188,6 +190,8 @@ public function depotage(Request $request)
         "agency_id" => "required|exists:agencies,id",               // Ajout de la validation 'exists'
         "citerne_fixe_id" => "required|exists:citernes,id",   // Ajout de la validation 'exists', assurez-vous du nom de table
         "recorded_by_user_id" => "required|exists:users,id",        // Ajout de la validation 'exists'
+    
+           "licence"=>"string|nullable",
     ]);
 
     try {
@@ -195,6 +199,7 @@ public function depotage(Request $request)
 
         // 1. Enregistrement du dépotage
         $depotage = new Depotage();
+        $depotage->type= $request->licences;
         $depotage->citerne_mobile_id = $request->citerne_mobile_id;
         $depotage->article_id = $request->article_id;
         $depotage->quantity = $request->quantity;
@@ -247,6 +252,8 @@ public function releve(Request $request, Stock $stock)
     $validatedData = $request->validate([
         'theorical_quantity' => ['required', 'numeric', 'min:0'], // Assurez-vous que ce champ peut être envoyé
         'quantity' => ['required', 'numeric', 'min:0'],           // Assurez-vous que ce champ peut être envoyé
+    
+           "licence"=>['string','nullable'],
     ]);
 
     try {
@@ -277,6 +284,7 @@ public function releve(Request $request, Stock $stock)
         $releve->theorical_quantity = $request->theorical_quantity;
         $releve->measured_quantity = $request->quantity;
         $releve->difference = $releve->measured_quantity - $request->theorical_quantity;
+        $releve->type = $request->licence;
         $releve->save();
         DB::commit();
         return back()->with('success', 'Stock de citerne mis à jour avec succès.');

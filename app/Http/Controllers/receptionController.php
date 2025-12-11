@@ -15,11 +15,11 @@ use Maatwebsite\Excel\Facades\Excel;
 class receptionController extends Controller
 {
     //
-    public function index(){
-            $receptions = Reception::with("agency","citerne","article","user")->paginate(150);
+    public function index($type){
+            $receptions = Reception::where("type",$type)->with("agency","citerne","article","user")->paginate(150);
             $agencies = Agency::all();
         if(Auth::user()->role->name != "direction"){
-            $receptions = Reception::where("destination_agency_id",Auth::user()->agency_id)->with("agency","citerne","article","user")->paginate();
+            $receptions = Reception::where("type",$type)->where("destination_agency_id",Auth::user()->agency_id)->with("agency","citerne","article","user")->paginate();
             $agencies = Agency::where("id",Auth::user()->agency_id)->get();
         }
         return Inertia("Reception",compact("receptions","agencies"));

@@ -13,7 +13,7 @@ import useLicenceChoice from '../hooks/useLicenceChoice';
 import MagFuelLayout from '../layout/FuelLayout/MagFuelLayout';
 import DirFuelLayout from '../layout/DirFuelLayout/DirFuelLayout';
 
-const PageContent = ({ releves: initialReleves, agencies }) => { // 'filters' est retiré des props
+const PageContent = ({ releves: initialReleves, agencies,licence }) => { // 'filters' est retiré des props
   // --- États pour la modale d'exportation ---
   const [isPDFExcelModalOpen, setIsPDFExcelModalOpen] = useState(false);
   const openPDFExcelModal = () => setIsPDFExcelModalOpen(true);
@@ -260,6 +260,7 @@ const PageContent = ({ releves: initialReleves, agencies }) => { // 'filters' es
         agencies={agencies}
         // Passez les données de filtre actuelles à la modale
         currentFilters={filterState} // Passez filterState
+      licence={licence}
       />
     </>
   );
@@ -272,13 +273,13 @@ const Releve =({releves,agencies})=>{
     if(licence == "gaz"){
     return (
       <MagLayout title="releves">
-        <PageContent releves={releves} agencies={agencies}/>
+        <PageContent licence={licence} releves={releves} agencies={agencies}/>
       </MagLayout>
     )
   }else{
     return(
       <MagFuelLayout>
-        <PageContent releves={releves} agencies={agencies}/>
+        <PageContent licence={licence} releves={releves} agencies={agencies}/>
       </MagFuelLayout>
     )
   }
@@ -286,7 +287,7 @@ const Releve =({releves,agencies})=>{
    if(auth.user.role == "controleur"){
     return (
       <RegLayout title="releves">
-        <PageContent releves={releves} agencies={agencies}/>
+        <PageContent licence={DirLicence} releves={releves} agencies={agencies}/>
       </RegLayout>
     )
   }
@@ -294,13 +295,13 @@ const Releve =({releves,agencies})=>{
     if(DirLicence == "gaz"){
     return(
       <DirLayout>
-        <PageContent releves={releves} agencies={agencies}/>
+        <PageContent licence={DirLicence} releves={releves} agencies={agencies}/>
       </DirLayout>
     )
   }else{
     return(
       <DirFuelLayout>
-        <PageContent releves={releves} agencies={agencies}/>
+        <PageContent licence={DirLicence} releves={releves} agencies={agencies}/>
       </DirFuelLayout>
     )
   }
