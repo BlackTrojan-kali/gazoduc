@@ -1,0 +1,22 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Stock;
+use Illuminate\Http\Request;
+
+class DirectionController extends Controller
+{
+    //
+    public function index(){
+        $stocks = Stock::where("storage_type","!=","gaz")->where("storage_type","!=","carburant")
+        ->with("article",'agency',"citerne")
+        ->get();  
+        return Inertia("Direction/DirIndex",compact("stocks"));
+    }
+    
+     public function licence(){
+        return Inertia("SelectDirLicence");
+    }
+}
+
