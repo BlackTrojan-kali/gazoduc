@@ -28,6 +28,7 @@ class User extends Authenticatable
         "entreprise_id",
         'email',
         'password',
+        "is_boutique",
     ];
 
     /**
