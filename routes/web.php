@@ -51,6 +51,8 @@ use App\Models\Mouvement;
 use Illuminate\Http\Request;
 use App\Http\Controllers\FuelPaymentController;
 use App\Http\Controllers\PompeController;
+
+use App\Http\Controllers\DirFuelController;
 //auth routes
 Route::get('/login',[AuthController::class,"loginPage"] )->name("login");
 Route::post('/login',[AuthController::class,"login"] )->name("login");
@@ -258,7 +260,8 @@ Route::post('/notifications/mark-all-as-read', [NotificationController::class, '
 Route::get("/fuel-sales-hitory",[ControllersFuelController::class,"history"])->name("fuel.sales");
 Route::get('/fuel-sales/export/pdf', [ControllersFuelController::class, 'export'])->name('fuel.export.pdf');
 Route::get('/fuel-sales/export/excel', [ControllersFuelController::class, 'exportExcel'])->name('fuel.export.excel');
- 
+     //stock des cuves
+    Route::get("/stock/cuves",[DirFuelController::class,"fetch_cuves_stock"])->name("fuel.stock.cuves");
 Route::delete('/fuel-sales/delete/{idFuelSale}', [ControllersFuelController::class, 'delete'])->name('fuelsales.delete');
 });
 Route::middleware([CommercialMiddleware::class,isArchivedMiddleWare::class,ClosureMiddleware::class])->group(function(){
@@ -269,7 +272,8 @@ Route::middleware(IsAdminMiddleware::class)->group(function(){
     Route::post("/store-regional",[UserController::class,"store_regional"])->name("regional.store");
     Route::put("/update-regional/{idceo}",[UserController::class,"update_regional"])->name("regional.update");
     Route::put("/archived-regional/{idceo}",[UserController::class,"archive_regional"])->name("regional.archive");
-        //regional routes
+
+    //regional routes
     Route::get("/magasin",[UserController::class,"index_magasin"])->name("magasin");
     Route::post("/store-magasin",[UserController::class,"store_magasin"])->name("magasin.store");
     Route::put("/update-magasin/{idceo}",[UserController::class,"update_magasin"])->name("magasin.update");

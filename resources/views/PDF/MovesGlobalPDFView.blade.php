@@ -161,7 +161,7 @@
             @endif
             Type de Mouvement: {{ $movementTypeName }}
         </p>
-        <p class="removed-line">
+        <p class="">
             Période: Toutes les dates (rapport global)
         </p>
         <p class="added-line">

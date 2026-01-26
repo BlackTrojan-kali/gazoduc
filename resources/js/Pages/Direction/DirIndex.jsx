@@ -119,7 +119,7 @@ const DirIndex = () => {
           ))
         ) : (
           <div className="text-center py-10 text-gray-600 dark:text-gray-400">
-            <p className="text-lg">Aucune agence trouvée pour "{searchTerm}". 😔</p>
+            <p className="text-lg">Aucun stock trouvé pour "{searchTerm}". 😔</p>
           </div>
         )}
       </div>

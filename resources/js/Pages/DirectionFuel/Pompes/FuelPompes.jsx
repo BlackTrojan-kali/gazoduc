@@ -2,313 +2,303 @@ import React, { useState, useMemo } from 'react';
 import DirFuelLayout from '../../../layout/DirFuelLayout/DirFuelLayout';
 import { Head, useForm, usePage, Link } from '@inertiajs/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEdit, faPlus, faTrash, faGasPump, faLink, faLinkSlash } from '@fortawesome/free-solid-svg-icons'; // Ajout de faLink
-import { Table, TableBody, TableCell, TableHeader, TableRow } from '../../../components/ui/table';
+import { 
+    faEdit, 
+    faPlus, 
+    faTrash, 
+    faGasPump, 
+    faLink, 
+    faLinkSlash, 
+    faDatabase, 
+    faBuilding,
+    faSearch,
+    faFilter
+} from '@fortawesome/free-solid-svg-icons';
 
-// ----------------------------------------------------------------------------------------------------------------
-// --- Imports des Modals ---
-// Assurez-vous d'ajuster les chemins d'accès à vos composants
+// --- Imports des Modals (Inchangés) ---
 import PompeFormModal from '../../../components/Modals/Pompe/PompeModal'; 
-import PompeCiterneAssociationModal from '../../../components/Modals/Pompe/PompeCiterneAssociationModal'; // NOUVEL IMPORT
-
-import Swal from 'sweetalert2';
+import PompeCiterneAssociationModal from '../../../components/Modals/Pompe/PompeCiterneAssociationModal';
 import PompeCiterneDissociationModal from '../../../components/Modals/Pompe/PompeCiterneDissociationModal';
+import Swal from 'sweetalert2';
 
-// ----------------------------------------------------------------------------------------------------------------
-
-/**
- * Page d'affichage et de gestion des pompes à carburant.
- * @param {object} props.pompes - Liste paginée des pompes (Inertia data).
- * @param {Array} props.agencies - Liste complète des agences.
- * @param {Array} props.citernes - Liste complète des citernes (pour la modal d'association).
- */
 const FuelPompes = ({ pompes, agencies, citernes }) => {
-    // --- États pour la gestion des Modals ---
+    // --- États (Inchangés) ---
     const [isPompeFormModalOpen, setIsPompeFormModalOpen] = useState(false);
-    const [isAssociationModalOpen, setIsAssociationModalOpen] = useState(false); // NOUVEL ÉTAT
-    const [isDissociationModalOpen, setIsDissociationModalOpen] = useState(false); // NOUVEL ÉTAT
+    const [isAssociationModalOpen, setIsAssociationModalOpen] = useState(false);
+    const [isDissociationModalOpen, setIsDissociationModalOpen] = useState(false);
     const [selectedPompe, setSelectedPompe] = useState(null);
 
-    // --- États pour les filtres ---
+    // --- Filtres ---
     const [filterAgency, setFilterAgency] = useState('');
     const [filterName, setFilterName] = useState('');
 
     const { delete: inertiaDelete } = useForm();
-    const { props: { auth } } = usePage();
 
-    // ---------------------------------------------
-    // --- Fonctions de gestion de la Modal Formulaire (Création/Édition) ---
-    // ---------------------------------------------
-    
-    const openCreatePompeModal = () => {
-        setSelectedPompe(null);
-        setIsPompeFormModalOpen(true);
-    };
+    // --- Gestionnaires de Modal (Inchangés) ---
+    const openCreatePompeModal = () => { setSelectedPompe(null); setIsPompeFormModalOpen(true); };
+    const openEditPompeModal = (pompe) => { setSelectedPompe(pompe); setIsPompeFormModalOpen(true); };
+    const closePompeFormModal = () => { setIsPompeFormModalOpen(false); setSelectedPompe(null); };
 
-    const openEditPompeModal = (pompe) => {
-        setSelectedPompe(pompe);
-        setIsPompeFormModalOpen(true);
-    };
+    const openAssociationModal = (pompe) => { setSelectedPompe(pompe); setIsAssociationModalOpen(true); };
+    const closeAssociationModal = () => { setIsAssociationModalOpen(false); setSelectedPompe(null); };
 
-    const closePompeFormModal = () => {
-        setIsPompeFormModalOpen(false);
-        setSelectedPompe(null);
-    };
+    const openDissociationModal = (pompe) => { setSelectedPompe(pompe); setIsDissociationModalOpen(true); };
+    const closeDissociationModal = () => { setIsDissociationModalOpen(false); setSelectedPompe(null); };
 
-    // ---------------------------------------------
-    // --- NOUVEAU : Fonctions de gestion de la Modal d'Association ---
-    // ---------------------------------------------
-    
-    const openAssociationModal = (pompe) => {
-        setSelectedPompe(pompe);
-        setIsAssociationModalOpen(true);
-    };
-
-    const closeAssociationModal = () => {
-        setIsAssociationModalOpen(false);
-        setSelectedPompe(null);
-        // Après association, on pourrait vouloir actualiser la liste des pompes si Inertia ne le fait pas automatiquement.
-        // Puisque le contrôleur d'association renvoie un redirect, Inertia devrait actualiser la page.
-    };
-
-    const openDissociationModal = (pompe) => {
-        setSelectedPompe(pompe);
-        setIsDissociationModalOpen(true);
-    };
-
-    const closeDissociationModal = () => {
-        setIsDissociationModalOpen(false);
-        setSelectedPompe(null);
-    };
-    // ---------------------------------------------
-    // --- Fonction pour gérer la suppression (inchangée) ---
-    // ---------------------------------------------
-
+    // --- Suppression (Inchangé) ---
     const handleDeletePompe = (pompeId, pompeName) => {
         Swal.fire({
-            title: 'Êtes-vous sûr, monsieur ?',
-            text: `Vous êtes sur le point de supprimer la pompe "${pompeName}". Cette action est irréversible !`,
+            title: 'Supprimer ce nœud ?',
+            text: `La pompe "${pompeName}" sera définitivement supprimée.`,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#676c75',
-            confirmButtonText: 'Oui, supprimer !',
-            cancelButtonText: 'Annuler'
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Oui, supprimer',
+            cancelButtonText: 'Annuler',
+            background: '#fff',
+            customClass: { popup: 'rounded-xl' }
         }).then((result) => {
             if (result.isConfirmed) {
                 inertiaDelete(route('pompes.destroy', pompeId), {
                     preserveScroll: true,
-                    onSuccess: () => {
-                        Swal.fire('Supprimée !', 'La pompe a été supprimée avec succès.', 'success');
-                    },
-                    onError: (errors) => {
-                        console.error('Erreur de suppression:', errors);
-                        const errorMessage = errors.error || 'Une erreur est survenue lors de la suppression de la pompe.';
-                        Swal.fire('Erreur !', errorMessage, 'error');
-                    },
+                    onSuccess: () => Swal.fire({ title: 'Supprimé!', icon: 'success', timer: 1500, showConfirmButton: false }),
+                    onError: (errors) => Swal.fire('Erreur', 'Impossible de supprimer.', 'error'),
                 });
             }
         });
     };
 
-    // ---------------------------------------------
-    // --- Logique de Filtrage (inchangée) ---
-    // ---------------------------------------------
-    
+    // --- Logique de Filtrage (Inchangée) ---
     const filteredPompes = useMemo(() => {
         const pompesData = pompes.data || pompes; 
         if (!pompesData || !Array.isArray(pompesData)) return [];
-
         return pompesData.filter(pompe => {
             const matchesAgency = filterAgency === '' || (pompe.agency_id && pompe.agency_id.toString() === filterAgency);
             const matchesName = filterName === '' || pompe.name.toLowerCase().includes(filterName.toLowerCase());
-
             return matchesAgency && matchesName;
         });
     }, [pompes, filterAgency, filterName]);
 
-    // ----------------------------------------------------------------------------------------------------------------
-
+    // --- Rendu Graphique Style n8n ---
     return (
         <>
-            <Head title='FuelPompes' />
-            <div className="p-6">
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white/90 mb-4">
-                    Gestion des FuelPompes
-                </h1>
-                <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
-                    
-                    {/* Section d'en-tête et Bouton Créer */}
-                    <div className="flex flex-col gap-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-                                Liste Des FuelPompes
-                            </h3>
+            <Head title='Gestion des Pompes' />
+            
+            {/* Background Canvas Effect */}
+            <div className="min-h-screen bg-slate-50 dark:bg-slate-900 relative p-6">
+                {/* Motif de fond style "Blueprint/Canvas" */}
+                <div className="absolute inset-0 opacity-[0.05] pointer-events-none" 
+                     style={{ backgroundImage: 'radial-gradient(#64748b 1px, transparent 1px)', backgroundSize: '24px 24px' }}>
+                </div>
+
+                {/* Header Flottant */}
+                <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <div>
+                        <h1 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                            <span className="bg-blue-600 text-white w-8 h-8 rounded-lg flex items-center justify-center text-sm">
+                                <FontAwesomeIcon icon={faGasPump} />
+                            </span>
+                            Workflow Pompes
+                        </h1>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 ml-10">
+                            Configurez les nœuds de distribution et leurs sources.
+                        </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3">
+                        {/* Barre de Recherche Style "Palette" */}
+                        <div className="relative group">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <FontAwesomeIcon icon={faSearch} className="text-slate-400" />
+                            </div>
+                            <input 
+                                type="text" 
+                                placeholder="Filtrer par nom..." 
+                                value={filterName}
+                                onChange={(e) => setFilterName(e.target.value)}
+                                className="pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 w-48 transition-all"
+                            />
                         </div>
 
-                        <div className="flex items-center gap-3">
-                            <button
-                                onClick={openCreatePompeModal}
-                                className="inline-flex items-center gap-2 rounded-lg border border-blue-300 bg-blue-600 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-blue-700 dark:border-blue-700"
+                        {/* Filtre Agence */}
+                        <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <FontAwesomeIcon icon={faFilter} className="text-slate-400" />
+                            </div>
+                            <select
+                                value={filterAgency}
+                                onChange={(e) => setFilterAgency(e.target.value)}
+                                className="pl-10 pr-8 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
                             >
-                                <FontAwesomeIcon icon={faPlus} /> Créer une Pompe
-                            </button>
+                                <option value="">Toutes les Agences</option>
+                                {agencies && agencies.map((agency) => (
+                                    <option key={agency.id} value={agency.id}>{agency.name}</option>
+                                ))}
+                            </select>
                         </div>
-                    </div>
 
-                    {/* Section: Les Filtres */}
-                    <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-                        {/* Filtre par Nom de Pompe */}
-                        <input
-                            type="text"
-                            placeholder="Rechercher par Nom de Pompe..."
-                            value={filterName}
-                            onChange={(e) => setFilterName(e.target.value)}
-                            className="rounded-lg border border-gray-300 p-2.5 text-theme-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 col-span-1 sm:col-span-2"
-                        />
-
-                        {/* Filtre par Agence (Conservé avec le SELECT HTML standard) */}
-                        <select
-                            value={filterAgency}
-                            onChange={(e) => setFilterAgency(e.target.value)}
-                            className="rounded-lg border border-gray-300 p-2.5 text-theme-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+                        <button
+                            onClick={openCreatePompeModal}
+                            className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5"
                         >
-                            <option value="">Toutes les Agences</option>
-                            {agencies && agencies.map((agency) => (
-                                <option key={agency.id} value={agency.id}>
-                                    {agency.name}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                    {/* Fin des Filtres */}
-
-                    <div className="max-w-full overflow-x-auto">
-                        <Table>
-                            <TableHeader className="border-gray-100 dark:border-gray-800 border-y">
-                                <TableRow>
-                                    <TableCell isHeader>Nom de la Pompe</TableCell>
-                                    <TableCell isHeader>Agence</TableCell>
-                                    <TableCell isHeader>Cuve(s) Liée(s)</TableCell>
-                                    <TableCell isHeader className='text-center'>Actions</TableCell>
-                                </TableRow>
-                            </TableHeader>
-
-                            <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
-                                {filteredPompes.length > 0 ? (
-                                    filteredPompes.map((pompe) => (
-                                        <TableRow key={pompe.id}>
-                                            <TableCell className="font-medium text-gray-900 dark:text-white">{pompe.name}</TableCell>
-                                            <TableCell>{pompe.agency ? pompe.agency.name : 'N/A'}</TableCell>
-                                            <TableCell className="max-w-xs text-sm truncate">
-                                                {/* Affichage des cuves liées, séparées par une virgule */}
-                                                {pompe.cuves && pompe.cuves.length > 0
-                                                    ? pompe.cuves.map(cuve => cuve.name + (cuve.product_type ? ` (${cuve.product_type})` : '')).join(', ')
-                                                    : <span className='italic text-gray-500 dark:text-gray-400'>Aucune cuve liée</span>}
-                                            </TableCell>
-                                            <TableCell className="py-3 text-gray-500 text-theme-sm gap-2 flex justify-center dark:text-gray-400">
-                                                
-                                                {/* NOUVEAU BOUTON : Associer les Cuves */}
-                                                <button
-                                                    onClick={() => openAssociationModal(pompe)}
-                                                    title="Associer des cuves à cette pompe"
-                                                    className="inline-flex items-center gap-2 rounded-lg border border-green-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-green-700 shadow-theme-xs hover:bg-green-50 hover:text-green-800 dark:border-green-700 dark:bg-green-800 dark:text-green-400 dark:hover:bg-white/[0.03] dark:hover:text-green-200"
-                                                >
-                                                    <FontAwesomeIcon icon={faLink} /> Lier Cuve(s)
-                                                </button>
-                                                {/* NOUVEAU BOUTON : Dissocier les Cuves */}
-                                        {pompe.cuves && pompe.cuves.length > 0 && (
-                                            <button
-                                                onClick={() => openDissociationModal(pompe)}
-                                                title="Dissocier des cuves de cette pompe"
-                                                className="inline-flex items-center gap-2 rounded-lg border border-red-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-red-700 shadow-theme-xs hover:bg-red-50 hover:text-red-800 dark:border-red-700 dark:bg-red-800 dark:text-red-400 dark:hover:bg-white/[0.03] dark:hover:text-red-200"
-                                            >
-                                                <FontAwesomeIcon icon={faLinkSlash} /> Retirer Cuve(s)
-                                            </button>
-                                        )}
-                                                {/* Bouton Modifier */}
-                                                <button
-                                                    onClick={() => openEditPompeModal(pompe)}
-                                                    className="inline-flex items-center gap-2 rounded-lg border border-yellow-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-yellow-700 shadow-theme-xs hover:bg-yellow-50 hover:text-yellow-800 dark:border-yellow-700 dark:bg-yellow-800 dark:text-yellow-400 dark:hover:bg-white/[0.03] dark:hover:text-yellow-200"
-                                                >
-                                                    <FontAwesomeIcon icon={faEdit} /> Modifier
-                                                </button>
-                                                
-                                                {/* Bouton Supprimer */}
-                                                <button
-                                                    onClick={() => handleDeletePompe(pompe.id, pompe.name)}
-                                                    className="inline-flex items-center gap-2 rounded-lg border border-red-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-red-700 shadow-theme-xs hover:bg-red-50 hover:text-red-800 dark:border-red-700 dark:bg-red-800 dark:text-red-400 dark:hover:bg-white/[0.03] dark:hover:text-red-200"
-                                                >
-                                                    <FontAwesomeIcon icon={faTrash} /> Supprimer
-                                                </button>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
-                                ) : (
-                                    <TableRow>
-                                        <TableCell colSpan={4} className="py-3 text-center text-gray-500 dark:text-gray-400">
-                                            {pompes.data && pompes.data.length > 0 ? 
-                                                'Aucune pompe ne correspond aux critères de filtre.' : 
-                                                'Aucune pompe trouvée.'
-                                            }
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-
-                        {/* Pagination InertiaJS (inchangée) */}
-                        {(pompes.links && pompes.links.length > 3) && (
-                            <nav className="flex justify-end mt-4">
-                                <div className="flex gap-2">
-                                    {pompes.links.map((link, index) => (
-                                        <Link
-                                            key={index}
-                                            href={link.url || '#'}
-                                            className={`px-3 py-1 text-sm font-medium border rounded-lg shadow-sm
-                                            ${link.active
-                                                ? 'bg-blue-600 text-white border-blue-600 cursor-default'
-                                                : link.url === null
-                                                    ? 'bg-white border-gray-300 text-gray-700 disabled:opacity-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 cursor-not-allowed'
-                                                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-800 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200'
-                                            }`}
-                                            preserveState
-                                            preserveScroll
-                                            only={['pompes']}
-                                            onClick={(e) => {
-                                                if (!link.url) e.preventDefault();
-                                            }}
-                                            dangerouslySetInnerHTML={{ __html: link.label }}
-                                        />
-                                    ))}
-                                </div>
-                            </nav>
-                        )}
+                            <FontAwesomeIcon icon={faPlus} />
+                            <span>Nouveau Nœud</span>
+                        </button>
                     </div>
                 </div>
+
+                {/* Grid des Nœuds (Pompes) */}
+                <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {filteredPompes.length > 0 ? filteredPompes.map((pompe) => (
+                        <div key={pompe.id} className="group relative bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col overflow-hidden">
+                            
+                            {/* En-tête du Nœud (Style n8n) */}
+                            <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 to-cyan-400"></div>
+                            <div className="p-4 flex justify-between items-start border-b border-slate-100 dark:border-slate-700">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                                        <FontAwesomeIcon icon={faGasPump} size="lg" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-slate-800 dark:text-white leading-tight">{pompe.name}</h3>
+                                        <div className="flex items-center gap-1.5 mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                            <FontAwesomeIcon icon={faBuilding} className="text-[10px]" />
+                                            <span>{pompe.agency?.name || 'Agence N/A'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {/* Actions Rapides (Edit/Delete) */}
+                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button 
+                                        onClick={() => openEditPompeModal(pompe)}
+                                        className="p-1.5 text-slate-400 hover:text-yellow-600 hover:bg-yellow-50 rounded transition-colors"
+                                        title="Configurer le nœud"
+                                    >
+                                        <FontAwesomeIcon icon={faEdit} />
+                                    </button>
+                                    <button 
+                                        onClick={() => handleDeletePompe(pompe.id, pompe.name)}
+                                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                        title="Supprimer le nœud"
+                                    >
+                                        <FontAwesomeIcon icon={faTrash} />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Corps du Nœud : Connexions (Inputs) */}
+                            <div className="p-4 flex-1 flex flex-col gap-3">
+                                <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1 flex justify-between items-center">
+                                    <span>Source (Cuves)</span>
+                                    {/* Indicateur visuel de connexion */}
+                                    <div className="h-2 w-2 rounded-full bg-slate-300 dark:bg-slate-600"></div>
+                                </div>
+
+                                <div className="space-y-2 relative">
+                                    {/* Ligne de connexion visuelle verticale (Optionnelle) */}
+                                    <div className="absolute left-[-24px] top-0 bottom-0 w-px border-l border-dashed border-slate-300 dark:border-slate-600 hidden group-hover:block"></div>
+
+                                    {pompe.cuves && pompe.cuves.length > 0 ? (
+                                        pompe.cuves.map((cuve, idx) => (
+                                            <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 group/item">
+                                                <div className="flex items-center gap-2">
+                                                    {/* Point de connexion (Input Dot) */}
+                                                    <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]"></div>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                                            <FontAwesomeIcon icon={faDatabase} className="mr-1.5 opacity-70" />
+                                                            {cuve.name}
+                                                        </span>
+                                                        <span className="text-[10px] text-slate-500">{cuve.product_type || 'Produit inconnu'}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="flex items-center gap-2 p-2 rounded border border-dashed border-slate-200 dark:border-slate-700 text-slate-400 italic text-xs">
+                                            <div className="w-2 h-2 rounded-full bg-red-400"></div>
+                                            <span>Aucune source connectée</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Footer : Boutons d'Action Workflow */}
+                            <div className="bg-slate-50 dark:bg-slate-900/30 p-3 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center gap-2">
+                                <button
+                                    onClick={() => openAssociationModal(pompe)}
+                                    className="flex-1 inline-flex justify-center items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-green-700 bg-green-100/50 hover:bg-green-100 rounded-md transition-colors border border-green-200"
+                                >
+                                    <FontAwesomeIcon icon={faLink} /> Lier
+                                </button>
+                                
+                                {pompe.cuves && pompe.cuves.length > 0 && (
+                                    <button
+                                        onClick={() => openDissociationModal(pompe)}
+                                        className="flex-1 inline-flex justify-center items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-100/50 hover:bg-red-100 rounded-md transition-colors border border-red-200"
+                                    >
+                                        <FontAwesomeIcon icon={faLinkSlash} /> Délier
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    )) : (
+                        <div className="col-span-full flex flex-col items-center justify-center py-20 text-slate-400">
+                            <div className="text-6xl mb-4 opacity-20">
+                                <FontAwesomeIcon icon={faGasPump} />
+                            </div>
+                            <p className="text-lg font-medium">Aucun nœud trouvé</p>
+                            <p className="text-sm">Ajustez les filtres ou créez une nouvelle pompe.</p>
+                        </div>
+                    )}
+                </div>
+
+                {/* Pagination (Style Flottant en bas) */}
+                {(pompes.links && pompes.links.length > 3) && (
+                    <div className="mt-8 flex justify-center">
+                        <nav className="inline-flex rounded-xl shadow-lg bg-white dark:bg-slate-800 p-1 border border-slate-200 dark:border-slate-700">
+                            {pompes.links.map((link, index) => (
+                                <Link
+                                    key={index}
+                                    href={link.url || '#'}
+                                    className={`px-4 py-2 text-xs font-bold rounded-lg transition-all
+                                    ${link.active
+                                        ? 'bg-blue-600 text-white shadow-md'
+                                        : link.url === null
+                                            ? 'text-slate-300 cursor-not-allowed'
+                                            : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'
+                                    }`}
+                                    onClick={(e) => !link.url && e.preventDefault()}
+                                    dangerouslySetInnerHTML={{ __html: link.label }}
+                                />
+                            ))}
+                        </nav>
+                    </div>
+                )}
             </div>
 
-            {/* Modal de formulaire de Pompe (Création/Édition) */}
+            {/* Modals (Inchangés) */}
             <PompeFormModal
                 isOpen={isPompeFormModalOpen}
                 onClose={closePompeFormModal}
                 agencies={agencies}
                 pompe={selectedPompe}
-                title={selectedPompe ? 'Modifier la Pompe' : 'Créer une Nouvelle Pompe'}
+                title={selectedPompe ? 'Configuration du Nœud' : 'Nouveau Nœud Pompe'}
             />
 
-            {/* NOUVELLE MODAL : Association Pompe-Citerne */}
             <PompeCiterneAssociationModal
                 isOpen={isAssociationModalOpen}
                 onClose={closeAssociationModal}
                 pompe={selectedPompe}
-                allCiternes={citernes} // Passer la liste complète des citernes ici
+                allCiternes={citernes}
             />
-            {/* NOUVELLE MODAL : Dissociation Pompe-Citerne */}
+
             <PompeCiterneDissociationModal
                 isOpen={isDissociationModalOpen}
                 onClose={closeDissociationModal}
-                pompe={selectedPompe} // La pompe DOIT contenir la relation 'cuves' chargée !
+                pompe={selectedPompe}
             />
         </>
     );
