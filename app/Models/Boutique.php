@@ -7,14 +7,20 @@ use Illuminate\Database\Eloquent\Model;
 class Boutique extends Model
 {
    //
+    //
     protected $fillable=[
-        "code",
-        "name",
-        "type",
-        "unit",
         "entreprise_id",
-        "weight_per_unit"
+        "licence_id",
+        "region_id",
+        "city_id",
+        "name",
+        "address",
+        "archived",
+        "is_central"
     ];
+    public function entreprise(){
+        return $this->belongsTo(Entreprise::class,"entreprise_id");
+    }
     public function licence(){
         return $this->belongsTo(Licence::class,"licence_id");
     }
@@ -23,8 +29,5 @@ class Boutique extends Model
     }
     public function city(){
         return $this->belongsTo(City::class);
-    }
-    public function users(){
-        return $this->hasMany(User::class,"agency_id");
     }
 }

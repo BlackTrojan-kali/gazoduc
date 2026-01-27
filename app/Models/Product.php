@@ -13,10 +13,13 @@ class Product extends Model
         "sku", 
         "barcode", 
         "prix_achat", 
+        "image_url",
+        "prix_achat",
         "prix_vente",
         "tva",
-        "unité",
-        "stock_alerte"
+        "unit",
+        "value_per_unit",
+        "stock_alert"
     ];
 
     public function category (){

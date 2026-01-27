@@ -22,10 +22,10 @@ return new class extends Migration
             $table->string("prix_achat")->nullable();
             $table->string("prix_vente");
             $table->float("tva");
-            $table->timestamps();
             $table->string("unit");
             $table->bigInteger("stock_alert");
             $table->float("value_per_unit");
+            $table->timestamps();
         });
     }
 
