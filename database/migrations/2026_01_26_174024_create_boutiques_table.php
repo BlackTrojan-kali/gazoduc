@@ -12,12 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('boutiques', function (Blueprint $table) {
-            $table->id();
+            $table->id(); 
             $table->unsignedBigInteger("region_id");
             $table->unsignedBigInteger("city_id");
             $table->string("name")->unique();
             $table->string("address")->nullable();
             $table->boolean("archived")->default(false);
+            $table->integer("counters");
             $table->boolean("is_central")->default(false);
             $table->foreign("region_id")->on("regions")->references("id")->onDelete("cascade");
             $table->foreign("city_id")->on("cities")->references("id")->onDelete("cascade");

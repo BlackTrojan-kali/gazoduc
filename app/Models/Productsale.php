@@ -9,7 +9,7 @@ class Productsale extends Model
     //
     protected $fillable= [
         "boutique_id", "user_id", "customer_id", "code_facture", "total_ht", "total_tva", "total_ttc", "amount_paid",
-"payment_mode", "status", "sync_status"
+"payment_mode", "status", "sync_status","counter_id"
     ];
     public function boutique(){
         return $this->belongsTo(Boutique::class);
@@ -20,5 +20,9 @@ class Productsale extends Model
     }
     public function customer(){
         return $this->belongsTo(Customer::class);
+    }
+    
+    public function counter(){
+        return $this->belongTo(Counter::class,"counter_id");
     }
 }

@@ -16,7 +16,7 @@ return new class extends Migration
             $table->unsignedBigInteger("boutique_departure_id");
             $table->foreign("boutique_departure_id")->on("boutiques")->references("id")->onDelete("cascade");
             $table->unsignedBigInteger("boutique_arrival_id");
-            $table->foreign("boutique_departure_id")->on("boutiques")->references("id")->onDelete("cascade");
+            $table->foreign("boutique_arrival_id")->on("boutiques")->references("id")->onDelete("cascade");
             $table->dateTime("departure_date");
             $table->dateTime("arrival_date");
             $table->string("status")->default("pending");// pending, cancelled ,finished 

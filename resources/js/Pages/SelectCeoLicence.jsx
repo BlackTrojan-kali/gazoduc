@@ -42,9 +42,9 @@ const SelectCeoLicence = () => {
             description: 'Gérez le stock et la distribution de produits pétroliers.',
             href: route('pdg.fuel_index'),  
             icon: (
-                <svg className="w-12 h-12 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v14m-12 0h12m-12 0L9 6"/>
-                </svg>
+                  <svg className="w-12 h-12 text-blue-500" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path d="M12 2C12 2 5 10 5 15C5 18.866 8.13401 22 12 22C15.866 22 19 18.866 19 15C19 10 12 2 12 2Z"/>
+</svg>
             ),
         },
         {

@@ -20,9 +20,9 @@ return new class extends Migration
             $table->decimal("available_qty",14,2);
             $table->string("type");
             $table->string("label")->nullable();
-            $table->string("departure");+
+            $table->string("departure");
             $table->string("destination")->nullable();
-            $table->unsignedInteger("user_id");
+            $table->unsignedBigInteger("user_id");
             $table->foreign("user_id")->on("users")->references("id")->onDelete("cascade");
             $table->timestamps();
         });

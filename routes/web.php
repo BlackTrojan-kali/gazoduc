@@ -4,6 +4,7 @@ use App\Http\Controllers\AgencyController;
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\bankController;
+use App\Http\Controllers\BoutiqueController;
 use App\Http\Controllers\BrouteController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CEOController;
@@ -33,10 +34,12 @@ use App\Http\Controllers\RegionalController;
 use App\Http\Controllers\RegionController;
 use App\Http\Controllers\ReleveController;
 use App\Http\Controllers\StockController;
+use App\Http\Controllers\DirBoutiqueController;
 use App\Http\Controllers\SubController;
 use App\Http\Controllers\ClosureController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VehiculeController;
+use App\Http\Controllers\ProductCategoryController;
 use App\Http\Middleware\CEOMiddleware;
 use App\Http\Middleware\CommercialMiddleware;
 use App\Http\Middleware\DirectionMiddleware;
@@ -53,6 +56,9 @@ use App\Http\Controllers\FuelPaymentController;
 use App\Http\Controllers\PompeController;
 
 use App\Http\Controllers\DirFuelController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProductStockController;
+
 //auth routes
 Route::get('/login',[AuthController::class,"loginPage"] )->name("login");
 Route::post('/login',[AuthController::class,"login"] )->name("login");
@@ -99,6 +105,27 @@ Route::get('/subscriptions/{subscription}/invoice', [SubController::class, 'down
 });
 
 Route::middleware([DirectionMiddleware::class,isArchivedMiddleWare::class])->group(function(){
+    //BOUTIQUES ROUTES
+    Route::get("/boutiques/index",[DirBoutiqueController::class,"index"])->name("boutiques.index");
+    Route::post("/boutiques/store",[BoutiqueController::class,"store"])->name("boutiques.store");
+    Route::put("/boutiques/update/{boutique}",[BoutiqueController::class,"update"])->name("boutiques.update");
+    Route::delete("/boutiques/delete/{boutique}",[BoutiqueController::class,"destroy"])->name("boutiques.destroy");
+    //BOUTIQUE PRODUCT CATEGORY
+    Route::get("/product/category/index",[ProductCategoryController::class,"index"])->name("product.category.index");
+    Route::post("/product/category/store",[ProductCategoryController::class,"store"])->name("product-categories.store");
+    Route::put("/product/category/update/{category}",[ProductCategoryController::class,"update"])->name("product-categories.update");
+    Route::delete("/product/category/delete/{category}",[ProductCategoryController::class,"destroy"])->name("product-categories.destroy");
+    //BOUTIQUE PRODUCT
+    Route::get("/product/index",[ProductController::class,"index"])->name("product.index");
+    Route::post("/product/store",[ProductController::class,"store"])->name("products.store");
+    Route::put("/product/update/{product}",[ProductController::class,"update"])->name("products.update");
+    Route::delete("/product/delete/{product}",[ProductController::class,"destroy"])->name("products.destroy");
+    Route::post("/product/all-stock",[ProductController::class,"initializeAllStocks"])->name("products.init-all-stocks");
+    Route::post("/product/stock/{product}",[ProductController::class,"initializeProductStock"])->name("products.init-stock");
+   //Boutique Product Stocks
+
+    Route::get("/product/stocks-index",[ProductStockController::class,"index"])->name("product.stocks");
+   
     //pompes routes
     Route::get("/pompes/index",[PompeController::class,"index"])->name("pompes.index");
     Route::post("/pompes/store",[PompeController::class,"store"])->name("pompes.store");
@@ -263,6 +290,8 @@ Route::get('/fuel-sales/export/excel', [ControllersFuelController::class, 'expor
      //stock des cuves
     Route::get("/stock/cuves",[DirFuelController::class,"fetch_cuves_stock"])->name("fuel.stock.cuves");
 Route::delete('/fuel-sales/delete/{idFuelSale}', [ControllersFuelController::class, 'delete'])->name('fuelsales.delete');
+
+
 });
 Route::middleware([CommercialMiddleware::class,isArchivedMiddleWare::class,ClosureMiddleware::class])->group(function(){
    });

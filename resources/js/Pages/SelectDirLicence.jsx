@@ -42,9 +42,9 @@ const SelectDirLicence = () => {
             description: 'Gérez le stock et la distribution de produits pétroliers.',
             href: route('fuel_article.index'),  
             icon: (
-                <svg className="w-12 h-12 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v14m-12 0h12m-12 0L9 6"/>
-                </svg>
+            <svg className="w-12 h-12 text-blue-500" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path d="M12 2C12 2 5 10 5 15C5 18.866 8.13401 22 12 22C15.866 22 19 18.866 19 15C19 10 12 2 12 2Z"/>
+</svg>
             ),
         },
         {
@@ -56,6 +56,17 @@ const SelectDirLicence = () => {
                 <svg className="w-12 h-12 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14v6m-4-2v4m-4-6v8m5-16l-7 14v-4m0 0L9 3v4m0 0h6m-6 0v4m6-4v4"/>
                 </svg>
+            ),
+        },
+        {
+            type: 'Boutique',
+            label: 'Gérer les Boutiques',
+            description: 'Gérez le stock des Boutiques.',
+            href: route("boutiques.index"), 
+            icon: (
+            <svg className="w-12 h-12 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h18v2H3V3zm0 2l1.6 4h14.8l1.6-4H3zm2 4v12h14V9H5zm5 5h4v7h-4v-7z" />
+</svg>
             ),
         },
     ];
