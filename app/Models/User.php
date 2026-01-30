@@ -29,7 +29,8 @@ class User extends Authenticatable
         'email',
         'password',
         "counter_id",
-        "boutique_id",
+        "is_boutique",
+        "boutique_id"
     ];
 
     /**
@@ -64,6 +65,10 @@ class User extends Authenticatable
         return $this->belongsTo(Agency::class,"agency_id");
     }
     public function counter(){
-        return $this->belongTo(Counter::class,"counter_id");
+        return $this->belongsTo(Counter::class,"counter_id");
     }
+        public function boutique(){
+        return $this->belongsTo(Boutique::class,"boutique_id");
+    }
+
 }

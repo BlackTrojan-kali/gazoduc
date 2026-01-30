@@ -11,6 +11,7 @@ import {
     faStoreAlt,
     faChartPie
 } from '@fortawesome/free-solid-svg-icons';
+import Button from '../../../components/ui/button/Button';
 
 const ProductStockIndex = ({ stocks, boutiques, filters }) => {
     // --- États pour les filtres ---

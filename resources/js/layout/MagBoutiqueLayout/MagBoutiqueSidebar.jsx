@@ -69,7 +69,7 @@ const othersItems= [
   }
 ];
 
-const DirBoutiqueSidebar = () => {
+const MagBoutiqueSidebar = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const { url } = usePage(); // <--- GET CURRENT URL FROM INERTIA
   const {auth} = usePage().props
@@ -350,4 +350,4 @@ const DirBoutiqueSidebar = () => {
   );
 };
 
-export default DirBoutiqueSidebar;
+export default MagBoutiqueSidebar;

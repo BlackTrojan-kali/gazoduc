@@ -49,7 +49,7 @@ class ProductStockController extends Controller
         // 6. Données pour les filtres de l'interface
         $boutiques = Boutique::orderBy('name')->get(['id', 'name']);
 
-        return Inertia::render('Stocks/Index', [
+        return Inertia::render('DirBoutique/Products/ProductStockIndex', [
             'stocks'    => $stocks,
             'boutiques' => $boutiques,
             'filters'   => $request->only(['search', 'boutique_id', 'service']),

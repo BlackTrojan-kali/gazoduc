@@ -58,6 +58,7 @@ use App\Http\Controllers\PompeController;
 use App\Http\Controllers\DirFuelController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductStockController;
+use App\Http\Controllers\CounterController;
 
 //auth routes
 Route::get('/login',[AuthController::class,"loginPage"] )->name("login");
@@ -125,7 +126,16 @@ Route::middleware([DirectionMiddleware::class,isArchivedMiddleWare::class])->gro
    //Boutique Product Stocks
 
     Route::get("/product/stocks-index",[ProductStockController::class,"index"])->name("product.stocks");
-   
+   //BOUTIQUE COUNTERS
+    Route::get("/counters/index",[CounterController::class,"index"])->name("counters.index");
+    Route::put('/counters/{counter}/transfert-point', [CounterController::class, 'updateTransfertPoint'])
+         ->name('counters.update-transfert-point');
+    //BOUTIQUE USER Routes
+    Route::get("/boutique/users/index",[UserController::class,"index_boutique"])->name("boutique.users.index");
+    Route::post("/boutique/users/store",[UserController::class,"store_boutique"])->name("boutique_users.store");
+    Route::put("/boutique/users/update/{user}",[UserController::class,"update_boutique"])->name("boutique_users.update");
+    Route::post("/boutique/users/delete/{user}",[UserController::class,"destroy_boutique"])->name("boutique_users.destroy");
+    
     //pompes routes
     Route::get("/pompes/index",[PompeController::class,"index"])->name("pompes.index");
     Route::post("/pompes/store",[PompeController::class,"store"])->name("pompes.store");

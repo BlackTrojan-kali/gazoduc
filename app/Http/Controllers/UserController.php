@@ -5,11 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Agency;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\Boutique;
+use App\Models\Counter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use App\Models\Entreprise;
 use Illuminate\Support\Facades\Auth;
-
+use Inertia\Inertia;
+use Illuminate\Validation\Rule;
 class UserController extends Controller
 {
     //coes controllers
@@ -473,5 +476,136 @@ class UserController extends Controller
         $ceo->archived = !$ceo->archived;
         $ceo->save();
         return back()->with("warning","user archived successfully");
+    }
+
+    public function index_boutique(Request $request)
+    {
+        // 1. Chargement des utilisateurs avec toutes les relations nécessaires
+        // On charge 'boutique' et 'counter' pour l'affichage
+        $users = User::where('is_boutique', true)
+            ->with(['role', 'agency', 'counter', 'boutique']) 
+            ->when($request->input('search'), function ($query, $search) {
+                $query->where(function($q) use ($search) {
+                    $q->where('first_name', 'like', "%{$search}%")
+                      ->orWhere('last_name', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%")
+                      ->orWhere('code', 'like', "%{$search}%");
+                });
+            })
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+
+        // 2. Données pour les formulaires (Modale)
+        $roles = Role::whereIn('name', ['magasin', 'commercial'])->get(['id', 'name']);
+        $agencies = Agency::orderBy('name')->get(['id', 'name']);
+        $boutiques = Boutique::orderBy('name')->get(['id', 'name']); // Nouveau
+        $counters = Counter::orderBy('name')->get(['id', 'name']);
+
+        return Inertia::render('DirBoutique/Users/UserBoutiqueIndex', [
+            'users'     => $users,
+            'roles'     => $roles,
+            'agencies'  => $agencies,
+            'boutiques' => $boutiques,
+            'counters'  => $counters,
+            'filters'   => $request->only(['search']),
+        ]);
+    }
+
+    /**
+     * CRÉER : store_boutique
+     */
+    public function store_boutique(Request $request)
+    {
+        $commercialRole = Role::where('name', 'commercial')->firstOrFail();
+        $allowedRoles = Role::whereIn('name', ['magasin', 'commercial'])->pluck('id');
+            
+        $validated = $request->validate([
+            'first_name'   => ['required', 'string', 'max:255'],
+            'last_name'    => ['required', 'string', 'max:255'],
+            'email'        => ['required', 'email', 'max:255', 'unique:users,email'],
+            'phone_number' => ['nullable', 'string', 'max:20'],
+            'code'         => ['required', 'string', 'max:50'],
+            'agency_id'    => ['nullable'], // Agence administrative
+            'boutique_id'  => ['required', 'exists:boutiques,id'], // NOUVEAU : Boutique physique
+            'role_id'      => ['required', Rule::in($allowedRoles)],
+            'password'     => ['required', 'confirmed', 'min:4'],
+            
+            // Règle : Si Commercial, Caisse OBLIGATOIRE
+            'counter_id'   => [
+                'nullable', 
+                'exists:counters,id',
+                function ($attribute, $value, $fail) use ($request, $commercialRole) {
+                    if ((int)$request->role_id === $commercialRole->id && empty($value)) {
+                        $fail('Un utilisateur "Commercial" doit obligatoirement avoir une caisse.');
+                    }
+                },
+            ],
+        ]);
+
+        $validated['is_boutique'] = true;
+        $validated['password'] = Hash::make($validated['password']);
+
+        User::create($validated);
+
+        return redirect()->back()->with('success', 'Utilisateur boutique créé avec succès.');
+    }
+
+    /**
+     * MODIFIER : update_boutique
+     */
+    public function update_boutique(Request $request, User $user)
+    {
+        $commercialRole = Role::where('name', 'commercial')->firstOrFail();
+        $allowedRoles = Role::whereIn('name', ['magasin', 'commercial'])->pluck('id');
+
+        $validated = $request->validate([
+            'first_name'   => ['required', 'string', 'max:255'],
+            'last_name'    => ['required', 'string', 'max:255'],
+            'email'        => ['required', 'email', Rule::unique('users')->ignore($user->id)],
+            'phone_number' => ['nullable', 'string', 'max:20'],
+            'code'         => ['required', 'string', 'max:50'],
+            'agency_id'    => ['nullable', ],
+            'boutique_id'  => ['required', 'exists:boutiques,id'], // NOUVEAU
+            'role_id'      => ['required', Rule::in($allowedRoles)],
+            
+            'counter_id'   => [
+                'nullable', 
+                'exists:counters,id',
+                function ($attribute, $value, $fail) use ($request, $commercialRole) {
+                    if ((int)$request->role_id === $commercialRole->id && empty($value)) {
+                        $fail('Un utilisateur "Commercial" doit obligatoirement avoir une caisse.');
+                    }
+                },
+            ],
+
+            'password'     => ['nullable', 'confirmed', 'min:4'],
+        ]);
+
+        if ($request->filled('password')) {
+            $validated['password'] = Hash::make($validated['password']);
+        } else {
+            unset($validated['password']);
+        }
+
+        $validated['is_boutique'] = true;
+
+        $user->update($validated);
+
+        return redirect()->back()->with('success', 'Utilisateur mis à jour avec succès.');
+    }
+
+    /**
+     * ARCHIVER : destroy_boutique
+     */
+    public function destroy_boutique(User $user)
+    {
+        if (!$user->is_boutique) {
+            return redirect()->back()->with('error', 'Action non autorisée.');
+        }
+
+        $user->delete();
+
+        return redirect()->back()->with('success', 'Utilisateur archivé avec succès.');
     }
 }

@@ -16,6 +16,7 @@ class Boutique extends Model
         "archived",
         "counters",
         "is_central"
+        
     ];
     public function region(){
         return $this->belongsTo(Region::class,"region_id");
