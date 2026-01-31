@@ -108,7 +108,14 @@ Route::get('/subscriptions/{subscription}/invoice', [SubController::class, 'down
 });
 
 Route::middleware([DirectionMiddleware::class,isArchivedMiddleWare::class])->group(function(){
-    //BOUTIQUES ROUTES
+//Mouvements direction
+Route::get('/direction/historique-global', [DirBoutiqueController::class, 'history'])
+         ->name('direction.history');
+Route::get('/direction/export-historique', [DirBoutiqueController::class, 'export_history'])
+     ->name('direction.export_history');
+     Route::get('/direction/transferts', [DirBoutiqueController::class, 'transferHistory'])
+     ->name('direction.transfers');
+         //BOUTIQUES ROUTES
     Route::get("/boutiques/index",[DirBoutiqueController::class,"index"])->name("boutiques.index");
     Route::post("/boutiques/store",[BoutiqueController::class,"store"])->name("boutiques.store");
     Route::put("/boutiques/update/{boutique}",[BoutiqueController::class,"update"])->name("boutiques.update");
@@ -216,6 +223,9 @@ Route::delete('/transfers/{id}', [ProductTransfertController::class, 'destroy'])
 //common routes to all users
 Route::middleware([isAuthenticatedMiddleware::class,ClosureMiddleware::class])->group(function(){
 
+    // Impression
+    Route::get('/transfers/{id}/print', [ProductTransfertController::class, 'print_waybill'])
+         ->name('transfers.print_waybill');
    Route::post("/magasin-citernes-reception",[CiterneController::class,"reception"])->name("magasin.reception");
    //choose licence
 Route::get("/direction-choose-licence",[DirectionController::class,"licence"])->name("director.licence");

@@ -27,8 +27,8 @@ const navItems = [
     icon:  <FontAwesomeIcon icon={faCoins} />,
     name: "Mouvements",
       subItems: [
-      { name: "Mouvements", path: "/banks/index", pro: false },
-      { name: "Transferts", path: "/banks/index", pro: false },
+      { name: "Mouvements", path: "/direction/historique-global", pro: false },
+      { name: "Transferts", path: "/direction/transferts", pro: false },
     ],
   },
   
