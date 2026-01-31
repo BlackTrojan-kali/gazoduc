@@ -39,11 +39,15 @@ class AuthController extends Controller
            return redirect()->route("director.index")->with("success","authentification reussie");
            }
           case "magasin":
+            if(Auth::user()->boutique_id){
+               return redirect()->route("magasin.boutique.index")->with("info","veillez choisir une licence");
+         
+            }else{
            if (Auth::user()->entreprise->subscription->licence->name == "gaz et petrol"){
             return redirect()->route("magasin.licence")->with("info","veillez choisir une licence");
            }else{
            return redirect()->route("magasin.index")->with("success","authentification reussie");
-           }
+           }}
            break;
          case "production":
                   

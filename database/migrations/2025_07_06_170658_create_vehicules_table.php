@@ -13,7 +13,8 @@ return new class extends Migration
     {
         Schema::create('vehicules', function (Blueprint $table) {
             $table->id();
-            $table->string("licence_plate")->unique();
+            $table->string("licence_plate")->unique();// Ajout du champ brand (Marque)
+            $table->string("brand")->nullable();
             $table->string("type");
             $table->decimal("capacity_liters")->nullable();
             $table->string("owner_type")->nullable();

@@ -13,16 +13,23 @@ return new class extends Migration
     {
         Schema::create('producttransferts', function (Blueprint $table) {
             $table->id();
+            
+            $table->unsignedBigInteger("vehicule_id");
+            $table->foreign("vehicule_id")->on("vehicules")->references("id")->onDelete("cascade");
+            $table->unsignedBigInteger("chauffeur_id");
+            $table->foreign("chauffeur_id")->on("chauffeurs")->references("id")->onDelete("cascade");
+            $table->unsignedBigInteger("co_chauffeur_id")->nullable();
+            $table->foreign("co_chauffeur_id")->on("chauffeurs")->references("id");
             $table->unsignedBigInteger("boutique_departure_id");
             $table->foreign("boutique_departure_id")->on("boutiques")->references("id")->onDelete("cascade");
             $table->unsignedBigInteger("boutique_arrival_id");
             $table->foreign("boutique_arrival_id")->on("boutiques")->references("id")->onDelete("cascade");
             $table->dateTime("departure_date");
-            $table->dateTime("arrival_date");
+            $table->dateTime("arrival_date")->nullable();
             $table->string("status")->default("pending");// pending, cancelled ,finished 
             $table->unsignedBigInteger("user_emitting_id");
             $table->foreign("user_emitting_id")->on("users")->references("id")->onDelete("cascade");
-            $table->unsignedBigInteger("user_receiving_id");
+            $table->unsignedBigInteger("user_receiving_id")->nullable();
             $table->foreign("user_receiving_id")->on("users")->references("id")->onDelete("cascade");
             $table->timestamps();
         });

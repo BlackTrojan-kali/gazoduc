@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useForm, usePage } from '@inertiajs/react';
 import Modal from '../Modal';
 import Form from '../../form/Form';
@@ -7,10 +7,8 @@ import Input from '../../form/input/InputField';
 import Select from 'react-select';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { faSpinner, faTrash, faPlus, faMinus, faBoxOpen } from '@fortawesome/free-solid-svg-icons';
 import Swal from 'sweetalert2';
-
-import ArticlesSelectionModal from './ArticleSelectionModal';
 
 const RoadbillFormModal = ({ isOpen, onClose, roadbill, routeName, vehicles, drivers, agencies, articles }) => {
   const { auth } = usePage().props;
@@ -28,394 +26,276 @@ const RoadbillFormModal = ({ isOpen, onClose, roadbill, routeName, vehicles, dri
     status: 'en_cours',
     type: '',
     note: '',
-    articles: [],
+    articles: [], // Contiendra { article_id, quantity, name, unit }
   });
 
-  const [isArticlesModalOpen, setIsArticlesModalOpen] = useState(false);
-
-  const vehicleOptions = vehicles.map(v => ({ value: v.id, label: v.licence_plate }));
+  // Options pour les selects
+  const vehicleOptions = vehicles.map(v => ({ value: v.id, label: `${v.brand} - ${v.licence_plate}` }));
   const driverOptions = drivers.map(d => ({ value: d.id, label: d.name }));
   const agencyOptions = agencies.map(a => ({ value: a.id, label: a.name }));
-  const typeOptions = [
-    { value: 'livraison', label: 'Livraison' },
-  ];
+  const articleOptions = articles.map(a => ({ value: a.id, label: a.name, unit: a.unit }));
+  const typeOptions = [{ value: 'livraison', label: 'Livraison' }, { value: 'ramassage', label: 'Ramassage' }, { value: 'transit', label: 'Transit' }];
 
   useEffect(() => {
     if (isOpen) {
       if (roadbill) {
         setData({
-          vehicle_id: roadbill.vehicle_id || '',
-          driver_id: roadbill.driver_id || '',
-          co_driver_id: roadbill.co_driver_id || '',
-          departure_location_id: roadbill.departure_location_id || '',
-          arrival_location_id: roadbill.arrival_location_id || '',
+          ...roadbill,
           departure_date: roadbill.departure_date ? new Date(roadbill.departure_date).toISOString().slice(0, 16) : '',
-          arrival_date: roadbill.arrival_date ? new Date(roadbill.arrival_date).toISOString().slice(0, 16) : '',
-          status: roadbill.status || 'en_cours',
-          type: roadbill.type || '',
-          note: roadbill.note || '',
-          articles: roadbill.articles || [],
+          articles: roadbill.articles.map(a => ({
+            article_id: a.id,
+            quantity: a.pivot ? a.pivot.qty : a.quantity,
+            name: a.name,
+            unit: a.unit
+          }))
         });
       } else {
         reset();
-        setData({
-          vehicle_id: '',
-          driver_id: '',
-          co_driver_id: '',
-          departure_location_id: userAgencyId,
-          arrival_location_id: '',
-          departure_date: '',
-          arrival_date: '',
-          status: 'en_cours',
-          type: '',
-          note: '',
-          articles: [],
-        });
+        setData(prev => ({ ...prev, departure_location_id: userAgencyId, articles: [] }));
       }
     }
-  }, [isOpen, roadbill, reset, setData, userAgencyId]);
+  }, [isOpen, roadbill]);
 
   useEffect(() => {
     if (recentlySuccessful) {
-      reset();
-      setData('articles', []);
       onClose();
-   
     }
-  }, [recentlySuccessful, reset, onClose, roadbill, setData]);
+  }, [recentlySuccessful]);
 
-  const openArticlesModal = () => setIsArticlesModalOpen(true);
-  const closeArticlesModal = () => setIsArticlesModalOpen(false);
+  // --- Logique de gestion des articles (Inspirée SAP / E-commerce) ---
 
-  const handleSaveSelectedArticles = (selectedItems) => {
-    setData('articles', selectedItems);
+  const addArticleLine = (selectedOption) => {
+    if (!selectedOption) return;
+    
+    const existingIndex = data.articles.findIndex(a => a.article_id === selectedOption.value);
+    
+    if (existingIndex > -1) {
+      // Si l'article existe déjà, on augmente la quantité
+      updateArticleQuantity(selectedOption.value, data.articles[existingIndex].quantity + 1);
+    } else {
+      // Sinon on ajoute une nouvelle ligne
+      const newArticle = {
+        article_id: selectedOption.value,
+        name: selectedOption.label,
+        unit: selectedOption.unit,
+        quantity: 1
+      };
+      setData('articles', [...data.articles, newArticle]);
+    }
+  };
+
+  const updateArticleQuantity = (id, qte) => {
+    const newArticles = data.articles.map(a => 
+      a.article_id === id ? { ...a, quantity: Math.max(1, parseInt(qte) || 0) } : a
+    );
+    setData('articles', newArticles);
+  };
+
+  const removeArticleLine = (id) => {
+    setData('articles', data.articles.filter(a => a.article_id !== id));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
-    if (!data.articles || data.articles.length === 0) {
-      Swal.fire({
-        title: 'Attention !',
-        text: 'Veuillez sélectionner au moins un article à transférer.',
-        icon: 'warning',
-        confirmButtonText: 'OK'
-      });
+    if (data.articles.length === 0) {
+      Swal.fire('Attention', 'Veuillez ajouter au moins un article au bordereau.', 'warning');
       return;
     }
 
-    if (roadbill) {
-      put(route(routeName, roadbill.id), {
-        preserveScroll: true,
-        onError: (validationErrors) => {
-       
-          console.error("Validation Errors:", validationErrors);
-        },
-      });
-    } else {
-      post(route(routeName), {
-        preserveScroll: true,
-        onError: (validationErrors) => {
-         
-          console.error("Validation Errors:", validationErrors);
-        },
-      });
-    }
+    const action = roadbill ? put : post;
+    const url = roadbill ? route(routeName, roadbill.id) : route(routeName);
+
+    action(url, { preserveScroll: true });
   };
 
+  // Styles Select (simplifiés pour intégration)
   const customStyles = {
-    control: (provided, state) => ({
-      ...provided,
-      backgroundColor: '#f3f4f6',
-      borderColor: errors[state.selectProps.name] ? '#ef4444' : '#d1d5db',
-      color: '#1f2937',
-      borderRadius: '0.375rem',
-      boxShadow: state.isFocused ? '0 0 0 1px #3b82f6' : null,
-      minHeight: '42px',
-
-      '.dark &': {
-        backgroundColor: '#374151',
-        borderColor: errors[state.selectProps.name] ? '#ef4444' : '#4b5563',
-        color: '#ffffff',
-      },
-      '&:hover': {
-        borderColor: errors[state.selectProps.name] ? '#ef4444' : '#6b7280',
-        '.dark &': {
-          borderColor: errors[state.selectProps.name] ? '#ef4444' : '#60a5fa',
-        },
-      },
-    }),
-    singleValue: (provided) => ({
-      ...provided,
-      color: '#1f2937',
-      '.dark &': {
-        color: '#ffffff',
-      },
-    }),
-    input: (provided) => ({
-      ...provided,
-      color: '#1f2937',
-      '.dark &': {
-        color: '#ffffff',
-      },
-    }),
-    placeholder: (provided) => ({
-      ...provided,
-      color: '#9ca3af',
-      '.dark &': {
-        color: '#9ca3af',
-      },
-    }),
-    menu: (provided) => ({
-      ...provided,
-      backgroundColor: '#ffffff',
-      borderRadius: '0.375rem',
-      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)',
-      zIndex: 9999,
-      
-      '.dark &': {
-        backgroundColor: '#1f2937',
-      },
-    }),
-    option: (provided, state) => ({
-      ...provided,
-      backgroundColor: state.isSelected ? '#2563eb' : (state.isFocused ? '#3b82f6' : 'transparent'),
-      color: state.isSelected || state.isFocused ? '#ffffff' : '#1f2937',
-
-      '.dark &': {
-        backgroundColor: state.isSelected ? '#2563eb' : (state.isFocused ? '#3b82f6' : 'transparent'),
-        color: state.isSelected || state.isFocused ? '#ffffff' : '#e5e7eb',
-      },
-    }),
-    indicatorSeparator: (provided) => ({
-      ...provided,
-      backgroundColor: '#9ca3af',
-      '.dark &': {
-        backgroundColor: '#6b7280',
-      },
-    }),
-    dropdownIndicator: (provided) => ({
-      ...provided,
-      color: '#6b7280',
-      '.dark &': {
-        color: '#9ca3af',
-      },
-      '&:hover': {
-        color: '#3b82f6',
-      },
-    }),
-    clearIndicator: (provided) => ({
-      ...provided,
-      color: '#6b7280',
-      '&:hover': {
-        color: '#ef4444',
-      },
-    }),
+    control: (base) => ({ ...base, minHeight: '42px', borderRadius: '0.375rem' })
   };
 
   return (
-    <>
-      <Modal isOpen={isOpen} onClose={onClose} title={roadbill ? "Modifier le Bordereau de Route" : "Créer un Nouveau Bordereau de Route"}>
-        <Form onSubmit={handleSubmit} className="space-y-4">
-          {/* Champ Véhicule */}
-          <div>
-            <Label htmlFor="roadbill-vehicle_id">Véhicule <span className="text-red-500">*</span></Label>
-            <Select
-              id="roadbill-vehicle_id"
-              name="vehicle_id"
-              options={vehicleOptions}
-              value={vehicleOptions.find(option => option.value === data.vehicle_id) || null}
-              onChange={(selectedOption) => setData('vehicle_id', selectedOption ? selectedOption.value : '')}
-              isDisabled={processing}
-              placeholder="Sélectionner un véhicule"
-              isClearable
-              styles={customStyles}
-              classNamePrefix="react-select"
-            />
-            {errors.vehicle_id && <div className="text-red-500 text-sm mt-1">{errors.vehicle_id}</div>}
-          </div>
-
-          {/* Conteneur pour Chauffeur et Co-Chauffeur */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Champ Chauffeur Principal */}
+    <Modal isOpen={isOpen} onClose={onClose} title={roadbill ? "Modifier Bordereau" : "Nouveau Bordereau de Route"} maxWidth="4xl">
+      <Form onSubmit={handleSubmit} className="p-1">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          {/* COLONNE GAUCHE : INFOS GÉNÉRALES */}
+          <div className="lg:col-span-1 space-y-4 border-r border-gray-200 dark:border-gray-700 pr-0 lg:pr-6">
+            <h3 className="font-semibold text-gray-700 dark:text-gray-300 flex items-center">
+               <span className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mr-2 text-sm">1</span>
+               Informations Transport
+            </h3>
+            
             <div>
-              <Label htmlFor="roadbill-driver_id">Chauffeur Principal <span className="text-red-500">*</span></Label>
+              <Label>Véhicule *</Label>
               <Select
-                id="roadbill-driver_id"
-                name="driver_id"
-                options={driverOptions}
-                value={driverOptions.find(option => option.value === data.driver_id) || null}
-                onChange={(selectedOption) => setData('driver_id', selectedOption ? selectedOption.value : '')}
-                isDisabled={processing}
-                placeholder="Sélectionner un chauffeur"
-                isClearable
+                options={vehicleOptions}
+                value={vehicleOptions.find(o => o.value === data.vehicle_id)}
+                onChange={val => setData('vehicle_id', val?.value)}
                 styles={customStyles}
-                classNamePrefix="react-select"
+                placeholder="Choisir..."
               />
-              {errors.driver_id && <div className="text-red-500 text-sm mt-1">{errors.driver_id}</div>}
+              {errors.vehicle_id && <p className="text-red-500 text-xs mt-1">{errors.vehicle_id}</p>}
             </div>
 
-            {/* Champ Co-Chauffeur (facultatif) */}
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <Label>Chauffeur *</Label>
+                <Select
+                  options={driverOptions}
+                  value={driverOptions.find(o => o.value === data.driver_id)}
+                  onChange={val => setData('driver_id', val?.value)}
+                  styles={customStyles}
+                />
+              </div>
+              <div>
+                <Label>Co-Chauffeur</Label>
+                <Select
+                  options={driverOptions}
+                  value={driverOptions.find(o => o.value === data.co_driver_id)}
+                  onChange={val => setData('co_driver_id', val?.value)}
+                  styles={customStyles}
+                />
+              </div>
+            </div>
+
             <div>
-              <Label htmlFor="roadbill-co_driver_id">Co-Chauffeur</Label>
+              <Label>Destination *</Label>
               <Select
-                id="roadbill-co_driver_id"
-                name="co_driver_id"
-                options={driverOptions}
-                value={driverOptions.find(option => option.value === data.co_driver_id) || null}
-                onChange={(selectedOption) => setData('co_driver_id', selectedOption ? selectedOption.value : '')}
-                isDisabled={processing}
-                placeholder="Aucun co-chauffeur"
-                isClearable
-                styles={customStyles}
-                classNamePrefix="react-select"
-              />
-              {errors.co_driver_id && <div className="text-red-500 text-sm mt-1">{errors.co_driver_id}</div>}
-            </div>
-          </div>
-
-          {/* Conteneur pour Agence de Départ et Agence d'Arrivée */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Affichage du nom de l'agence de départ non-modifiable */}
-            <div>
-              <Label htmlFor="roadbill-departure_location_id">Agence de Départ <span className="text-red-500">*</span></Label>
-              <p className="mt-1 block w-full rounded-md bg-gray-100 border-gray-300 shadow-sm px-3 py-2 text-gray-700 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200">
-                {userAgencyName}
-              </p>
-              <input type="hidden" name="departure_location_id" value={data.departure_location_id} />
-            </div>
-
-            {/* Champ Agence d'Arrivée */}
-            <div>
-              <Label htmlFor="roadbill-arrival_location_id">Agence d'Arrivée <span className="text-red-500">*</span></Label>
-              <Select
-                id="roadbill-arrival_location_id"
-                name="arrival_location_id"
                 options={agencyOptions}
-                value={agencyOptions.find(option => option.value === data.arrival_location_id) || null}
-                onChange={(selectedOption) => setData('arrival_location_id', selectedOption ? selectedOption.value : '')}
-                isDisabled={processing}
-                placeholder="Sélectionner une agence d'arrivée"
-                isClearable
+                value={agencyOptions.find(o => o.value === data.arrival_location_id)}
+                onChange={val => setData('arrival_location_id', val?.value)}
                 styles={customStyles}
-                classNamePrefix="react-select"
               />
-              {errors.arrival_location_id && <div className="text-red-500 text-sm mt-1">{errors.arrival_location_id}</div>}
+            </div>
+
+            <div>
+              <Label>Date de Départ *</Label>
+              <Input
+                type="datetime-local"
+                value={data.departure_date}
+                onChange={e => setData('departure_date', e.target.value)}
+                error={errors.departure_date}
+              />
+            </div>
+
+            <div>
+              <Label>Type *</Label>
+              <Select
+                options={typeOptions}
+                value={typeOptions.find(o => o.value === data.type)}
+                onChange={val => setData('type', val?.value)}
+                styles={customStyles}
+              />
             </div>
           </div>
 
-          {/* Champ Date de Départ */}
-          <div>
-            <Label htmlFor="roadbill-departure_date">Date de Départ <span className="text-red-500">*</span></Label>
-            <Input
-              type="datetime-local"
-              id="roadbill-departure_date"
-              name="departure_date"
-              value={data.departure_date}
-              onChange={(e) => setData('departure_date', e.target.value)}
-              disabled={processing}
-              error={!!errors.departure_date}
-              hint={errors.departure_date}
-              required
-            />
-          </div>
+          {/* COLONNE DROITE : SÉLECTION ARTICLES (STYLE PANIER/SAP) */}
+          <div className="lg:col-span-2 space-y-4">
+            <h3 className="font-semibold text-gray-700 dark:text-gray-300 flex items-center">
+               <span className="w-8 h-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center mr-2 text-sm">2</span>
+               Articles à transférer
+            </h3>
 
-          {/* Champ Date d'Arrivée (facultatif) */}
-          <div className='hidden'>
-            <Label htmlFor="roadbill-arrival_date">Date d'Arrivée</Label>
-            <Input
-              type="datetime-local"
-              id="roadbill-arrival_date"
-              name="arrival_date"
-              value={data.arrival_date}
-              onChange={(e) => setData('arrival_date', e.target.value)}
-              disabled={processing}
-              error={!!errors.arrival_date}
-              hint={errors.arrival_date}
-            />
-          </div>
+            {/* Barre de recherche d'article rapide */}
+            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-dashed border-gray-300 dark:border-gray-600">
+              <Label>Rechercher et ajouter un article</Label>
+              <Select
+                options={articleOptions}
+                onChange={addArticleLine}
+                placeholder="Tapez le nom de l'article..."
+                value={null} // Pour qu'il se réinitialise après sélection
+                styles={customStyles}
+              />
+            </div>
 
-          {/* Champ Type */}
-          <div>
-            <Label htmlFor="roadbill-type">Type <span className="text-red-500">*</span></Label>
-            <Select
-              id="roadbill-type"
-              name="type"
-              options={typeOptions}
-              value={typeOptions.find(option => option.value === data.type) || null}
-              onChange={(selectedOption) => setData('type', selectedOption ? selectedOption.value : '')}
-              isDisabled={processing}
-              placeholder="Sélectionner un type"
-              styles={customStyles}
-              classNamePrefix="react-select"
-            />
-            {errors.type && <div className="text-red-500 text-sm mt-1">{errors.type}</div>}
+            {/* Tableau des articles sélectionnés */}
+            <div className="overflow-x-auto border rounded-lg dark:border-gray-700">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-900">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Article</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase w-32">Quantité</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase w-20"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {data.articles.length === 0 ? (
+                    <tr>
+                      <td colSpan="3" className="px-4 py-8 text-center text-gray-400">
+                        <FontAwesomeIcon icon={faBoxOpen} className="text-3xl mb-2 block mx-auto" />
+                        Aucun article sélectionné
+                      </td>
+                    </tr>
+                  ) : (
+                    data.articles.map((item) => (
+                      <tr key={item.article_id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-gray-900 dark:text-white">{item.name}</div>
+                          <div className="text-xs text-gray-500 italic">{item.unit}</div>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <div className="flex items-center justify-center space-x-2">
+                            <button 
+                              type="button"
+                              onClick={() => updateArticleQuantity(item.article_id, item.quantity - 1)}
+                              className="p-1 text-gray-500 hover:text-red-500"
+                            >
+                              <FontAwesomeIcon icon={faMinus} className="text-xs" />
+                            </button>
+                            <input
+                              type="number"
+                              className="w-16 text-center border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600 py-1"
+                              value={item.quantity}
+                              onChange={(e) => updateArticleQuantity(item.article_id, e.target.value)}
+                            />
+                            <button 
+                              type="button"
+                              onClick={() => updateArticleQuantity(item.article_id, item.quantity + 1)}
+                              className="p-1 text-gray-500 hover:text-green-500"
+                            >
+                              <FontAwesomeIcon icon={faPlus} className="text-xs" />
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            type="button"
+                            onClick={() => removeArticleLine(item.article_id)}
+                            className="text-red-400 hover:text-red-600 transition-colors"
+                          >
+                            <FontAwesomeIcon icon={faTrash} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {errors.articles && <p className="text-red-500 text-sm mt-1">{errors.articles}</p>}
           </div>
+        </div>
 
-          {/* Champ Note (Commentaire) */}
-          <div className='hidden'>
-            <Label htmlFor="roadbill-note">Note (Commentaire)</Label>
-            <textarea
-              id="roadbill-note"
-              name="note"
-              value={data.note}
-              onChange={(e) => setData('note', e.target.value)}
-              disabled={processing}
-              className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.note ? 'border-red-500' : ''}`}
-              rows="3"
-            ></textarea>
-            {errors.note && <div className="text-red-500 text-sm mt-1">{errors.note}</div>}
-          </div>
-
-          {/* Bouton pour ouvrir la modale de sélection d'articles */}
-          <div className="mt-6">
-            <button
-              type="button"
-              onClick={openArticlesModal}
-              className="w-full bg-indigo-600 text-white active:bg-indigo-700 font-bold uppercase text-sm px-6 py-3 rounded shadow hover:shadow-lg outline-none focus:outline-none ease-linear transition-all duration-150"
-            >
-              Sélectionner les Articles ({data.articles.length})
-            </button>
-            {errors.articles && <div className="text-red-500 text-sm mt-1">{errors.articles}</div>}
-          </div>
-
-          {/* Pied de la modale (boutons de soumission) */}
-          <div className="flex items-center justify-between p-6 border-t border-solid border-gray-200 rounded-b dark:border-gray-700 mt-4">
-            <button
-              type="button"
-              className="text-red-500 background-transparent font-bold uppercase px-6 py-2 text-sm outline-none focus:outline-none mr-1 mb-1 ease-linear transition-all duration-150"
-              onClick={onClose}
-              disabled={processing}
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              className="bg-blue-500 text-white active:bg-blue-600 font-bold uppercase text-sm px-6 py-3 rounded shadow hover:shadow-lg outline-none focus:outline-none ease-linear transition-all duration-150"
-              disabled={processing}
-            >
-              {processing ? (
-                <>
-                  <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
-                  {roadbill ? 'Mise à jour...' : 'Création...'}
-                </>
-              ) : (
-                roadbill ? 'Modifier le bordereau' : 'Créer le bordereau'
-              )}
-            </button>
-          </div>
-        </Form>
-      </Modal>
-
-      {/* Modale de sélection des articles */}
-      <ArticlesSelectionModal
-        isOpen={isArticlesModalOpen}
-        onClose={closeArticlesModal}
-        articles={articles}
-        onSaveArticles={handleSaveSelectedArticles}
-        initialSelectedArticles={data.articles}
-      />
-    </>
+        {/* ACTIONS */}
+        <div className="flex items-center justify-end mt-8 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <button
+            type="button"
+            className="px-6 py-2 text-gray-600 hover:text-gray-800 font-bold mr-4"
+            onClick={onClose}
+          >
+            Annuler
+          </button>
+          <button
+            type="submit"
+            disabled={processing}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded shadow-lg transition-all flex items-center"
+          >
+            {processing && <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />}
+            {roadbill ? 'Mettre à jour le Bordereau' : 'Valider le Bordereau'}
+          </button>
+        </div>
+      </Form>
+    </Modal>
   );
 };
 

@@ -231,18 +231,18 @@ class UserController extends Controller
         $role = Role::where("name","magasin")->first();
          if(Auth::user()->role->name === "super_administrateur"){
 
-        $ceos = User::where("role_id",$role->id)->with("entreprise","agency","role")->orderBy("created_at","desc")->paginate(15);
+        $ceos = User::where("role_id",$role->id)->where("boutique_id",null)->with("entreprise","agency","role")->orderBy("created_at","desc")->paginate(15);
         $agencies = Agency::with("entreprise")->get();
         $entreprises = Entreprise::all();
         }else if(Auth::user()->role->name ==="direction"){
 
-        $ceos = User::where("role_id",$role->id)->where("entreprise_id",Auth::user()->entreprise_id)->with("entreprise","agency","role")->orderBy("created_at","desc")->paginate(15);
+        $ceos = User::where("role_id",$role->id)->where("boutique_id",null)->where("entreprise_id",Auth::user()->entreprise_id)->with("entreprise","agency","role")->orderBy("created_at","desc")->paginate(15);
         $agencies = Agency::where("entreprise_id",Auth::user()->entreprise_id)->with("entreprise")->get();
         $entreprises = Entreprise::where("id",Auth::user()->entreprise_id)->get();
 
         }else if(Auth::user()->role->name === "regional"){
 
-        $ceos = User::where("role_id",$role->id)->where("entreprise_id",Auth::user()->entreprise_id)->where("agency_id",Auth::user()->agency_id)->with("entreprise","agency","role")->orderBy("created_at","desc")->paginate(15);
+        $ceos = User::where("role_id",$role->id)->where("boutique_id",null)->where("entreprise_id",Auth::user()->entreprise_id)->where("agency_id",Auth::user()->agency_id)->with("entreprise","agency","role")->orderBy("created_at","desc")->paginate(15);
         $agencies = Agency::where("id",Auth::user()->agency_id)->where("entreprise_id",Auth::user()->entreprise_id)->with("entreprise")->get();
         $entreprises = Entreprise::where("id",Auth::user()->entreprise_id)->get();
 
@@ -399,18 +399,18 @@ class UserController extends Controller
         $role = Role::where("name","commercial")->first();
         if(Auth::user()->role->name === "super_administrateur"){
 
-        $ceos = User::where("role_id",$role->id)->with("entreprise","agency","role")->orderBy("created_at","desc")->paginate(15);
+        $ceos = User::where("role_id",$role->id)->where("boutique_id",null)->with("entreprise","agency","role")->orderBy("created_at","desc")->paginate(15);
         $agencies = Agency::with("entreprise")->get();
         $entreprises = Entreprise::all();
         }else if(Auth::user()->role->name ==="direction"){
 
-        $ceos = User::where("role_id",$role->id)->where("entreprise_id",Auth::user()->entreprise_id)->with("entreprise","agency","role")->orderBy("created_at","desc")->paginate(15);
+        $ceos = User::where("role_id",$role->id)->where("boutique_id",null)->where("entreprise_id",Auth::user()->entreprise_id)->with("entreprise","agency","role")->orderBy("created_at","desc")->paginate(15);
         $agencies = Agency::where("entreprise_id",Auth::user()->entreprise_id)->with("entreprise")->get();
         $entreprises = Entreprise::where("id",Auth::user()->entreprise_id)->get();
 
         }else if(Auth::user()->role->name === "regional"){
 
-        $ceos = User::where("role_id",$role->id)->where("entreprise_id",Auth::user()->entreprise_id)->where("agency_id",Auth::user()->agency_id)->with("entreprise","agency","role")->orderBy("created_at","desc")->paginate(15);
+        $ceos = User::where("role_id",$role->id)->where("boutique_id",null)->where("entreprise_id",Auth::user()->entreprise_id)->where("agency_id",Auth::user()->agency_id)->with("entreprise","agency","role")->orderBy("created_at","desc")->paginate(15);
         $agencies = Agency::where("id",Auth::user()->agency_id)->where("entreprise_id",Auth::user()->entreprise_id)->with("entreprise")->get();
         $entreprises = Entreprise::where("id",Auth::user()->entreprise_id)->get();
 
@@ -515,6 +515,9 @@ class UserController extends Controller
     /**
      * CRÉER : store_boutique
      */
+   /**
+     * CRÉER : store_boutique
+     */
     public function store_boutique(Request $request)
     {
         $commercialRole = Role::where('name', 'commercial')->firstOrFail();
@@ -526,8 +529,8 @@ class UserController extends Controller
             'email'        => ['required', 'email', 'max:255', 'unique:users,email'],
             'phone_number' => ['nullable', 'string', 'max:20'],
             'code'         => ['required', 'string', 'max:50'],
-            'agency_id'    => ['nullable'], // Agence administrative
-            'boutique_id'  => ['required', 'exists:boutiques,id'], // NOUVEAU : Boutique physique
+            'agency_id'    => ['nullable'], // Peut être null pour un user boutique
+            'boutique_id'  => ['required', 'exists:boutiques,id'],
             'role_id'      => ['required', Rule::in($allowedRoles)],
             'password'     => ['required', 'confirmed', 'min:4'],
             
@@ -543,6 +546,10 @@ class UserController extends Controller
             ],
         ]);
 
+        // 1. Assignation automatique de l'entreprise de l'admin connecté
+        $validated['entreprise_id'] = Auth::user()->entreprise_id;
+
+        // 2. Configuration spécifique boutique
         $validated['is_boutique'] = true;
         $validated['password'] = Hash::make($validated['password']);
 
@@ -565,8 +572,8 @@ class UserController extends Controller
             'email'        => ['required', 'email', Rule::unique('users')->ignore($user->id)],
             'phone_number' => ['nullable', 'string', 'max:20'],
             'code'         => ['required', 'string', 'max:50'],
-            'agency_id'    => ['nullable', ],
-            'boutique_id'  => ['required', 'exists:boutiques,id'], // NOUVEAU
+            'agency_id'    => ['nullable'],
+            'boutique_id'  => ['required', 'exists:boutiques,id'],
             'role_id'      => ['required', Rule::in($allowedRoles)],
             
             'counter_id'   => [
@@ -582,6 +589,10 @@ class UserController extends Controller
             'password'     => ['nullable', 'confirmed', 'min:4'],
         ]);
 
+        // 1. On force l'entreprise (sécurité : empêche de déplacer un user vers une autre entreprise)
+        $validated['entreprise_id'] = Auth::user()->entreprise_id;
+
+        // 2. Gestion du mot de passe
         if ($request->filled('password')) {
             $validated['password'] = Hash::make($validated['password']);
         } else {

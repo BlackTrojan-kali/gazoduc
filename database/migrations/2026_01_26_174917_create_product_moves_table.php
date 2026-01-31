@@ -17,12 +17,13 @@ return new class extends Migration
             $table->foreign("product_id")->on("products")->references("id")->onDelete("cascade");
             $table->unsignedBigInteger("boutique_id");
             $table->foreign("boutique_id")->on("boutiques")->references("id")->onDelete("cascade");
-            $table->decimal("available_qty",14,2);
+            $table->decimal("qty",14,2);
             $table->string("type");
             $table->string("label")->nullable();
             $table->string("departure");
             $table->string("destination")->nullable();
             $table->unsignedBigInteger("user_id");
+        
             $table->foreign("user_id")->on("users")->references("id")->onDelete("cascade");
             $table->timestamps();
         });

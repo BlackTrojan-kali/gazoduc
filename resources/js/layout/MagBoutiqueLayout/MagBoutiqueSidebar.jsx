@@ -11,62 +11,22 @@ const navItems = [
     icon:  <FontAwesomeIcon icon={faDashboard} />,
     name: "Dashboard",
     subItems: [
-      { name: "Boutiques", path: "/boutiques/index", pro: false }, 
-      { name: "Produits", path: "/product/index", pro: false },
-      { name: "Stock Produits", path: "/product/stocks-index", pro: false },
-      { name: "Categories Produits", path: "/product/category/index", pro: false },
+      { name: "Stocks", path: "/magasin-stock", pro: false }, 
+      { name: "Mouvements", path: "/magasin-stock-history", pro: false },
     ],
   },{
     icon:  <FontAwesomeIcon icon={faTimeline} />,
-    name: "Caisses",
+    name: "Transferts",
     subItems: [
-      { name:"Caisses", path: "/counters/index", pro: false },
-    ],
-  },
-  {
-    icon:  <FontAwesomeIcon icon={faCoins} />,
-    name: "Mouvements",
-      subItems: [
-      { name: "Mouvements", path: "/banks/index", pro: false },
-      { name: "Transferts", path: "/banks/index", pro: false },
+      { name:"Historique", path: "/mag-boutique/trasfert/index", pro: false },
     ],
   },
   
-    {
-      icon:  <FontAwesomeIcon icon={faDriversLicense} />,
-      name: "Route",
-      subItems: [
-        { name: "chauffeurs", path: "/drivers-index", pro: false },
-        { name: "vehicules", path: "/vehicules-index", pro: false },
-      ],
-    },
-    {
-       icon:  <FontAwesomeIcon icon={faDollar} />,
-       name: "Ventes Produits",
-       subItems: [
-         { name: "Historique ventes", path: "/fuel-sales-hitory", pro: false },
-         { name: "Historique versements", path: "/fuel-payments", pro: false },
-       ],
-     },
-     ,
   
- 
 ];
 
 const othersItems= [
-  { icon:  <FontAwesomeIcon icon={faUser} />,
-    name: "Users",
-    subItems: [
-      { name: "Utilisateurs", path: "/boutique/users/index", pro: false },
-    ],
-  }, { icon:  <FontAwesomeIcon icon={faUserFriends} />,
-    name: "Clients",
-   subItems: [
-      { name: "Clients", path: "/client-index", pro: false },
-      { name: "Categories Clients", path: "/client-cat", pro: false },
-      { name: "Prix par category", path: "/client-price", pro: false },
-    ],
-  }
+  
 ];
 
 const MagBoutiqueSidebar = () => {
@@ -76,7 +36,6 @@ const MagBoutiqueSidebar = () => {
   const [openSubmenu, setOpenSubmenu] = useState(null);
   const [subMenuHeight, setSubMenuHeight] = useState({});
   const subMenuRefs = useRef({});
-
   // --- CORRECTED isActive FUNCTION ---
   const isActive = useCallback((path) => {
     // This checks if the current URL exactly matches or starts with the path

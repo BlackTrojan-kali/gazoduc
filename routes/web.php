@@ -59,6 +59,8 @@ use App\Http\Controllers\DirFuelController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductStockController;
 use App\Http\Controllers\CounterController;
+use App\Http\Controllers\MagBoutiqueController;
+use App\Http\Controllers\ProductTransfertController;
 
 //auth routes
 Route::get('/login',[AuthController::class,"loginPage"] )->name("login");
@@ -185,6 +187,29 @@ Route::middleware([MagasinMiddleware::class,isArchivedMiddleWare::class,ClosureM
 Route::get("/magasin-choose-licence",[MagasinController::class,"licence"])->name("magasin.licence");
 //carburants routes 
 Route::get('/fuel_citerne_index', [MagasinController::class, 'fuel_citerne_index'])->name('magasin.fuel_citerne_index');
+//BOUTIQUES MAGASIN ROUTES
+Route::get("/magasin-stock",[MagBoutiqueController::class,"index"])->name("magasin.boutique.index");
+Route::post("/magasin-stock-move",[MagBoutiqueController::class,"store"])->name("magasin.boutique.store");
+Route::delete("/magasin-stock-destroy/{id}",[MagBoutiqueController::class,"destroy"])->name("magasin.boutique.destroy");
+//Move history
+Route::get("/magasin-stock-history",[MagBoutiqueController::class,"history"])->name("magasin.boutique.history");
+Route::get('/mag-boutique/export', [MagBoutiqueController::class, 'export_history'])
+         ->name('mag-boutique.export_history');
+
+Route::get('/mag-boutique/trasfert/index', [ProductTransfertController::class, 'index'])
+         ->name('mag-boutique.transferts');
+
+Route::post('/mag-boutique/trasfert/store', [ProductTransfertController::class, 'store'])
+         ->name('mag-boutique.tranfert.store');
+
+Route::post('/mag-boutique/trasfert/receive/{id}', [ProductTransfertController::class, 'receive'])
+         ->name('mag-boutique.transferts.receive');
+Route::delete('/transfers/{id}', [ProductTransfertController::class, 'destroy'])
+         ->name('transfers.destroy');
+
+    // Impression
+    Route::get('/transfers/{id}/print', [ProductTransfertController::class, 'print_waybill'])
+         ->name('transfers.print_waybill');
 
 });
 

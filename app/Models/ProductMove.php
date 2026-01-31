@@ -8,8 +8,16 @@ class ProductMove extends Model
 {
     //
     protected $fillable= [
-         "product_id", "boutique_id", "type", "quantité", "motif",
-"user_id"
+        
+        "product_id",        
+        "boutique_id",
+        "qty",
+        "type",
+        "label",
+        "departure",
+        "destination",
+        "user_id",
+        "move_id"
     ];
     public function product(){
         return $this->belongsTo(Product::class);
@@ -19,5 +27,8 @@ class ProductMove extends Model
     }
     public function user(){
         return $this->belongsTo(User::class);
+    }
+    public function move(){
+        return $this->belongsTo(ProductMove::class,"move_id");
     }
 }
