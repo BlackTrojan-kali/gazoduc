@@ -3,21 +3,34 @@ import { Head, router, Link } from '@inertiajs/react';
 import ComBoutiqueLayout from '../../layout/ComBoutiqueLayout/ComBoutiqueLayout';
 import CommercialStockMoveModal from '../../components/Modals/Boutique_Modals/Moves/CommercialStockMoveModal';
 import CreateSaleModal from '../../components/Modals/Boutique_Modals/Sales/CreateSaleModal'; 
+// Import de la modale de versement créée précédemment
+import CreatePaymentModal from '../../components/Modals/Boutique_Modals/Payments/CreatePaymentModal'; 
+
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
     faSearch, 
     faBoxOpen, 
     faArrowRightFromBracket,
     faCubes,
-    faCashRegister
+    faCashRegister,
+    faHandHoldingDollar,
+    faMoneyBillWave,
+    faChartLine,
+    faExclamationTriangle
 } from '@fortawesome/free-solid-svg-icons';
 
-const ComBoutiqueIndex = ({ stocks, filters, customers = [], userCounterId }) => {
+// Ajout des props 'stats' et 'salesToAssociate'
+const ComBoutiqueIndex = ({ stocks, filters, customers = [], userCounterId, stats, salesToAssociate = [] }) => {
     
     // --- États ---
     const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
     const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false); // Nouvel état pour le versement
     const [search, setSearch] = useState(filters.search || '');
+
+    // --- Logique du Seuil de Versement ---
+    // On vérifie si le montant en attente dépasse le point de transfert défini
+    const isTransferDue = (stats?.unassociated_total || 0) >= (stats?.transfer_point || 0) && (stats?.unassociated_total > 0);
 
     // --- Gestion de la Recherche (Debounce) ---
     useEffect(() => {
@@ -32,7 +45,7 @@ const ComBoutiqueIndex = ({ stocks, filters, customers = [], userCounterId }) =>
         return () => clearTimeout(timer);
     }, [search]);
 
-    // --- Préparation des données pour la Modale de SORTIE (Mouvements) ---
+    // --- Préparation des données pour la Modale de SORTIE ---
     const productsForMoveModal = useMemo(() => {
         return stocks.data.map(stockItem => ({
             ...stockItem.product, 
@@ -41,16 +54,15 @@ const ComBoutiqueIndex = ({ stocks, filters, customers = [], userCounterId }) =>
         }));
     }, [stocks.data]);
 
-    // --- Préparation des données pour la Modale de VENTE (POS) ---
-    // CORRECTION ICI : On mappe 'prix_vente' et 'tva' correctement selon votre migration
+    // --- Préparation des données pour la Modale de VENTE ---
     const productsForSaleModal = useMemo(() => {
         return stocks.data.map(stockItem => ({
             id: stockItem.product.id,
             designation: stockItem.product.designation,
             sku: stockItem.product.sku,
-            barcode: stockItem.product.barcode, // Ajout du barcode pour le scan
-            prix_vente: stockItem.product.prix_vente, // IMPORTANT : Nom exact de la colonne DB
-            tva: stockItem.product.tva, // Ajout TVA
+            barcode: stockItem.product.barcode,
+            prix_vente: stockItem.product.prix_vente, 
+            tva: stockItem.product.tva, 
             image_url: stockItem.product.image_url,
             stock_comptoir: stockItem.available_qty,
             unit: stockItem.product.unit
@@ -64,7 +76,56 @@ const ComBoutiqueIndex = ({ stocks, filters, customers = [], userCounterId }) =>
             <div className="py-6">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
                     
-                    {/* --- HEADER & TITRE --- */}
+                    {/* --- SECTION STATISTIQUES & ALERTES --- */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                        {/* Carte 1 : Ventes du Jour */}
+                        <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border-l-4 border-blue-500 flex items-center justify-between">
+                            <div>
+                                <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Ventes du Jour</p>
+                                <p className="text-2xl font-extrabold text-gray-800 dark:text-white mt-1">
+                                    {Number(stats?.total_sales_today || 0).toLocaleString()} <span className="text-sm font-normal">FCFA</span>
+                                </p>
+                            </div>
+                            <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                                <FontAwesomeIcon icon={faChartLine} />
+                            </div>
+                        </div>
+
+                        {/* Carte 2 : En Attente de Versement */}
+                        <div className={`bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border-l-4 flex items-center justify-between transition-colors ${
+                            isTransferDue ? 'border-red-500 bg-red-50 dark:bg-red-900/10' : 'border-orange-400'
+                        }`}>
+                            <div>
+                                <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-1">
+                                    Non Associé
+                                    {isTransferDue && <FontAwesomeIcon icon={faExclamationTriangle} className="text-red-500 animate-pulse"/>}
+                                </p>
+                                <p className={`text-2xl font-extrabold mt-1 ${isTransferDue ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-white'}`}>
+                                    {Number(stats?.unassociated_total || 0).toLocaleString()} <span className="text-sm font-normal">FCFA</span>
+                                </p>
+                            </div>
+                            <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                                isTransferDue ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' : 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400'
+                            }`}>
+                                <FontAwesomeIcon icon={faHandHoldingDollar} />
+                            </div>
+                        </div>
+
+                        {/* Carte 3 : Point de Transfert (Info) */}
+                        <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border-l-4 border-gray-300 dark:border-gray-600 flex items-center justify-between opacity-80">
+                            <div>
+                                <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Seuil Versement</p>
+                                <p className="text-2xl font-extrabold text-gray-600 dark:text-gray-300 mt-1">
+                                    {Number(stats?.transfer_point || 0).toLocaleString()} <span className="text-sm font-normal">FCFA</span>
+                                </p>
+                            </div>
+                            <div className="h-10 w-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400">
+                                <FontAwesomeIcon icon={faMoneyBillWave} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* --- HEADER & ACTIONS --- */}
                     <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
                             <h2 className="font-semibold text-2xl text-gray-800 dark:text-gray-200 leading-tight flex items-center gap-2">
@@ -76,9 +137,26 @@ const ComBoutiqueIndex = ({ stocks, filters, customers = [], userCounterId }) =>
                             </p>
                         </div>
 
-                        {/* --- BOUTONS ACTIONS --- */}
                         <div className="flex flex-wrap gap-3">
-                            {/* Bouton VENTE (POS) - Visible si une caisse est assignée */}
+                            
+                            {/* BOUTON NOUVEAU VERSEMENT (Conditionnel) */}
+                            <button
+                                onClick={() => setIsPaymentModalOpen(true)}
+                                disabled={!isTransferDue}
+                                className={`px-5 py-2.5 rounded-lg font-bold shadow-md flex items-center transition-all transform ${
+                                    isTransferDue 
+                                    ? 'bg-red-600 hover:bg-red-700 text-white hover:scale-105 animate-bounce-slow' 
+                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500'
+                                }`}
+                                title={!isTransferDue ? `Le montant en attente (${stats?.unassociated_total}) est inférieur au seuil (${stats?.transfer_point})` : "Effectuer un versement maintenant"}
+                            >
+                                <FontAwesomeIcon icon={faHandHoldingDollar} className="mr-2" />
+                                Faire un Versement
+                            </button>
+
+                            <div className="w-px h-10 bg-gray-300 dark:bg-gray-600 mx-2 hidden md:block"></div>
+
+                            {/* Bouton VENTE (POS) */}
                             {userCounterId ? (
                                 <button
                                     onClick={() => setIsSaleModalOpen(true)}
@@ -89,7 +167,7 @@ const ComBoutiqueIndex = ({ stocks, filters, customers = [], userCounterId }) =>
                                 </button>
                             ) : (
                                 <div className="text-xs text-red-500 font-bold bg-red-100 px-3 py-2 rounded border border-red-200">
-                                    ⚠️ Aucune caisse assignée
+                                    ⚠️ Caisse non assignée
                                 </div>
                             )}
 
@@ -158,7 +236,6 @@ const ComBoutiqueIndex = ({ stocks, filters, customers = [], userCounterId }) =>
                                                     {stock.product.sku}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-gray-700 dark:text-gray-300">
-                                                    {/* Utilisation de prix_vente */}
                                                     {Number(stock.product.prix_vente).toLocaleString('fr-FR')} FCFA
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-right">
@@ -242,6 +319,14 @@ const ComBoutiqueIndex = ({ stocks, filters, customers = [], userCounterId }) =>
                 products={productsForSaleModal}
                 customers={customers}
                 userCounterId={userCounterId}
+            />
+
+            {/* --- MODALE DE VERSEMENT (Nouvelle) --- */}
+            <CreatePaymentModal
+                isOpen={isPaymentModalOpen}
+                onClose={() => setIsPaymentModalOpen(false)}
+                salesToAssociate={salesToAssociate} // Données passées par le contrôleur
+                counterId={userCounterId}
             />
 
         </>

@@ -6,6 +6,9 @@ use App\Models\Customer;
 use App\Models\Product;
 use App\Models\ProductStock;
 use App\Models\ProductMove;
+use App\Models\Productsale;
+use App\Models\UnassociatedFacture;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -17,42 +20,68 @@ class ComBoutiqueController extends Controller
      * Affiche le stock du commercial (Service: 'comptoir')
      * Uniquement pour la boutique de l'utilisateur connecté.
      */
-   public function index(Request $request)
-    {
-        $user = Auth::user();
+    public function index(Request $request)
+{
+    // On charge la relation 'counter' pour accéder au 'transfer_point' sans refaire de requête
+    $user = Auth::user();
 
-        // 1. Récupération des clients (Optimisé : on ne prend que id et name pour le Select)
-        $customers = Customer::orderBy('name')->get(['id', 'name']);
+    // 1. Récupération des clients
+    $customers = Customer::orderBy('name')->get(['id', 'name']);
 
-        // 2. Récupération de la caisse affectée à l'utilisateur
-        // Assurez-vous que votre table 'users' a bien une colonne 'counter_id'
-        // Si l'utilisateur n'a pas de caisse, on envoie null (le frontend le gérera)
-        $userCounterId = $user->counter_id; 
+    // 2. Info Caisse
+    $userCounterId = $user->counter_id; 
 
-        // 3. Récupération des stocks du comptoir
-        $query = ProductStock::with('product.category')
-            ->where('boutique_id', $user->boutique_id)
-            ->where('service', 'comptoir'); // FILTRE CRUCIAL
+    // --- NOUVEAU : CALCULS STATISTIQUES ---
 
-        // Recherche optionnelle
-        if ($request->filled('search')) {
-            $search = $request->input('search');
-            $query->whereHas('product', function($q) use ($search) {
-                $q->where('designation', 'like', '%' . $search . '%')
-                  ->orWhere('sku', 'like', '%' . $search . '%')
-                  ->orWhere('barcode', 'like', '%' . $search . '%'); // Ajout recherche par code-barre ici aussi
-            });
-        }
+    // A. Somme totale des ventes de la journée (pour cette boutique)
+    $totalSalesToday = ProductSale::where('boutique_id', $user->boutique_id)
+        ->whereDate('created_at', Carbon::today()) // Filtre sur la date d'aujourd'hui (00:00 à 23:59)
+        ->sum('total_ttc');
 
-        $stocks = $query->paginate(15)->withQueryString();
+    // B. Somme totale des factures non associées (en attente de versement)
+    // On récupère d'abord le tableau d'IDs stocké dans le JSON
+    $unassociatedRecord = UnassociatedFacture::first();
+    $unassociatedIds = $unassociatedRecord ? ($unassociatedRecord->product_sales_id ?? []) : [];
     
-        return Inertia::render('ComBoutique/ComBoutiqueIndex', [
-            'stocks'        => $stocks,
-            'filters'       => $request->only(['search']),
-            'customers'     => $customers,      // Passé au frontend
-            'userCounterId' => $userCounterId,  // Passé au frontend pour la vente
-        ]);
+    // On somme le total_ttc de ces factures spécifiques
+    $unassociatedTotal = 0;
+    if (!empty($unassociatedIds)) {
+        $unassociatedTotal = Productsale::whereIn('id', $unassociatedIds)->sum('total_ttc');
     }
+    // C. Point de transfert (Seuil de versement)
+    // On sécurise avec ?? 0 au cas où l'utilisateur n'a pas de caisse ou la valeur est null
+    $transferPoint = $user->counter->transfert_point ?? 0;
+
+
+    // 3. Récupération des stocks (Code existant)
+    $query = ProductStock::with('product.category')
+        ->where('boutique_id', $user->boutique_id)
+        ->where('service', 'comptoir');
+
+    if ($request->filled('search')) {
+        $search = $request->input('search');
+        $query->whereHas('product', function($q) use ($search) {
+            $q->where('designation', 'like', '%' . $search . '%')
+                ->orWhere('sku', 'like', '%' . $search . '%')
+                ->orWhere('barcode', 'like', '%' . $search . '%');
+        });
+    }
+
+    $stocks = $query->paginate(15)->withQueryString();
+
+    return Inertia::render('ComBoutique/ComBoutiqueIndex', [
+        'stocks'        => $stocks,
+        'filters'       => $request->only(['search']),
+        'customers'     => $customers,
+        'userCounterId' => $userCounterId,
+        // On envoie les nouvelles stats groupées dans un objet pour plus de propreté
+        'stats' => [
+            'total_sales_today'  => $totalSalesToday,
+            'unassociated_total' => $unassociatedTotal,
+            'transfer_point'     => $transferPoint,
+        ]
+    ]);
+}
     /**
      * Enregistre un mouvement de sortie (Retour Magasin ou Perte).
      */
