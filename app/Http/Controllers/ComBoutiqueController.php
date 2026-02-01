@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Customer;
+use App\Models\Product;
 use App\Models\ProductStock;
 use App\Models\ProductMove;
 use Illuminate\Http\Request;
@@ -15,33 +17,42 @@ class ComBoutiqueController extends Controller
      * Affiche le stock du commercial (Service: 'comptoir')
      * Uniquement pour la boutique de l'utilisateur connecté.
      */
-    public function index(Request $request)
+   public function index(Request $request)
     {
         $user = Auth::user();
 
-        // On récupère les stocks liés au service 'comptoir' de la boutique de l'utilisateur
+        // 1. Récupération des clients (Optimisé : on ne prend que id et name pour le Select)
+        $customers = Customer::orderBy('name')->get(['id', 'name']);
+
+        // 2. Récupération de la caisse affectée à l'utilisateur
+        // Assurez-vous que votre table 'users' a bien une colonne 'counter_id'
+        // Si l'utilisateur n'a pas de caisse, on envoie null (le frontend le gérera)
+        $userCounterId = $user->counter_id; 
+
+        // 3. Récupération des stocks du comptoir
         $query = ProductStock::with('product.category')
             ->where('boutique_id', $user->boutique_id)
-            ->where('service', 'comptoir'); // FILTRE CRUCIAL : Uniquement le stock commercial
+            ->where('service', 'comptoir'); // FILTRE CRUCIAL
 
         // Recherche optionnelle
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->whereHas('product', function($q) use ($search) {
                 $q->where('designation', 'like', '%' . $search . '%')
-                  ->orWhere('sku', 'like', '%' . $search . '%');
+                  ->orWhere('sku', 'like', '%' . $search . '%')
+                  ->orWhere('barcode', 'like', '%' . $search . '%'); // Ajout recherche par code-barre ici aussi
             });
         }
 
         $stocks = $query->paginate(15)->withQueryString();
-
-        // On retourne la vue Inertia (adaptez le chemin selon votre structure de dossiers)
+    
         return Inertia::render('ComBoutique/ComBoutiqueIndex', [
-            'stocks' => $stocks,
-            'filters' => $request->only(['search'])
+            'stocks'        => $stocks,
+            'filters'       => $request->only(['search']),
+            'customers'     => $customers,      // Passé au frontend
+            'userCounterId' => $userCounterId,  // Passé au frontend pour la vente
         ]);
     }
-
     /**
      * Enregistre un mouvement de sortie (Retour Magasin ou Perte).
      */

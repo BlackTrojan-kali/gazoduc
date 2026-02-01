@@ -15,4 +15,11 @@ class Productsaleitem extends Model
          "discount",
          "sub_total",
     ];
+    
+    public function product(){
+        return $this->belongsTo(Product::class);
+    }
+    public function sale(){
+        return $this->belongsTo(Productsale::class,"sale_id");
+    }
 }

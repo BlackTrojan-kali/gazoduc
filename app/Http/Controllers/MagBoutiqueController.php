@@ -174,75 +174,110 @@ class MagBoutiqueController extends Controller
     /**
      * Supprime un mouvement avec vérification que l'annulation ne crée pas de stock négatif.
      */
-    public function destroy($id)
+public function destroy($id)
     {
         try {
             DB::transaction(function () use ($id) {
-                // On récupère le mouvement et on verrouille la ligne pour l'intégrité
-                $move = ProductMove::lockForUpdate()->findOrFail($id);
+                $user = Auth::user();
 
-                // CAS 1 : Annuler une ENTRÉE (ex: erreur de saisie approvisionnement)
-                // Conséquence : On doit RETIRER du stock.
-                // Risque : Si on retire alors que le stock a déjà été vendu, on tombe en négatif.
-                if ($move->type === 'entree') {
+                // 1. Récupération et Verrouillage du mouvement à supprimer
+                $move = ProductMove::where('id', $id)
+                    ->where('boutique_id', $user->boutique_id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                // On récupère le stock du Comptoir (celui de l'utilisateur courant)
+                $stockComptoir = ProductStock::where([
+                    'product_id'  => $move->product_id,
+                    'boutique_id' => $move->boutique_id,
+                    'service'     => 'comptoir'
+                ])->lockForUpdate()->first();
+
+                // --- CAS A : Annulation d'une SORTIE (ex: Annuler un retour magasin ou une perte) ---
+                if ($move->type === 'sortie') {
                     
-                    $service = ($move->destination === 'Comptoir') ? 'comptoir' : 'magasin';
-                    
-                    $stock = ProductStock::where([
-                        'product_id'  => $move->product_id, 
-                        'boutique_id' => $move->boutique_id, 
-                        'service'     => $service
-                    ])->lockForUpdate()->first();
-
-                    $currentQty = $stock ? $stock->available_qty : 0;
-
-                    if ($currentQty < $move->qty) {
-                        throw new \Exception("Impossible d'annuler cette entrée : Les articles ont déjà été consommés ou vendus (Stock actuel insuffisant).");
-                    }
-
-                    $stock->decrement('available_qty', $move->qty);
-                } 
-                
-                // CAS 2 : Annuler une SORTIE
-                // Conséquence : On REMET du stock au magasin. (Pas de risque de négatif ici)
-                // MAIS : Si c'était un transfert vers le comptoir, on doit RETIRER du comptoir.
-                elseif ($move->type === 'sortie') {
-                    
-                    // A. On remet le stock au magasin
-                    ProductStock::where([
-                        'product_id'  => $move->product_id, 
-                        'boutique_id' => $move->boutique_id, 
-                        'service'     => 'magasin'
-                    ])->increment('available_qty', $move->qty);
-
-                    // B. Si c'était un transfert vers le commercial, on doit annuler l'entrée au comptoir
-                    if (strtolower($move->destination) === 'commercial') {
+                    // Sous-cas 1 : C'était un RETOUR AU MAGASIN
+                    if ($move->destination === 'Magasin') {
                         
-                        $stockComptoir = ProductStock::where([
-                            'product_id'  => $move->product_id, 
-                            'boutique_id' => $move->boutique_id, 
-                            'service'     => 'comptoir'
+                        // On doit reprendre le stock au Magasin.
+                        // MAIS D'ABORD : Vérifier si le magasin a encore ce stock !
+                        $stockMagasin = ProductStock::where([
+                            'product_id'  => $move->product_id,
+                            'boutique_id' => $move->boutique_id,
+                            'service'     => 'magasin'
                         ])->lockForUpdate()->first();
 
-                        $currentComptoirQty = $stockComptoir ? $stockComptoir->available_qty : 0;
+                        $magasinQty = $stockMagasin ? $stockMagasin->available_qty : 0;
 
-                        if ($currentComptoirQty < $move->qty) {
-                            throw new \Exception("Impossible d'annuler ce transfert : Les articles transférés au comptoir ont déjà été vendus.");
+                        if ($magasinQty < $move->qty) {
+                            throw new \Exception("Impossible d'annuler ce retour : Le magasin a déjà utilisé ou vendu ces articles (Stock magasin insuffisant).");
                         }
 
-                        $stockComptoir->decrement('available_qty', $move->qty);
+                        // 1. On débit le magasin (On reprend le stock)
+                        $stockMagasin->decrement('available_qty', $move->qty);
+
+                        // 2. On recrédite le comptoir (On rend le stock au vendeur)
+                        if ($stockComptoir) {
+                            $stockComptoir->increment('available_qty', $move->qty);
+                        } else {
+                            // Si le stock comptoir n'existe plus (cas rare), on le recrée
+                            ProductStock::create([
+                                'product_id' => $move->product_id, 'boutique_id' => $move->boutique_id,
+                                'service' => 'comptoir', 'available_qty' => $move->qty
+                            ]);
+                        }
+
+                        // 3. NETTOYAGE : On supprime le mouvement "Miroir" (l'Entrée magasin correspondante)
+                        // On cherche un mouvement inverse créé au même moment (à 2 sec près) pour le même produit
+                        ProductMove::where('product_id', $move->product_id)
+                            ->where('boutique_id', $move->boutique_id)
+                            ->where('type', 'entree')           // C'était une entrée coté magasin
+                            ->where('destination', 'Magasin')
+                            ->where('qty', $move->qty)
+                            ->whereBetween('created_at', [$move->created_at->subSeconds(2), $move->created_at->addSeconds(2)])
+                            ->delete();
+                    }
+                    
+                    // Sous-cas 2 : C'était une déclaration de PERTE
+                    elseif ($move->destination === 'Perte') {
+                        // Pas de contrôle complexe, on rend juste le stock au comptoir (erreur de saisie supposée)
+                        if ($stockComptoir) {
+                            $stockComptoir->increment('available_qty', $move->qty);
+                        }
                     }
                 }
 
-                // Suppression (La cascade SQL gérera la suppression de l'entrée liée si elle existe, 
-                // mais nous avons déjà géré la logique de stock ci-dessus).
+                // --- CAS B : Annulation d'une ENTRÉE (ex: Transfert reçu du magasin qu'on veut refuser/annuler) ---
+                elseif ($move->type === 'entree') {
+                    
+                    // Si on annule une entrée, on doit retirer le stock du comptoir et le rendre au magasin.
+                    
+                    // 1. Vérifier si le comptoir a encore le stock (qu'il n'a pas été vendu entre temps)
+                    $comptoirQty = $stockComptoir ? $stockComptoir->available_qty : 0;
+
+                    if ($comptoirQty < $move->qty) {
+                        throw new \Exception("Impossible d'annuler cette entrée : Vous avez déjà vendu ces articles (Stock comptoir insuffisant).");
+                    }
+
+                    // 2. On retire du comptoir
+                    $stockComptoir->decrement('available_qty', $move->qty);
+
+                    // 3. On rend au magasin (Provenance probable)
+                    ProductStock::where([
+                        'product_id'  => $move->product_id,
+                        'boutique_id' => $move->boutique_id,
+                        'service'     => 'magasin'
+                    ])->increment('available_qty', $move->qty);
+                }
+
+                // Suppression finale du mouvement historique
                 $move->delete();
             });
 
-            return redirect()->back()->with('success', 'Mouvement annulé et stocks ajustés.');
+            return redirect()->back()->with('success', 'Mouvement annulé et stocks rétablis.');
 
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', $e->getMessage());
+            return redirect()->back()->withErrors(['error' => $e->getMessage()]);
         }
     }
  /**

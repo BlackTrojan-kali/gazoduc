@@ -27,6 +27,7 @@ return new class extends Migration
             $table->string("payment_mode");
             $table->string("status");
             $table->string("sync_status");
+            
             $table->timestamps();
         });
     }

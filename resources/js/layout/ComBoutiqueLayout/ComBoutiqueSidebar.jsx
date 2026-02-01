@@ -16,9 +16,9 @@ const navItems = [
     ],
   },{
     icon:  <FontAwesomeIcon icon={faTimeline} />,
-    name: "Transferts",
+    name: "Ventes",
     subItems: [
-      { name:"Historique", path: "/mag-boutique/trasfert/index", pro: false },
+      { name:"Historique", path: "/sales/history", pro: false },
     ],
   },
   

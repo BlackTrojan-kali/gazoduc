@@ -21,6 +21,7 @@ return new class extends Migration
             $table->float("unit_price");
             $table->integer("discount");
             $table->float("sub_total");
+            
             $table->timestamps();
         });
     }

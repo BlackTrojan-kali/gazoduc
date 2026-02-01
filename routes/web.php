@@ -64,6 +64,7 @@ use App\Http\Controllers\MagBoutiqueController;
 use App\Http\Controllers\ProductTransfertController;
 
 use App\Http\Controllers\ComBoutiqueController;
+use App\Http\Controllers\ProductSalesController;
 //auth routes
 Route::get('/login',[AuthController::class,"loginPage"] )->name("login");
 Route::post('/login',[AuthController::class,"login"] )->name("login");
@@ -360,7 +361,11 @@ Route::middleware([CommercialMiddleware::class,isArchivedMiddleWare::class,Closu
     Route::get("/com-boutique/index",[ComBoutiqueController::class,"index"])->name("commercial.boutique.index");
     
     Route::post("/com-boutique/move/store",[ComBoutiqueController::class,"store"])->name("comboutique.move_store");
-   });
+  Route::post('/sales', [ProductSalesController::class, 'store'])->name('sales.store');
+    Route::get('/sales/{id}/print', [ProductSalesController::class, 'print'])->name('sales.print');
+    Route::get('/sales/history/pdf', [ProductSalesController::class, 'generateHistoryPdf'])->name('sales.history.pdf');
+   Route::get('/sales/history', [ProductSalesController::class, 'history'])->name('sales.history');
+    });
 Route::middleware(IsAdminMiddleware::class)->group(function(){
    //regional routes
     Route::get("/regional",[UserController::class,"index_regional"])->name("regional");
