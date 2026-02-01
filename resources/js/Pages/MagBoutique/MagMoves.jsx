@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Head, router, Link } from '@inertiajs/react';
+import { Head, router, Link, usePage } from '@inertiajs/react';
 import MagBoutiqueLayout from '../../layout/MagBoutiqueLayout/MagBoutiqueLayout';
-import ExportHistoryModal from '../../components/Modals/Boutique_Modals/Moves/ExportHistoryModal'; // Assurez-vous du chemin
+import ComBoutiqueLayout from '../../layout/ComBoutiqueLayout/ComBoutiqueLayout'; // Assurez-vous du chemin
+import ExportHistoryModal from '../../components/Modals/Boutique_Modals/Moves/ExportHistoryModal'; 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
     faHistory, 
@@ -15,7 +16,8 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import Swal from 'sweetalert2';
 
-const MagMoves = ({ moves, filters, products }) => {
+// --- 1. Contenu de la page (Logique métier) ---
+const MovesContent = ({ moves, filters, products }) => {
   
   // --- États ---
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -242,7 +244,6 @@ const MagMoves = ({ moves, filters, products }) => {
         {moves.links && moves.links.length > 3 && (
             <div className="bg-gray-50 dark:bg-gray-700/50 px-6 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
                  <div className="flex-1 flex justify-between sm:hidden">
-                    {/* Mobile pagination simple */}
                     <Link href={moves.prev_page_url} disabled={!moves.prev_page_url} className="btn-secondary">Précédent</Link>
                     <Link href={moves.next_page_url} disabled={!moves.next_page_url} className="btn-secondary">Suivant</Link>
                  </div>
@@ -271,11 +272,34 @@ const MagMoves = ({ moves, filters, products }) => {
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
         products={products}
-        routeExportName="mag-boutique.export_history" // Nom de votre route d'export
+        routeExportName="mag-boutique.export_history"
       />
     </div>
   );
 };
 
-MagMoves.layout = page => <MagBoutiqueLayout children={page}/>
+// --- 2. Composant Principal (Gestion des Layouts) ---
+const MagMoves = ({ moves, filters, products }) => {
+    const { auth } = usePage().props;
+
+    // Vérification du rôle (Adapté selon votre backend : ex: 'commercial', 'commercial_boutique', etc.)
+    // Utilisation de .includes() ou == selon la structure de vos données
+    const isCommercial = auth.user.role && auth.user.role.toLowerCase().includes('commercial');
+
+    if (isCommercial) {
+        return (
+            <ComBoutiqueLayout>
+                <MovesContent moves={moves} filters={filters} products={products} />
+            </ComBoutiqueLayout>
+        );
+    }
+
+    // Par défaut (Magasinier)
+    return (
+        <MagBoutiqueLayout>
+            <MovesContent moves={moves} filters={filters} products={products} />
+        </MagBoutiqueLayout>
+    );
+};
+
 export default MagMoves;

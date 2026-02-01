@@ -245,17 +245,44 @@ class MagBoutiqueController extends Controller
             return redirect()->back()->with('error', $e->getMessage());
         }
     }
-   /**
-     * Méthode privée pour construire la requête filtrée (DRY: Don't Repeat Yourself)
+ /**
+     * Méthode privée pour construire la requête filtrée
+     * INTEGRE MAINTENANT LA LOGIQUE RBAC (Role-Based Access Control)
      */
     private function getHistoryQuery(Request $request, $boutiqueId)
     {
+        $user = Auth::user();
+        
+        // On charge le rôle pour faire la vérification (si pas déjà chargé)
+        $user->role; 
+
         $query = ProductMove::query()
             ->where('boutique_id', $boutiqueId)
             ->with([
                 'product:id,designation,sku', 
                 'user:id,first_name,last_name'
             ]);
+
+        // --- LOGIQUE DE SÉCURITÉ : Restriction Commercial ---
+        // Vérifiez ici le nom exact de votre rôle en base de données (ex: 'Commercial', 'Vendeur', etc.)
+        $isCommercial = $user->role && (
+            str_contains(strtolower($user->role->name), 'commercial') || 
+            str_contains(strtolower($user->role->name), 'vendeur')
+        );
+
+        if ($isCommercial) {
+            // Le commercial ne voit que :
+            // 1. Les mouvements qu'il a créés (user_id)
+            // 2. OU les mouvements qui partent du Comptoir (Origine)
+            // 3. OU les mouvements qui arrivent au Comptoir (Destination)
+            $query->where(function($q) use ($user) {
+                $q->where('user_id', $user->id)
+                  ->orWhere('departure', 'Comptoir')
+                  ->orWhere('destination', 'Comptoir');
+            });
+        }
+
+        // --- Filtres Standards ---
 
         // Filtre 1: Recherche Textuelle
         if ($request->filled('search')) {
@@ -272,7 +299,7 @@ class MagBoutiqueController extends Controller
             });
         }
 
-        // Filtre 2: ID Produit spécifique (Vient de la modale d'export)
+        // Filtre 2: ID Produit
         if ($request->filled('product_id')) {
             $query->where('product_id', $request->product_id);
         }
@@ -290,7 +317,7 @@ class MagBoutiqueController extends Controller
             $query->whereDate('created_at', '<=', $request->date_end);
         }
 
-        return $query->latest(); // Tri par défaut
+        return $query->latest();
     }
 
     /**
@@ -304,17 +331,18 @@ class MagBoutiqueController extends Controller
             return redirect()->back()->with('error', "Aucune boutique assignée.");
         }
 
-        // Utilisation de la méthode commune
+        // La requête contient maintenant la restriction Commercial automatiquement
         $query = $this->getHistoryQuery($request, $user->boutique_id);
 
         $moves = $query->paginate(20)->withQueryString();
 
-        // AJOUT CRUCIAL : Liste des produits pour la modale d'export
+        // Pour la liste des produits (filtre), on garde tous les produits 
+        // car le commercial peut vouloir filtrer sur un produit même s'il n'a pas fait de mouvement dessus
         $products = Product::orderBy('designation')->get(['id', 'designation', 'sku']);
 
         return Inertia::render('MagBoutique/MagMoves', [
             'moves'    => $moves,
-            'products' => $products, // Passé à la vue pour ExportHistoryModal
+            'products' => $products,
             'filters'  => $request->only(['search', 'type', 'date_start', 'date_end', 'product_id']),
         ]);
     }
@@ -326,26 +354,27 @@ class MagBoutiqueController extends Controller
     {
         $user = Auth::user();
         
-        // 1. Récupération des données avec les MÊMES filtres
+        // Réutilise exactement la même logique de filtrage et de restriction
         $query = $this->getHistoryQuery($request, $user->boutique_id);
-        $moves = $query->get(); // On récupère tout (pas de pagination)
+        $moves = $query->get(); 
 
         $format = $request->input('format', 'pdf');
         $fileName = 'historique_stock_' . date('d-m-Y_His');
 
-        // 2. EXPORT EXCEL
+        // EXPORT EXCEL
         if ($format === 'excel') {
             return Excel::download(new ProductMovesExport($moves), $fileName . '.xlsx');
         }
 
-        // 3. EXPORT PDF
+        // EXPORT PDF
         if ($format === 'pdf') {
             $data = [
-                'title'     => 'Historique des Mouvements de Stock',
-                'boutique'  => $user->boutique->name,
-                'date'      => date('d/m/Y H:i'),
-                'moves'     => $moves,
-                'filters'   => [
+                'title'    => 'Historique des Mouvements' . ($request->type ? ' (' . ucfirst($request->type) . ')' : ''),
+                'boutique' => $user->boutique->name,
+                'user'     => $user->first_name . ' ' . $user->last_name, // On ajoute qui a exporté
+                'date'     => date('d/m/Y H:i'),
+                'moves'    => $moves,
+                'filters'  => [
                     'start' => $request->date_start,
                     'end'   => $request->date_end,
                     'type'  => $request->type

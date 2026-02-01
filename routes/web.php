@@ -63,6 +63,7 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\MagBoutiqueController;
 use App\Http\Controllers\ProductTransfertController;
 
+use App\Http\Controllers\ComBoutiqueController;
 //auth routes
 Route::get('/login',[AuthController::class,"loginPage"] )->name("login");
 Route::post('/login',[AuthController::class,"login"] )->name("login");
@@ -198,11 +199,7 @@ Route::get('/fuel_citerne_index', [MagasinController::class, 'fuel_citerne_index
 //BOUTIQUES MAGASIN ROUTES
 Route::get("/magasin-stock",[MagBoutiqueController::class,"index"])->name("magasin.boutique.index");
 Route::post("/magasin-stock-move",[MagBoutiqueController::class,"store"])->name("magasin.boutique.store");
-Route::delete("/magasin-stock-destroy/{id}",[MagBoutiqueController::class,"destroy"])->name("magasin.boutique.destroy");
-//Move history
-Route::get("/magasin-stock-history",[MagBoutiqueController::class,"history"])->name("magasin.boutique.history");
-Route::get('/mag-boutique/export', [MagBoutiqueController::class, 'export_history'])
-         ->name('mag-boutique.export_history');
+
 
 Route::get('/mag-boutique/trasfert/index', [ProductTransfertController::class, 'index'])
          ->name('mag-boutique.transferts');
@@ -223,7 +220,15 @@ Route::delete('/transfers/{id}', [ProductTransfertController::class, 'destroy'])
 
 //common routes to all users
 Route::middleware([isAuthenticatedMiddleware::class,ClosureMiddleware::class])->group(function(){
-    // Route pour la mise à jour (PUT)
+    
+Route::delete("/magasin-stock-destroy/{id}",[MagBoutiqueController::class,"destroy"])->name("magasin.boutique.destroy");
+//Move history
+Route::get("/magasin-stock-history",[MagBoutiqueController::class,"history"])->name("magasin.boutique.history");
+Route::get('/mag-boutique/export', [MagBoutiqueController::class, 'export_history'])
+         ->name('mag-boutique.export_history');
+
+
+// Route pour la mise à jour (PUT)
     Route::put('/customers/update/{customer}', [CustomerController::class, 'update'])->name('customers.update');
 
     // Route pour la suppression (DELETE)
@@ -352,6 +357,9 @@ Route::delete('/fuel-sales/delete/{idFuelSale}', [ControllersFuelController::cla
 
 });
 Route::middleware([CommercialMiddleware::class,isArchivedMiddleWare::class,ClosureMiddleware::class])->group(function(){
+    Route::get("/com-boutique/index",[ComBoutiqueController::class,"index"])->name("commercial.boutique.index");
+    
+    Route::post("/com-boutique/move/store",[ComBoutiqueController::class,"store"])->name("comboutique.move_store");
    });
 Route::middleware(IsAdminMiddleware::class)->group(function(){
    //regional routes

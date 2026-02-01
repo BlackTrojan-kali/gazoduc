@@ -23,7 +23,7 @@ class Product extends Model
     ];
 
     public function category (){
-    return $this->belongsTo(Productcategory::class);
+    return $this->belongsTo(Productcategory::class,"category_id");
     }
     public function stocks (){
         return $this->hasMany(Productstock::class,"product_id","id");
