@@ -17,7 +17,8 @@ class ProductMove extends Model
         "departure",
         "destination",
         "user_id",
-        "move_id"
+        "move_id",
+        "remaining_stock"
     ];
     public function product(){
         return $this->belongsTo(Product::class);

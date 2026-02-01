@@ -24,4 +24,7 @@ class Boutique extends Model
     public function city(){
         return $this->belongsTo(City::class);
     }
+    public function counters(){
+        return $this->hasMany(Counter::class);
+    }
 }

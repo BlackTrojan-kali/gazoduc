@@ -22,10 +22,9 @@ const UserBoutiqueFormModal = ({
     onClose, 
     user, 
     roles = [], 
-    // agencies = [], // RETIRÉ : Plus nécessaire
     boutiques = [], 
-    counters = [], 
-    routeName = 'boutique_users.store' // Vérifiez si c'est 'users.store' ou 'users.store_boutique' selon vos routes
+    counters = [], // Doit contenir [{id, name, boutique_id}, ...]
+    routeName = 'boutique_users.store' 
 }) => {
   const isEditMode = !!user;
 
@@ -37,7 +36,6 @@ const UserBoutiqueFormModal = ({
     phone_number: '',
     code: '',
     role_id: '',
-    // agency_id: '', // RETIRÉ
     boutique_id: '', 
     counter_id: '',
     password: '',
@@ -57,7 +55,6 @@ const UserBoutiqueFormModal = ({
           phone_number: user.phone_number || '',
           code: user.code || '',
           role_id: user.role_id || '',
-          // agency_id: user.agency_id || '', // RETIRÉ
           boutique_id: user.boutique_id || '', 
           counter_id: user.counter_id || '',
           password: '', 
@@ -70,11 +67,21 @@ const UserBoutiqueFormModal = ({
     }
   }, [isOpen, isEditMode, user]);
 
-  // --- Préparation des Options pour les Selects ---
+  // --- Préparation des Options ---
   const roleOptions = useMemo(() => roles.map(r => ({ value: String(r.id), label: r.name, name: r.name })), [roles]);
-  // const agencyOptions = useMemo(...) // RETIRÉ
   const boutiqueOptions = useMemo(() => boutiques.map(b => ({ value: String(b.id), label: b.name })), [boutiques]);
-  const counterOptions = useMemo(() => counters.map(c => ({ value: String(c.id), label: c.name })), [counters]);
+
+  // --- LOGIQUE DE FILTRAGE DES CAISSES ---
+  // On filtre les caisses disponibles selon la boutique sélectionnée dans le formulaire
+  const filteredCountersOptions = useMemo(() => {
+      if (!data.boutique_id) return []; // Si aucune boutique, aucune caisse
+
+      return counters
+          // On ne garde que les caisses qui appartiennent à la boutique choisie
+          // Astuce: on convertit en String pour éviter les erreurs de type (int vs string)
+          .filter(c => String(c.boutique_id) === String(data.boutique_id))
+          .map(c => ({ value: String(c.id), label: c.name }));
+  }, [counters, data.boutique_id]);
 
   // --- Logique Métier : Est-ce un Commercial ? ---
   const selectedRoleObj = roleOptions.find(r => r.value === String(data.role_id));
@@ -84,7 +91,6 @@ const UserBoutiqueFormModal = ({
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    // Validation Client-side
     if (isCommercial && !data.counter_id) {
         Swal.fire('Attention', 'Un commercial doit obligatoirement avoir une caisse assignée.', 'warning');
         return;
@@ -96,7 +102,6 @@ const UserBoutiqueFormModal = ({
     }
 
     const submitMethod = isEditMode ? put : post;
-    // Assurez-vous que la route correspond à celle définie dans Laravel (resource ou custom)
     const submitRoute = isEditMode ? route('boutique_users.update', user.id) : route('boutique_users.store');
 
     submitMethod(submitRoute, {
@@ -165,7 +170,7 @@ const UserBoutiqueFormModal = ({
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {/* Boutique (Déplacé en premier pour la logique) */}
+                {/* Boutique */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         <FontAwesomeIcon icon={faStore} className="mr-1 text-gray-400"/>
@@ -174,7 +179,14 @@ const UserBoutiqueFormModal = ({
                     <Select 
                         options={boutiqueOptions}
                         value={boutiqueOptions.find(b => b.value === String(data.boutique_id))}
-                        onChange={opt => setData('boutique_id', opt ? opt.value : '')}
+                        onChange={opt => {
+                            // QUAND ON CHANGE LA BOUTIQUE :
+                            setData(currentData => ({
+                                ...currentData,
+                                boutique_id: opt ? opt.value : '',
+                                counter_id: '' // IMPORTANT : On réinitialise la caisse car elle ne correspond plus
+                            }));
+                        }}
                         placeholder="Choisir la boutique..."
                         className="text-sm"
                     />
@@ -206,20 +218,26 @@ const UserBoutiqueFormModal = ({
                     {errors.role_id && <p className="text-xs text-red-500 mt-1">{errors.role_id}</p>}
                 </div>
 
-                {/* Caisse (Conditionnel) */}
+                {/* Caisse (Filtrée et Conditionnelle) */}
                 <div className={`transition-all duration-300 ${isCommercial ? 'bg-orange-50 dark:bg-orange-900/10 p-2 rounded-lg -m-2 border border-orange-100 dark:border-orange-800' : ''}`}>
                     <label className={`block text-sm font-medium mb-1 ${isCommercial ? 'text-orange-700 dark:text-orange-400 font-bold' : 'text-gray-700 dark:text-gray-300'}`}>
                         <FontAwesomeIcon icon={faCashRegister} className="mr-1"/>
                         Caisse d'affectation
-                        {isCommercial && <span className="text-red-500 ml-1">* (Requis)</span>}
+                        {isCommercial && <span className="text-red-500 ml-1">*</span>}
                     </label>
                     <Select 
-                        options={counterOptions}
-                        value={counterOptions.find(c => c.value === String(data.counter_id))}
+                        options={filteredCountersOptions} // Utilisation de la liste filtrée
+                        value={filteredCountersOptions.find(c => c.value === String(data.counter_id))}
                         onChange={opt => setData('counter_id', opt ? opt.value : '')}
-                        placeholder={isCommercial ? "Sélectionnez impérativement une caisse" : "Aucune caisse"}
+                        placeholder={
+                            !data.boutique_id 
+                                ? "Sélectionnez d'abord une boutique" 
+                                : (filteredCountersOptions.length === 0 ? "Aucune caisse dans cette boutique" : "Choisir une caisse...")
+                        }
+                        isDisabled={!data.boutique_id} // Désactivé si pas de boutique choisie
                         className="text-sm"
                         isClearable={!isCommercial}
+                        noOptionsMessage={() => !data.boutique_id ? "Choisir une boutique d'abord" : "Aucune caisse trouvée"}
                         styles={{ control: (base) => ({ ...base, borderColor: isCommercial && !data.counter_id ? '#ef4444' : base.borderColor }) }}
                     />
                     {errors.counter_id && <p className="text-xs text-red-500 mt-1">{errors.counter_id}</p>}

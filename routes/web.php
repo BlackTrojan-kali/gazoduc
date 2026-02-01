@@ -59,6 +59,7 @@ use App\Http\Controllers\DirFuelController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductStockController;
 use App\Http\Controllers\CounterController;
+use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\MagBoutiqueController;
 use App\Http\Controllers\ProductTransfertController;
 
@@ -222,8 +223,20 @@ Route::delete('/transfers/{id}', [ProductTransfertController::class, 'destroy'])
 
 //common routes to all users
 Route::middleware([isAuthenticatedMiddleware::class,ClosureMiddleware::class])->group(function(){
+    // Route pour la mise à jour (PUT)
+    Route::put('/customers/update/{customer}', [CustomerController::class, 'update'])->name('customers.update');
 
-    // Impression
+    // Route pour la suppression (DELETE)
+    Route::delete('/customers/delete/{customer}', [CustomerController::class, 'destroy'])->name('customers.destroy');
+    Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
+    Route::post('/customers', [CustomerController::class, 'store'])->name('customers.store');
+    
+    // Import / Export
+    Route::post('/customers/import', [CustomerController::class, 'import'])->name('customers.import');
+    Route::get('/customers/template', [CustomerController::class, 'downloadTemplate'])->name('customers.download-template');
+    
+    // Pour l'export, on utilise souvent GET avec des query params, ou POST si beaucoup de filtres
+    Route::get('/customers/export', [CustomerController::class, 'export'])->name('customers.export');    // Impression
     Route::get('/transfers/{id}/print', [ProductTransfertController::class, 'print_waybill'])
          ->name('transfers.print_waybill');
    Route::post("/magasin-citernes-reception",[CiterneController::class,"reception"])->name("magasin.reception");

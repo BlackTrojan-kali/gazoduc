@@ -19,6 +19,7 @@ return new class extends Migration
             $table->foreign("user_id")->on("users")->references("id")->onDelete("cascade");
             $table->float("amount");
             $table->string("label")->nullable();
+            $table->float("label_amount")->nullable();
             $table->string("reference")->nullable();
             $table->timestamps();
         });

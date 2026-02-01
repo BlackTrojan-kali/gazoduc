@@ -103,85 +103,88 @@ class ProductTransfertController extends Controller
 /* CRÉATION DU TRANSFERT
      */
     public function store(Request $request)
-    {
-        $user = Auth::user();
+{
+    $validated = $request->validate([
+        'boutique_arrival_id' => 'required|exists:boutiques,id|different:boutique_departure_id',
+        'departure_date'      => 'required|date',
+        'vehicule_id'         => 'required|exists:vehicules,id',
+        'chauffeur_id'        => 'required|exists:chauffeurs,id',
+        'items'               => 'required|array|min:1',
+        'items.*.product_id'  => 'required|exists:products,id',
+        'items.*.qty'         => 'required|numeric|min:0.1',
+    ]);
 
-        $validated = $request->validate([
-            'boutique_arrival_id' => 'required|exists:boutiques,id|different:boutique_departure_id',
-            'departure_date'      => 'required|date',
-            // 'arrival_date'     => RETIRÉ
-            'vehicule_id'         => 'required|exists:vehicules,id',
-            'chauffeur_id'        => 'required|exists:chauffeurs,id',
-            'items'               => 'required|array|min:1',
-            'items.*.product_id'  => 'required|exists:products,id',
-            'items.*.qty'         => 'required|numeric|min:0.1',
-        ]);
-        $boutiqueDepartureId = $user->boutique_id;
+    $user = Auth::user();
+    // On s'assure que la boutique de départ est celle de l'utilisateur connecté
+    $boutiqueDepartureId = $user->boutique_id;
 
-        try {
-            DB::transaction(function () use ($validated, $user, $boutiqueDepartureId) {
+    try {
+        DB::transaction(function () use ($validated, $user, $boutiqueDepartureId) {
+            
+            // 1. Création du Bordereau de Transfert
+            $transfert = ProductTransfert::create([
+                'vehicule_id'           => $validated['vehicule_id'],
+                'chauffeur_id'          => $validated['chauffeur_id'],
+                'boutique_departure_id' => $boutiqueDepartureId,
+                'boutique_arrival_id'   => $validated['boutique_arrival_id'],
+                'departure_date'        => $validated['departure_date'],
+                'arrival_date'          => null, 
+                'status'                => 'pending',
+                'user_emitting_id'      => $user->id,
+                'user_receiving_id'     => null, 
+            ]);
+
+            // 2. Traitement des Articles
+            foreach ($validated['items'] as $item) {
                 
-                // 1. Création Transfert
-                $transfert = ProductTransfert::create([
-                    'vehicule_id'           => $validated['vehicule_id'],
-                    'chauffeur_id'          => $validated['chauffeur_id'],
-                    'boutique_departure_id' => $boutiqueDepartureId,
-                    'boutique_arrival_id'   => $validated['boutique_arrival_id'],
-                    'departure_date'        => $validated['departure_date'],
-                    'arrival_date'          => null, // Sera défini à la réception (via la méthode receive)
-                    'status'                => 'pending',
-                    'user_emitting_id'      => $user->id,
-                    'user_receiving_id'     => null, 
+                // A. Verrouillage du stock en magasin pour la boutique de départ
+                $stock = ProductStock::where([
+                    'product_id'  => $item['product_id'],
+                    'boutique_id' => $boutiqueDepartureId,
+                    'service'     => 'magasin'
+                ])->lockForUpdate()->first();
+
+                // B. Vérification stricte
+                if (!$stock || $stock->available_qty < $item['qty']) {
+                    // Utilisation d'une Exception standard pour déclencher le rollback
+                    throw new \Exception("Stock insuffisant pour le produit ID {$item['product_id']} (Disponible: " . ($stock->available_qty ?? 0) . ").");
+                }
+
+                // C. Débit du stock et rafraîchissement
+                $stock->decrement('available_qty', $item['qty']);
+                $stock->refresh(); 
+
+                // D. Création du mouvement (Trace historique)
+                $move = ProductMove::create([
+                    'product_id'  => $item['product_id'],
+                    'boutique_id' => $boutiqueDepartureId,
+                    'user_id'     => $user->id,
+                    'qty'         => $item['qty'],
+                    'type'        => 'sortie',
+                    'departure'   => 'Magasin',
+                    'destination' => 'Boutique Arrivée ID: ' . $validated['boutique_arrival_id'],
+                    'label'       => 'Sortie pour Transfert #' . $transfert->id,
+                    'remaining_stock' => $stock->available_qty // Très important pour le suivi
                 ]);
 
-                // 2. Traitement des Articles (SORTIE DE STOCK & HISTORIQUE)
-                foreach ($validated['items'] as $item) {
-                    
-                    // A. Vérification et Verrouillage Stock
-                    $stock = ProductStock::where([
-                        'product_id'  => $item['product_id'],
-                        'boutique_id' => $boutiqueDepartureId,
-                        'service'     => 'magasin'
-                    ])->lockForUpdate()->first();
+                // E. Liaison de l'article au transfert
+                // Note : Vérifiez bien si votre colonne est 'transfert_id' ou 'tranfert_id'
+                ProductTransfertItem::create([
+                    'product_id'   => $item['product_id'],
+                    'transfert_id' => $transfert->id, // Correction du nom probable
+                    'move_id'      => $move->id,
+                    'qty'          => $item['qty'],
+                ]);
+            }
+        });
 
-                    if (!$stock || $stock->available_qty < $item['qty']) {
-                        throw ValidationException::withMessages([
-                            'items' => "Stock insuffisant pour le produit ID {$item['product_id']}."
-                        ]);
-                    }
+        return redirect()->back()->with('success', 'Le transfert a été initié et le stock mis à jour.');
 
-                    // B. DÉBIT DU STOCK DÉPART (Immédiat)
-                    $stock->decrement('available_qty', $item['qty']);
-
-                    // C. Historique Mouvement (Sortie)
-                    // C'est ce qui crée la trace dans l'historique de la boutique émettrice
-                    $move = ProductMove::create([
-                        'product_id'  => $item['product_id'],
-                        'boutique_id' => $boutiqueDepartureId,
-                        'user_id'     => $user->id,
-                        'qty'         => $item['qty'],
-                        'type'        => 'sortie',
-                        'departure'   => 'Magasin',
-                        'destination' => 'Transfert #' . $transfert->id,
-                        'label'       => 'Transfert vers Boutique ' . $validated['boutique_arrival_id'],
-                    ]);
-
-                    // D. Item Transfert
-                    ProductTransfertItem::create([
-                        'product_id'  => $item['product_id'],
-                        'tranfert_id' => $transfert->id,
-                        'move_id'     => $move->id,
-                        'qty'         => $item['qty'],
-                    ]);
-                }
-            });
-
-            return redirect()->back()->with('success', 'Transfert créé et stock débité.');
-
-        } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => $e->getMessage()]);
-        }
+    } catch (\Exception $e) {
+        // En cas d'erreur, rien n'est enregistré en base de données
+        return redirect()->back()->with('error', $e->getMessage());
     }
+}
     /**
      * RÉCEPTION DU TRANSFERT
      * - Status: finished

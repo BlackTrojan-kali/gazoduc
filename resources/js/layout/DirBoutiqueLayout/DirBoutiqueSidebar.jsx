@@ -62,9 +62,7 @@ const othersItems= [
   }, { icon:  <FontAwesomeIcon icon={faUserFriends} />,
     name: "Clients",
    subItems: [
-      { name: "Clients", path: "/client-index", pro: false },
-      { name: "Categories Clients", path: "/client-cat", pro: false },
-      { name: "Prix par category", path: "/client-price", pro: false },
+      { name: "Clients", path: "/customers", pro: false },
     ],
   }
 ];

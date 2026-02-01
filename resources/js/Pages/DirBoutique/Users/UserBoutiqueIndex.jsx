@@ -21,7 +21,7 @@ const UserBoutiqueIndex = ({ users, roles, agencies, boutiques, counters, filter
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
     const [search, setSearch] = useState(filters.search || '');
-
+    console.log(counters)
     // --- Gestion Recherche ---
     const handleSearch = (e) => {
         e.preventDefault();

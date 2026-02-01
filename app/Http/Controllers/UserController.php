@@ -499,8 +499,8 @@ class UserController extends Controller
         // 2. Données pour les formulaires (Modale)
         $roles = Role::whereIn('name', ['magasin', 'commercial'])->get(['id', 'name']);
         $agencies = Agency::orderBy('name')->get(['id', 'name']);
-        $boutiques = Boutique::orderBy('name')->get(['id', 'name']); // Nouveau
-        $counters = Counter::orderBy('name')->get(['id', 'name']);
+        $boutiques = Boutique::orderBy('name')->with("counters")->get(['id', 'name',]); // Nouveau
+        $counters = Counter::orderBy('name')->get(['id', 'name',"boutique_id"]);
 
         return Inertia::render('DirBoutique/Users/UserBoutiqueIndex', [
             'users'     => $users,

@@ -18,6 +18,7 @@ return new class extends Migration
             $table->unsignedBigInteger("boutique_id");
             $table->foreign("boutique_id")->on("boutiques")->references("id")->onDelete("cascade");
             $table->decimal("qty",14,2);
+            $table->float("remaining_stock");
             $table->string("type");
             $table->string("label")->nullable();
             $table->string("departure");

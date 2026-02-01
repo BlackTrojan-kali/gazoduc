@@ -69,110 +69,108 @@ class MagBoutiqueController extends Controller
  /**
      * Enregistre un mouvement avec protection stricte contre le stock négatif.
      */
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'product_id'  => 'required|exists:products,id',
-            'boutique_id' => 'required|exists:boutiques,id',
-            'qty'         => 'required|numeric|min:0.01',
-            'type'        => ['required', Rule::in(['entree', 'sortie'])],
-            'destination' => 'nullable|string',
-            'label'       => 'nullable|string|max:255',
-        ]);
+   public function store(Request $request)
+{
+    $validated = $request->validate([
+        'product_id'  => 'required|exists:products,id',
+        'boutique_id' => 'required|exists:boutiques,id',
+        'qty'         => 'required|numeric|min:0.01',
+        'type'        => ['required', Rule::in(['entree', 'sortie'])],
+        'destination' => 'nullable|string',
+        'label'       => 'nullable|string|max:255',
+    ]);
 
-        $user = Auth::user();
+    $user = Auth::user();
 
-        try {
-            DB::transaction(function () use ($validated, $user) {
+    try {
+        DB::transaction(function () use ($validated, $user) {
+            
+            // --- SCÉNARIO 1 : ENTRÉE ---
+            if ($validated['type'] === 'entree') {
                 
-                // --- SCÉNARIO 1 : ENTRÉE (Pas de risque de négatif ici, on ajoute) ---
-                if ($validated['type'] === 'entree') {
+                $stockMagasin = ProductStock::firstOrCreate(
+                    ['product_id' => $validated['product_id'], 'boutique_id' => $validated['boutique_id'], 'service' => 'magasin'],
+                    ['available_qty' => 0]
+                );
+                
+                // On incrémente de manière atomique
+                $stockMagasin->increment('available_qty', $validated['qty']);
+                // IMPORTANT: On rafraîchit pour avoir la valeur à jour pour le 'remaining_stock'
+                $stockMagasin->refresh();
+
+                ProductMove::create([
+                    'product_id'  => $validated['product_id'],
+                    'boutique_id' => $validated['boutique_id'],
+                    'user_id'     => $user->id,
+                    'qty'         => $validated['qty'],
+                    'type'        => 'entree',
+                    'departure'   => 'Fournisseur',
+                    'destination' => 'Magasin',
+                    'label'       => $validated['label'] ?? 'Approvisionnement',
+                    'remaining_stock' => $stockMagasin->available_qty // Correction du nom de variable
+                ]);
+            }
+
+            // --- SCÉNARIO 2 : SORTIE ---
+            elseif ($validated['type'] === 'sortie') {
+                
+                $stockMagasin = ProductStock::where([
+                    'product_id'  => $validated['product_id'],
+                    'boutique_id' => $validated['boutique_id'],
+                    'service'     => 'magasin'
+                ])->lockForUpdate()->first();
+
+                if (!$stockMagasin || $stockMagasin->available_qty < $validated['qty']) {
+                    throw new \Exception("Opération impossible : Stock magasin insuffisant (Dispo: " . ($stockMagasin->available_qty ?? 0) . ").");
+                }
+                
+                $stockMagasin->decrement('available_qty', $validated['qty']);
+                $stockMagasin->refresh();
+
+                $sortieMove = ProductMove::create([
+                    'product_id'  => $validated['product_id'],
+                    'boutique_id' => $validated['boutique_id'],
+                    'user_id'     => $user->id,
+                    'qty'         => $validated['qty'],
+                    'type'        => 'sortie',
+                    'departure'   => 'Magasin',
+                    'destination' => ucfirst($validated['destination'] ?? 'Client'),
+                    'label'       => $validated['label'],
+                    'remaining_stock' => $stockMagasin->available_qty
+                ]);
+
+                // --- TRANSFERT VERS COMMERCIAL (COMPTOIR) ---
+                if (isset($validated['destination']) && strtolower($validated['destination']) === 'commercial') {
                     
-                    $stockMagasin = ProductStock::firstOrCreate(
-                        ['product_id' => $validated['product_id'], 'boutique_id' => $validated['boutique_id'], 'service' => 'magasin'],
+                    $stockComptoir = ProductStock::firstOrCreate(
+                        ['product_id' => $validated['product_id'], 'boutique_id' => $validated['boutique_id'], 'service' => 'comptoir'],
                         ['available_qty' => 0]
                     );
                     
-                    // Verrouillage pour éviter les conflits simultanés
-                    // (Note: firstOrCreate ne lock pas, on re-lock juste après si nécessaire, 
-                    // mais ici increment est atomique, donc c'est OK).
-                    $stockMagasin->increment('available_qty', $validated['qty']);
+                    $stockComptoir->increment('available_qty', $validated['qty']);
+                    $stockComptoir->refresh();
 
                     ProductMove::create([
                         'product_id'  => $validated['product_id'],
                         'boutique_id' => $validated['boutique_id'],
                         'user_id'     => $user->id,
                         'qty'         => $validated['qty'],
-                        'type'        => 'entree',
-                        'departure'   => 'Fournisseur',
-                        'destination' => 'Magasin',
-                        'label'       => $validated['label'] ?? 'Approvisionnement',
-                    ]);
-                }
-
-                // --- SCÉNARIO 2 : SORTIE (RISQUE DE NÉGATIF) ---
-                elseif ($validated['type'] === 'sortie') {
-                    
-                    // 1. On récupère le stock en le VERROUILLANT (lockForUpdate)
-                    $stockMagasin = ProductStock::where([
-                        'product_id'  => $validated['product_id'],
-                        'boutique_id' => $validated['boutique_id'],
-                        'service'     => 'magasin'
-                    ])->lockForUpdate()->first();
-
-                    // 2. Vérification Stricte AVANT décrémentation
-                    $currentQty = $stockMagasin ? $stockMagasin->available_qty : 0;
-                    
-                    if ($currentQty < $validated['qty']) {
-                        throw new \Exception("Opération impossible : Stock magasin insuffisant (Dispo: $currentQty).");
-                    }
-                    
-                    // 3. Application
-                    $stockMagasin->decrement('available_qty', $validated['qty']);
-
-                    $sortieMove = ProductMove::create([
-                        'product_id'  => $validated['product_id'],
-                        'boutique_id' => $validated['boutique_id'],
-                        'user_id'     => $user->id,
-                        'qty'         => $validated['qty'],
-                        'type'        => 'sortie',
+                        'type'        => 'entree', // C'est une entrée pour le comptoir
                         'departure'   => 'Magasin',
-                        'destination' => ucfirst($validated['destination']),
-                        'label'       => $validated['label'],
+                        'destination' => 'Comptoir',
+                        'label'       => 'Transfert depuis Magasin',
+                        'remaining_stock' => $stockComptoir->available_qty,
                     ]);
-
-                    // --- SOUS-SCÉNARIO : TRANSFERT VERS COMMERCIAL ---
-                    if (strtolower($validated['destination']) === 'commercial') {
-                        
-                        $stockComptoir = ProductStock::firstOrCreate(
-                            ['product_id' => $validated['product_id'], 'boutique_id' => $validated['boutique_id'], 'service' => 'comptoir'],
-                            ['available_qty' => 0]
-                        );
-                        $stockComptoir->increment('available_qty', $validated['qty']);
-
-                        ProductMove::create([
-                            'product_id'  => $validated['product_id'],
-                            'boutique_id' => $validated['boutique_id'],
-                            'user_id'     => $user->id,
-                            'qty'         => $validated['qty'],
-                            'type'        => 'entree',
-                            'departure'   => 'Magasin',
-                            'destination' => 'Comptoir',
-                            'label'       => 'Transfert depuis Magasin',
-                            'move_id'     => $sortieMove->id,
-                        ]);
-                    }
                 }
-            });
+            }
+        });
 
-            return redirect()->back()->with('success', 'Mouvement enregistré avec succès.');
+        return redirect()->back()->with('success', 'Mouvement enregistré avec succès.');
 
-        } catch (\Exception $e) {
-            // Le rollback est automatique ici grâce à DB::transaction
-            return redirect()->back()->with('error', $e->getMessage());
-        }
+    } catch (\Exception $e) {
+        return redirect()->back()->with('error', $e->getMessage());
     }
-
+}
     /**
      * Supprime un mouvement avec vérification que l'annulation ne crée pas de stock négatif.
      */
