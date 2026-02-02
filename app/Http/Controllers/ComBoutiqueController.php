@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Boutique;
+use App\Models\Boutiquepayment;
 use App\Models\Customer;
 use App\Models\Product;
 use App\Models\ProductStock;
 use App\Models\ProductMove;
 use App\Models\Productsale;
 use App\Models\UnassociatedFacture;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;

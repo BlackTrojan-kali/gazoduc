@@ -222,7 +222,13 @@ Route::delete('/transfers/{id}', [ProductTransfertController::class, 'destroy'])
 
 //common routes to all users
 Route::middleware([isAuthenticatedMiddleware::class,ClosureMiddleware::class])->group(function(){
-    
+    //global boutique pdf routes
+Route::get('/product-sales', [DirBoutiqueController::class, 'salesHistory'])->name('admin.reports.sales');
+        Route::get('/product-sales/pdf', [DirBoutiqueController::class, 'downloadSalesReport'])->name('admin.reports.sales.pdf');
+        
+        Route::get('/product-payments', [DirBoutiqueController::class, 'paymentsHistory'])->name('admin.reports.payments');
+        Route::get('/product-payments/pdf', [DirBoutiqueController::class, 'downloadPaymentsReport'])->name('admin.reports.payments.pdf');    
+
 Route::delete("/magasin-stock-destroy/{id}",[MagBoutiqueController::class,"destroy"])->name("magasin.boutique.destroy");
 //Move history
 Route::get("/magasin-stock-history",[MagBoutiqueController::class,"history"])->name("magasin.boutique.history");

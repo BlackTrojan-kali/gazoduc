@@ -44,8 +44,8 @@ const navItems = [
        icon:  <FontAwesomeIcon icon={faDollar} />,
        name: "Ventes Produits",
        subItems: [
-         { name: "Historique ventes", path: "/fuel-sales-hitory", pro: false },
-         { name: "Historique versements", path: "/fuel-payments", pro: false },
+         { name: "Historique ventes", path: "/product-sales", pro: false },
+         { name: "Historique versements", path: "/product-payments", pro: false },
        ],
      },
      ,
