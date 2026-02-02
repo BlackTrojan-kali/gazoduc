@@ -65,7 +65,7 @@ const CreatePaymentModal = ({ isOpen, onClose, salesToAssociate = [], counterId 
             return;
         }
 
-        post(route('payments.store'), {
+        post(route('product-sales.payment'), {
             onSuccess: () => {
                 Swal.fire('Succès', 'Versement créé et factures associées !', 'success');
                 reset();

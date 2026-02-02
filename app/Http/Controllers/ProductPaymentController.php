@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
     use App\Models\BoutiquePayment;
 use App\Models\ProductSale;
 use App\Models\UnassociatedFacture; // Import du modèle tampon
+use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
@@ -15,27 +17,44 @@ class ProductPaymentController extends Controller
     //
 
 // 1. MÉTHODE POUR AFFICHER LA PAGE (Passer les données à la modale)
-public function index()
-{
-    $user = Auth::user();
+/**
+     * Affiche l'historique des versements avec filtres.
+     */
+    public function index(Request $request)
+    {
+        $user = Auth::user();
 
-    // A. On récupère la ligne unique des factures non associées
-    $unassociated = UnassociatedFacture::first();
-    
-    // B. On extrait les IDs (tableau vide si pas d'enregistrement)
-    $idsToProcess = $unassociated ? ($unassociated->product_sales_id ?? []) : [];
+        // On récupère les paiements liés à la boutique de l'utilisateur (via le User ou le Counter)
+        // On charge la relation 'productSales' pour voir quelles factures ont été payées
+        $query = BoutiquePayment::with(['user', 'counter', 'productSales.customer'])
+            ->where('user_id', $user->id) // Ou ->where('counter_id', $user->counter_id) selon votre logique métier
+            ->orderBy('created_at', 'desc');
 
-    // C. On récupère les VRAIS objets Ventes correspondant à ces IDs
-    $salesToAssociate = ProductSale::with('customer')
-        ->whereIn('id', $idsToProcess)
-        ->orderBy('created_at', 'desc')
-        ->get();
+        // 1. Filtre Recherche (Référence ou Montant)
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function($q) use ($search) {
+                $q->where('reference', 'like', "%{$search}%")
+                  ->orWhere('amount', 'like', "%{$search}%")
+                  ->orWhere('label', 'like', "%{$search}%");
+            });
+        }
 
-    return Inertia::render('Payments/Index', [
-        'salesToAssociate' => $salesToAssociate, // On passe ça à la modale
-        // ... autres props
-    ]);
-}
+        // 2. Filtre Date
+        if ($request->filled('date_start')) {
+            $query->whereDate('created_at', '>=', $request->date_start);
+        }
+        if ($request->filled('date_end')) {
+            $query->whereDate('created_at', '<=', $request->date_end);
+        }
+
+        $payments = $query->paginate(20)->withQueryString();
+
+        return Inertia::render('ComBoutique/PaymentsHistory', [
+            'payments' => $payments,
+            'filters'  => $request->only(['search', 'date_start', 'date_end']),
+        ]);
+    }
 
 // 2. MÉTHODE POUR ENREGISTRER LE VERSEMENT
 public function store(Request $request)
@@ -95,4 +114,40 @@ public function store(Request $request)
 
     return redirect()->back()->with('success', 'Versement effectué et factures associées retirées de la liste d\'attente.');
 }
+/**
+     * Génère le PDF des versements sur une période.
+     */
+    public function downloadReport(Request $request)
+    {
+        $request->validate([
+            'start_date' => 'required|date',
+            'end_date'   => 'required|date|after_or_equal:start_date',
+        ]);
+
+        $user = Auth::user();
+        $startDate = Carbon::parse($request->start_date)->startOfDay();
+        $endDate = Carbon::parse($request->end_date)->endOfDay();
+
+        // Récupération des données pour le PDF
+        $payments = BoutiquePayment::with(['user', 'productSales'])
+            ->where('user_id', $user->id)
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $totalPeriod = $payments->sum('amount');
+
+        // Génération PDF
+        $pdf = Pdf::loadView('boutique_pdf.payments_history', [
+            'payments'     => $payments,
+            'start_date'   => $startDate,
+            'end_date'     => $endDate,
+            'total_period' => $totalPeriod,
+            'generated_by' => $user,
+            'boutique'     => $user->boutique ?? null // Si relation existe
+        ])->setPaper('a4', 'portrait');
+
+        return $pdf->stream('Rapport_Versements_' . $startDate->format('dmY') . '.pdf');
+    }
+
 }

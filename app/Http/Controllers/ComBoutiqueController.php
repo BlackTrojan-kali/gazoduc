@@ -53,6 +53,17 @@ class ComBoutiqueController extends Controller
     $transferPoint = $user->counter->transfert_point ?? 0;
 
 
+    // A. On récupère la ligne unique des factures non associées
+    $unassociated = UnassociatedFacture::first();
+    
+    // B. On extrait les IDs (tableau vide si pas d'enregistrement)
+    $idsToProcess = $unassociated ? ($unassociated->product_sales_id ?? []) : [];
+
+    // C. On récupère les VRAIS objets Ventes correspondant à ces IDs
+    $salesToAssociate = ProductSale::with('customer')
+        ->whereIn('id', $idsToProcess)
+        ->orderBy('created_at', 'desc')
+        ->get();
     // 3. Récupération des stocks (Code existant)
     $query = ProductStock::with('product.category')
         ->where('boutique_id', $user->boutique_id)
@@ -74,6 +85,9 @@ class ComBoutiqueController extends Controller
         'filters'       => $request->only(['search']),
         'customers'     => $customers,
         'userCounterId' => $userCounterId,
+        
+        'salesToAssociate' => $salesToAssociate, // On passe ça à la modale
+        // ... autres props
         // On envoie les nouvelles stats groupées dans un objet pour plus de propreté
         'stats' => [
             'total_sales_today'  => $totalSalesToday,

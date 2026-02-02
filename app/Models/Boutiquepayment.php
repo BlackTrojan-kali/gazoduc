@@ -22,4 +22,7 @@ class Boutiquepayment extends Model
     public function user(){
         return $this->belongsTo(User::class);
     }
+    public function productsales(){
+        return $this->belongsToMany(Productsale::class,"boutiquepayment_productsales");
+    }
 }

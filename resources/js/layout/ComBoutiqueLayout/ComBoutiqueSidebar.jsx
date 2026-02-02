@@ -19,6 +19,7 @@ const navItems = [
     name: "Ventes",
     subItems: [
       { name:"Historique", path: "/sales/history", pro: false },
+      { name:"Versements", path: "/product-payments/history", pro: false },
     ],
   },
   
