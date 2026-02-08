@@ -171,7 +171,7 @@ class ProductTransfertController extends Controller
                 // Note : Vérifiez bien si votre colonne est 'transfert_id' ou 'tranfert_id'
                 ProductTransfertItem::create([
                     'product_id'   => $item['product_id'],
-                    'transfert_id' => $transfert->id, // Correction du nom probable
+                    'tranfert_id' => $transfert->id, // Correction du nom probable
                     'move_id'      => $move->id,
                     'qty'          => $item['qty'],
                 ]);

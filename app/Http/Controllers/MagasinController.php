@@ -29,7 +29,7 @@ class MagasinController extends Controller
         $clients= Client::where("agency_id",Auth::user()->agency_id)->with("category")->get();
             
         } 
-         $articles = Article::where("entreprise_id",Auth::user()->entreprise_id)->where("type","!=","matiere_premiere")->get();
+         $articles = Article::where("entreprise_id",Auth::user()->entreprise_id)->where("type","!=","matiere_premiere")->where("type","!=","produit_petrolier")->get();
         $agencies = Agency::where("id",Auth::user()->agency_id)->where("entreprise_id",Auth::user()->entreprise_id)->get();
         
         return Inertia("Magasin/MagIndex",compact("stocks","articles","agencies","clients","articlePrices"));
@@ -72,7 +72,7 @@ class MagasinController extends Controller
     // New citerne_index function for fuel logic
     public function fuel_citerne_index(){
         $stocks = Stock::where("agency_id",Auth::user()->agency_id)
-        ->where("storage_type","carburant")
+        ->where("storage_type","produit_petrolier")
         ->with("article","citerne")
         ->get();
         $agencies = Agency::where("id",Auth::user()->agency_id)->where("entreprise_id",Auth::user()->entreprise_id)->get();

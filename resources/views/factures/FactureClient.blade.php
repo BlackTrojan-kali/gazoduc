@@ -184,11 +184,11 @@
             <div class="totals">
                 <div class="total-row-item">
                     <span style="width: 100px; display: inline-block;">Sous-total:</span>
-                    <span style="float: right;">{{ number_format($facture->total_amount, 2, ',', ' ') }} {{ $facture->currency }}</span>
+                    <span style="float: right;">{{ number_format($facture->total_amount, 2, ',', ' ') }} XAF</span>
                 </div>
                 <div class="total-row-item total-final">
                     <span style="width: 100px; display: inline-block;">TOTAL:</span>
-                    <span style="float: right;">{{ number_format($facture->total_amount, 2, ',', ' ') }} {{ $facture->currency }}</span>
+                    <span style="float: right;">{{ number_format($facture->total_amount, 2, ',', ' ') }} XAF</span>
                 </div>
             </div>
         </div>

@@ -21,7 +21,7 @@ const navItems = [
       subItems: [
       { name: "entrees", path: "/magasin-moves/entree", pro: false },
       { name: "sorties", path: "/magasin-moves/sortie", pro: false },
-      { name: "reception", path: "/receptions", pro: false },
+      { name: "reception", path: "/receptions/gaz", pro: false },
       { name: "production", path: "/prod-history", pro: false },
     ],
   }

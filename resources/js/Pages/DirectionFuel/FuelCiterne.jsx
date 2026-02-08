@@ -261,7 +261,6 @@ const FuelCiternes = ({ citernes, entreprises, products, agencies }) => {
                                         <FontAwesomeIcon icon={faEdit} /> Éditer
                                     </button>
                                     
-                                    {citerne.type === 'fixed' && (
                                         <button 
                                             onClick={() => handleCreateCiterneStock(citerne.id, citerne.name, citerne.current_product_id)}
                                             className="px-3 py-2 rounded-lg text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-colors"
@@ -269,7 +268,7 @@ const FuelCiternes = ({ citernes, entreprises, products, agencies }) => {
                                         >
                                             <FontAwesomeIcon icon={faBoxesStacked} />
                                         </button>
-                                    )}
+                                
 
                                     <button 
                                         onClick={() => handleDeleteCiterne(citerne.id, citerne.name)}

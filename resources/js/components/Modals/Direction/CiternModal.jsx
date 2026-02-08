@@ -31,10 +31,11 @@ const CiterneFormModal = ({ isOpen, onClose, entreprises, agencies, products, se
 
     const citerneTypes = [
         { value: 'fixed', label: 'Fixe' },
+        { value: 'carburant', label: 'Fixe carburant' },
     ];
 
     const productTypes = [
-        { value: 'liquide', label: 'Liquide' },
+        { value: 'produit_petrolier', label: 'Liquide' },
         { value: 'solide', label: 'Solide' },
         { value: 'gaz', label: 'Gaz' },
     ];
@@ -47,7 +48,7 @@ const CiterneFormModal = ({ isOpen, onClose, entreprises, agencies, products, se
             setData({
                 name: selectedCiterne?.name || '',
                 type: selectedCiterne?.type || 'fixed',
-                product_type: selectedCiterne?.product_type || 'liquide',
+                product_type: selectedCiterne?.product_type || 'produit_petrolier',
                 capacity_liter: selectedCiterne?.capacity_liter || '',
                 capacity_kg: selectedCiterne?.capacity_kg || '',
                 current_product_id: selectedCiterne?.current_product_id ? String(selectedCiterne.current_product_id) : '',

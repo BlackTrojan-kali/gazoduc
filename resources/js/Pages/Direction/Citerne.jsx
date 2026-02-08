@@ -20,6 +20,7 @@ import CiterneFormModal from '../../components/Modals/Direction/CiternModal';
 import Swal from 'sweetalert2';
 
 const Citernes = ({ citernes, entreprises, products, agencies }) => {
+
     // --- États (Inchangés) ---
     const [isCiterneFormModalOpen, setIsCiterneFormModalOpen] = useState(false);
     const [selectedCiterne, setSelectedCiterne] = useState(null);
@@ -70,7 +71,7 @@ const Citernes = ({ citernes, entreprises, products, agencies }) => {
                 });
             }
         });
-    };
+    }; 
 
     // --- Initialisation Stock ---
     const handleCreateCiterneStock = (citerneId, citerneName, currentProductId) => {

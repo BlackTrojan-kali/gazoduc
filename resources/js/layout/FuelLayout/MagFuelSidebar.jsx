@@ -11,7 +11,7 @@ const navItems = [
     icon:  <FontAwesomeIcon icon={faDashboard} />,
     name: "Dashboard",
     subItems: [
-      { name: "citernes", path: "/fuel_citerne_index", pro: false },
+      { name: "cuves", path: "/fuel_citerne_index", pro: false },
     ],
   },
   {

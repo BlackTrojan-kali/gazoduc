@@ -26,6 +26,7 @@ class CiterneController extends Controller
         $agencies = Agency::where("entreprise_id",Auth::user()->entreprise_id)->get();
         $entreprises = Entreprise::where("id",Auth::user()->entreprise_id)->get();
         $products = Article::where("entreprise_id",Auth::user()->entreprise_id)->where("type","matiere_premiere")->get();
+        
         return Inertia("Direction/Citerne",compact("citernes","agencies","entreprises","products"));
         }
 

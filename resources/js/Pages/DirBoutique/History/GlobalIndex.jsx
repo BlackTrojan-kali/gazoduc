@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Head, router, Link } from '@inertiajs/react';
-import DirBoutiqueLayout from '../../../layout/DirBoutiqueLayout/DirBoutiqueLayout'; // Adaptez le chemin vers votre layout Directeur
-import GlobalExportHistoryModal from '../../../components/Modals/Boutique_Modals/Moves/GlobalExportHistoryModal'; // La modale créée précédemment
+import DirBoutiqueLayout from '../../../layout/DirBoutiqueLayout/DirBoutiqueLayout'; 
+import GlobalExportHistoryModal from '../../../components/Modals/Boutique_Modals/Moves/GlobalExportHistoryModal'; 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
     faHistory, 
@@ -14,12 +14,12 @@ import {
     faArrowRight
 } from '@fortawesome/free-solid-svg-icons';
 
-const GlobalIndex = ({ moves, boutiques, filters,products }) => {
+// CORRECTION 1 : Ajout de valeurs par défaut pour éviter le crash si une prop est manquante
+const GlobalIndex = ({ moves = { data: [], links: [] }, boutiques = [], filters = {}, products = [] }) => {
   
   // --- États ---
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   
-  // États des filtres (initialisés avec les valeurs reçues du backend)
   const [search, setSearch] = useState(filters.search || '');
   const [boutiqueId, setBoutiqueId] = useState(filters.boutique_id || '');
   const [type, setType] = useState(filters.type || '');
@@ -27,7 +27,6 @@ const GlobalIndex = ({ moves, boutiques, filters,products }) => {
   const [dateEnd, setDateEnd] = useState(filters.date_end || '');
 
   // --- Gestion des Filtres ---
-  // Fonction unique pour déclencher la recherche
   const applyFilters = () => {
       router.get(route('direction.history'), { 
           search, 
@@ -38,12 +37,10 @@ const GlobalIndex = ({ moves, boutiques, filters,products }) => {
       }, { preserveState: true, replace: true });
   };
 
-  // Déclencheur sur la touche Entrée pour la recherche texte
   const handleKeyDown = (e) => {
       if (e.key === 'Enter') applyFilters();
   };
 
-  // Reset complet
   const handleReset = () => {
       setSearch('');
       setBoutiqueId('');
@@ -54,14 +51,14 @@ const GlobalIndex = ({ moves, boutiques, filters,products }) => {
   };
 
   return (
-    <div className="p-6 space-y-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
+    <div className="p-6 space-y-6 bg-gray-50 dark:bg-gray-900 min-h-screen font-sans">
       <Head title="Historique Global des Stocks" />
 
       {/* --- En-tête --- */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
         <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <FontAwesomeIcon icon={faHistory} className="text-brand-600"/>
+                <FontAwesomeIcon icon={faHistory} className="text-blue-600"/>
                 Mouvements de Stock Globaux
             </h1>
             <p className="text-sm text-gray-500 mt-1">
@@ -69,10 +66,9 @@ const GlobalIndex = ({ moves, boutiques, filters,products }) => {
             </p>
         </div>
 
-        {/* Bouton Export */}
         <button 
             onClick={() => setIsExportModalOpen(true)}
-            className="bg-brand-600 hover:bg-brand-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-md transition-all flex items-center gap-2"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-md transition-all flex items-center gap-2"
         >
             <FontAwesomeIcon icon={faFileExport} />
             Exporter / Rapports
@@ -93,7 +89,7 @@ const GlobalIndex = ({ moves, boutiques, filters,products }) => {
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    className="pl-10 w-full rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900 focus:ring-brand-500 text-sm"
+                    className="pl-10 w-full rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900 focus:ring-blue-500 text-sm dark:text-white"
                 />
             </div>
         </div>
@@ -106,7 +102,7 @@ const GlobalIndex = ({ moves, boutiques, filters,products }) => {
                 <select 
                     value={boutiqueId}
                     onChange={(e) => setBoutiqueId(e.target.value)}
-                    className="pl-10 w-full rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900 focus:ring-brand-500 appearance-none text-sm"
+                    className="pl-10 w-full rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900 focus:ring-blue-500 appearance-none text-sm dark:text-white"
                 >
                     <option value="">Toutes les boutiques</option>
                     {boutiques.map(b => (
@@ -122,7 +118,7 @@ const GlobalIndex = ({ moves, boutiques, filters,products }) => {
             <select 
                 value={type}
                 onChange={(e) => setType(e.target.value)}
-                className="w-full rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900 focus:ring-brand-500 text-sm"
+                className="w-full rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900 focus:ring-blue-500 text-sm dark:text-white"
             >
                 <option value="">Tout voir</option>
                 <option value="entree">Entrées (+)</option>
@@ -138,7 +134,7 @@ const GlobalIndex = ({ moves, boutiques, filters,products }) => {
                     type="date" 
                     value={dateStart}
                     onChange={e => setDateStart(e.target.value)}
-                    className="w-full rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900 text-sm p-2"
+                    className="w-full rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900 text-sm p-2 dark:text-white dark:[color-scheme:dark]"
                 />
             </div>
             <div>
@@ -147,7 +143,7 @@ const GlobalIndex = ({ moves, boutiques, filters,products }) => {
                     type="date" 
                     value={dateEnd}
                     onChange={e => setDateEnd(e.target.value)}
-                    className="w-full rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900 text-sm p-2"
+                    className="w-full rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900 text-sm p-2 dark:text-white dark:[color-scheme:dark]"
                 />
             </div>
         </div>
@@ -176,22 +172,22 @@ const GlobalIndex = ({ moves, boutiques, filters,products }) => {
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700/50">
                 <tr>
-                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Boutique</th>
-                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Article</th>
-                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Type</th>
-                    <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">Quantité</th>
-                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Détail Flux</th>
-                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Auteur</th>
+                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-300 uppercase">Date</th>
+                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-300 uppercase">Boutique</th>
+                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-300 uppercase">Article</th>
+                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-300 uppercase">Type</th>
+                    <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-300 uppercase">Quantité</th>
+                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-300 uppercase">Détail Flux</th>
+                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-300 uppercase">Auteur</th>
                 </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {moves.data.length > 0 ? (
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
+                {moves && moves.data && moves.data.length > 0 ? (
                     moves.data.map((move) => (
                         <tr key={move.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
                             
                             {/* Date */}
-                            <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
+                            <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
                                 <div className="flex items-center gap-2">
                                     <FontAwesomeIcon icon={faCalendarAlt} className="text-gray-300"/>
                                     {new Date(move.created_at).toLocaleDateString('fr-FR', {
@@ -200,9 +196,9 @@ const GlobalIndex = ({ moves, boutiques, filters,products }) => {
                                 </div>
                             </td>
 
-                            {/* Boutique (Colonne Spécifique Admin) */}
+                            {/* Boutique */}
                             <td className="px-6 py-4 whitespace-nowrap">
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-100">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
                                     <FontAwesomeIcon icon={faStore} className="mr-1.5 opacity-50"/>
                                     {move.boutique?.name || 'Inconnue'}
                                 </span>
@@ -214,35 +210,35 @@ const GlobalIndex = ({ moves, boutiques, filters,products }) => {
                                     <div className="text-sm font-bold text-gray-900 dark:text-white">
                                         {move.product?.designation}
                                     </div>
-                                    <div className="text-xs text-gray-500">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">
                                         SKU: {move.product?.sku}
                                     </div>
                                 </div>
                             </td>
 
-                            {/* Type (Badge) */}
+                            {/* Type */}
                             <td className="px-6 py-4 whitespace-nowrap">
                                 {move.type === 'entree' ? (
-                                    <span className="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded">
+                                    <span className="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded dark:bg-green-900/30 dark:text-green-400">
                                         ENTRÉE
                                     </span>
                                 ) : (
-                                    <span className="text-xs font-bold text-red-600 bg-red-100 px-2 py-1 rounded">
+                                    <span className="text-xs font-bold text-red-600 bg-red-100 px-2 py-1 rounded dark:bg-red-900/30 dark:text-red-400">
                                         SORTIE
                                     </span>
                                 )}
                             </td>
 
-                            {/* Quantité */}
+                            {/* Quantité (CORRECTION 2: Sécurisation du nombre) */}
                             <td className="px-6 py-4 whitespace-nowrap text-right">
-                                <span className={`font-mono font-bold text-sm ${move.type === 'entree' ? 'text-green-600' : 'text-red-600'}`}>
-                                    {move.type === 'entree' ? '+' : '-'}{parseFloat(move.qty)}
+                                <span className={`font-mono font-bold text-sm ${move.type === 'entree' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                    {move.type === 'entree' ? '+' : '-'}{Number(move.qty || 0).toLocaleString()}
                                 </span>
                             </td>
 
                             {/* Flux */}
                             <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-xs text-gray-600 flex items-center gap-1">
+                                <div className="text-xs text-gray-600 dark:text-gray-300 flex items-center gap-1">
                                     <span>{move.departure}</span>
                                     <FontAwesomeIcon icon={faArrowRight} className="text-gray-300 mx-1"/>
                                     <span className="font-semibold">{move.destination}</span>
@@ -255,14 +251,14 @@ const GlobalIndex = ({ moves, boutiques, filters,products }) => {
                             </td>
 
                             {/* Auteur */}
-                            <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
+                            <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
                                 {move.user ? `${move.user.first_name} ${move.user.last_name?.charAt(0)}.` : 'Système'}
                             </td>
                         </tr>
                     ))
                 ) : (
                     <tr>
-                        <td colSpan="7" className="px-6 py-16 text-center text-gray-500">
+                        <td colSpan="7" className="px-6 py-16 text-center text-gray-500 dark:text-gray-400">
                             <div className="flex flex-col items-center">
                                 <FontAwesomeIcon icon={faSearch} className="text-3xl text-gray-300 mb-3"/>
                                 <p>Aucun mouvement trouvé pour ces critères.</p>
@@ -275,20 +271,28 @@ const GlobalIndex = ({ moves, boutiques, filters,products }) => {
         </div>
 
         {/* --- Pagination --- */}
-        {moves.links && moves.links.length > 3 && (
+        {moves && moves.links && moves.links.length > 3 && (
             <div className="bg-gray-50 dark:bg-gray-700/50 px-6 py-3 border-t border-gray-200 dark:border-gray-700 flex justify-center">
                 <div className="flex gap-1">
                     {moves.links.map((link, key) => (
-                        <Link
-                            key={key}
-                            href={link.url}
-                            className={`px-3 py-1 text-xs rounded border ${
-                                link.active 
-                                ? 'bg-brand-600 text-white border-brand-600' 
-                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                            } ${!link.url ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            dangerouslySetInnerHTML={{ __html: link.label }}
-                        />
+                        link.url === null ? (
+                            <div 
+                                key={key}
+                                className="px-3 py-1 text-xs rounded border bg-gray-100 text-gray-400 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-600 cursor-not-allowed"
+                                dangerouslySetInnerHTML={{ __html: link.label }}
+                            />
+                        ) : (
+                            <Link
+                                key={key}
+                                href={link.url}
+                                className={`px-3 py-1 text-xs rounded border transition-colors ${
+                                    link.active 
+                                    ? 'bg-blue-600 text-white border-blue-600' 
+                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
+                                }`}
+                                dangerouslySetInnerHTML={{ __html: link.label }}
+                            />
+                        )
                     ))}
                 </div>
             </div>
@@ -300,10 +304,7 @@ const GlobalIndex = ({ moves, boutiques, filters,products }) => {
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
         boutiques={boutiques}
-        // Note: Si vous avez besoin de filtrer par produit dans la modale, assurez-vous 
-        // de passer la liste des produits depuis le contrôleur dans une prop 'products'.
-        // Sinon, la modale affichera "Tous les produits" par défaut.
-        products={products} 
+        products={products} // Sécurisé grâce à la valeur par défaut []
         routeExportName="direction.export_history"
       />
     </div>

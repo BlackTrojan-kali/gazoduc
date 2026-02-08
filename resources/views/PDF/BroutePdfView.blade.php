@@ -164,7 +164,7 @@
     <table class="header-table">
         <tr>
             <td>
-                <div class="brand-name">{{ $entreprise->nom ?? 'MA BOUTIQUE ERP' }}</div>
+                <div class="brand-name">{{ $entreprise->name ?? 'MA BOUTIQUE ERP' }}</div>
                 <div class="system-name">Système de Gestion de Stock</div>
             </td>
             <td style="text-align: right;">
