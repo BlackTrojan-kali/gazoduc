@@ -1,15 +1,14 @@
-import React, { useState, useMemo } from 'react';
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Head, Link, useForm, usePage, router } from '@inertiajs/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCube, faTrash, faFileExport, faFilter } from '@fortawesome/free-solid-svg-icons';
+import { faCube, faTrash, faFileExport, faFilter, faSearch } from '@fortawesome/free-solid-svg-icons';
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '../components/ui/table';
 import Swal from 'sweetalert2';
 import Button from '../components/ui/button/Button';
-import Input from '../components/form/input/InputField';
 import MovementHistoryPDFExcelModal from '../components/Modals/MovHistModal';
-import Select from 'react-select'; // Import du composant Select
+import Select from 'react-select';
 
-// Layouts - assurez-vous que les chemins sont corrects
+// Layouts
 import MagLayout from '../layout/MagLayout/MagLayout';
 import ProdLayout from '../layout/ProdLayout/ProdLayout';
 import RegLayout from '../layout/RegLayout/RegLayout';
@@ -18,320 +17,286 @@ import MagFuelLayout from '../layout/FuelLayout/MagFuelLayout';
 import DirLayout from '../layout/DirLayout/DirLayout';
 import DirFuelLayout from '../layout/DirFuelLayout/DirFuelLayout';
 
-// --- Composant PageContent: Contient la logique principale de la page ---
-const PageContent = ({ movements, articles, agencies, services }) => {
-  // --- États pour la modale d'exportation ---
+// --- 1. Styles React-Select (Mode Sombre/Clair) ---
+const getSelectStyles = (isDark) => ({
+  control: (base, state) => ({
+    ...base,
+    height: '42px',
+    minHeight: '42px',
+    borderColor: state.isFocused ? '#3B82F6' : (isDark ? '#374151' : '#D1D5DB'),
+    backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+    color: isDark ? '#F3F4F6' : '#111827',
+    boxShadow: state.isFocused ? '0 0 0 2px rgba(59, 130, 246, 0.2)' : 'none',
+    fontSize: '0.875rem',
+    borderRadius: '0.5rem',
+    '&:hover': { borderColor: state.isFocused ? '#3B82F6' : '#9CA3AF' },
+  }),
+  menu: (base) => ({
+    ...base,
+    backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+    zIndex: 50,
+    border: `1px solid ${isDark ? '#374151' : '#E5E7EB'}`,
+  }),
+  option: (base, state) => ({
+    ...base,
+    backgroundColor: state.isSelected ? '#2563EB' : state.isFocused ? (isDark ? '#374151' : '#F3F4F6') : 'transparent',
+    color: state.isSelected ? '#FFFFFF' : (isDark ? '#F3F4F6' : '#111827'),
+    cursor: 'pointer',
+    fontSize: '0.875rem',
+  }),
+  singleValue: (base) => ({ ...base, color: isDark ? '#F3F4F6' : '#111827' }),
+  input: (base) => ({ ...base, color: isDark ? '#F3F4F6' : '#111827' }),
+  placeholder: (base) => ({ ...base, color: isDark ? '#9CA3AF' : '#6B7280' }),
+});
+
+// --- 2. Composant Pagination ---
+const Pagination = ({ links }) => {
+  if (!links || links.length <= 3) return null;
+  return (
+    <div className="px-5 py-4 border-t border-gray-100 dark:border-gray-700 flex justify-end">
+      <div className="flex flex-wrap gap-1">
+        {links.map((link, key) => {
+           // Nettoyage des entités HTML pour les flèches
+           let label = link.label.replace('&laquo;', '«').replace('&raquo;', '»');
+           return link.url === null ? (
+            <div key={key} className="px-3 py-1 text-sm text-gray-400 dark:text-gray-600 border border-transparent bg-transparent rounded-md cursor-not-allowed">
+              {label}
+            </div>
+          ) : (
+            <Link
+              key={key}
+              href={link.url}
+              preserveState
+              preserveScroll
+              only={['movements']} // Optimisation : ne recharge que les mouvements
+              className={`px-3 py-1 text-sm rounded-md border transition-colors ${
+                link.active
+                  ? 'bg-blue-600 text-white border-blue-600 font-medium'
+                  : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800'
+              }`}
+            >
+              {label}
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// --- 3. Composant Badge (Type de Mouvement) ---
+const MovementBadge = ({ type }) => {
+  const isEntree = type === 'entree';
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
+      isEntree 
+        ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800' 
+        : 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800'
+    }`}>
+      {type === 'entree' ? '+ Entrée' : '- Sortie'}
+    </span>
+  );
+};
+
+// --- 4. Contenu Principal de la Page ---
+const PageContent = ({ movements, articles, agencies, services, filters }) => {
   const [isPDFExcelModalOpen, setIsPDFExcelModalOpen] = useState(false);
-  const openPDFExcelModal = () => setIsPDFExcelModalOpen(true);
-  const closePDFExcelModal = () => setIsPDFExcelModalOpen(false);
+  
+  // Récupération des infos utilisateur et Rôle
+  const { auth } = usePage().props;
+  const userRole = auth.user.role?.name || auth.user.role; // Normalisation (objet ou string)
+  
+  const isDark = document.documentElement.classList.contains('dark');
 
-  // --- États pour les filtres frontend ---
-  const [filterMovementType, setFilterMovementType] = useState('');
-  const [filterArticle, setFilterArticle] = useState(null);
-  const [filterQualification, setFilterQualification] = useState('');
-  const [filterAgency, setFilterAgency] = useState(null);
-  const [filterService, setFilterService] = useState(null);
+  // État local des filtres
+  const [values, setValues] = useState({
+    article_name: filters.article_name || '',
+    qualification: filters.qualification || '',
+    agency_id: filters.agency_id || '',
+    service: filters.service || '',
+  });
 
-  // --- useForm d'Inertia pour la suppression ---
+  // Synchronisation des filtres (si l'utilisateur fait Précédent/Suivant)
+  useEffect(() => {
+    setValues({
+        article_name: filters.article_name || '',
+        qualification: filters.qualification || '',
+        agency_id: filters.agency_id || '',
+        service: filters.service || '',
+    });
+  }, [filters]); 
+
   const { delete: inertiaDelete, processing } = useForm();
-  const { props: { auth } } = usePage();
-console.log(auth);
-  // --- Fonction pour déterminer si un mouvement peut être supprimé ---
-  const canDelete = (movementCreatedAt) => {
-    // Si l'utilisateur n'a pas de `modification_days` défini ou s'il est 0, on ne permet pas la suppression.
-    if (!auth.user || !auth.user.modif_days || auth.user.modif_days <= 0) {
-      return false;
+
+  // Gestion du changement de filtre (Router.get)
+  const handleFilterChange = useCallback((key, value) => {
+    setValues(prev => {
+      const newValues = { ...prev, [key]: value };
+      router.get(
+        window.location.pathname,
+        { ...newValues, page: 1 }, // Reset page à 1 lors d'un nouveau filtre
+        { preserveState: true, preserveScroll: true, replace: true }
+      );
+      return newValues;
+    });
+  }, []);
+
+  // Options pour les Selects
+  const articleOptions = articles.map(a => ({ value: a.name, label: a.name }));
+  const agencyOptions = agencies.map(a => ({ value: String(a.id), label: a.name }));
+  const serviceOptions = services.map(s => ({ value: s.name, label: s.name.charAt(0).toUpperCase() + s.name.slice(1) }));
+  const qualificationOptions = [
+    { value: 'reepreuve', label: 'Réépreuve' }, { value: 'achat', label: 'Achat' },
+    { value: 'vente', label: 'Vente' }, { value: 'perte', label: 'Perte' },
+    { value: 'transfert', label: 'Transfert' }, { value: 'inventaire', label: 'Inventaire' },
+  ];
+
+  // --- LOGIQUE DE SÉCURITÉ : SUPPRESSION ---
+  const canDelete = (createdAt) => {
+    // 1. Bloquer strictement Direction et Contrôleur (Régional)
+    const forbiddenRoles = ['direction', 'controleur', 'regional'];
+    if (forbiddenRoles.includes(userRole)) {
+        return false;
     }
-    const today = new Date();
-    const creationDate = new Date(movementCreatedAt);
-    // Calculer la différence en jours
-    const diffTime = today.getTime() - creationDate.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    // 2. Pour les autres (Magasin, Production), vérifier la limite de temps
+    if (!auth.user?.modif_days || auth.user.modif_days <= 0) return false;
     
-    // Renvoyer vrai si le mouvement a été créé dans la période autorisée
+    const diffDays = Math.ceil((new Date() - new Date(createdAt)) / (1000 * 60 * 60 * 24));
     return diffDays <= auth.user.modif_days;
   };
 
-  // --- Fonction pour gérer la suppression d'un mouvement avec SweetAlert2 ---
-  const handleDelete = (movementId) => {
+  const handleDelete = (id) => {
     Swal.fire({
-      title: 'Êtes-vous sûr, monsieur ?',
-      text: `Vous êtes sur le point de supprimer ce mouvement. Cette action est irréversible et ajustera le stock de l'article !`,
+      title: 'Supprimer ce mouvement ?',
+      text: "Le stock sera recalculé. Cette action est irréversible.",
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Oui, supprimer !',
-      cancelButtonText: 'Annuler'
+      confirmButtonColor: '#EF4444',
+      cancelButtonColor: '#6B7280',
+      confirmButtonText: 'Oui, supprimer',
+      cancelButtonText: 'Annuler',
+      background: isDark ? '#1F2937' : '#fff',
+      color: isDark ? '#F3F4F6' : '#000'
     }).then((result) => {
       if (result.isConfirmed) {
-        inertiaDelete(route('magasin.move.delete', movementId), {
-          preserveScroll: true,
-          onSuccess: () => {
-          
-          },
-          onError: (errors) => {
-            console.error('Erreur de suppression:', errors);
-           
-          },
-        });
+        inertiaDelete(route('magasin.move.delete', id), { preserveScroll: true });
       }
     });
-  };
-  
-  // --- Filtrage des mouvements selon les filtres (optimisé avec useMemo) ---
-  const filteredMovements = useMemo(() => {
-    if (!movements || !movements.data) {
-      return [];
-    }
-
-    return movements.data.filter(movement => {
-      // 1. Filtrer par type de mouvement
-      const matchesType = filterMovementType === '' || movement.movement_type === filterMovementType;
-
-      // 2. Filtrer par article
-      const matchesArticle = !filterArticle || (movement.article && movement.article.id === parseInt(filterArticle.value));
-
-      // 3. Filtrer par qualification
-      const matchesQualification = filterQualification === '' ||
-        (movement.qualification && movement.qualification.toLowerCase() === filterQualification.toLowerCase());
-
-      // 4. Filtrer par agence
-      const matchesAgency = !filterAgency || String(movement.agency_id) === filterAgency.value;
-
-      // 5. Filtrer par service (source_location)
-      const matchesService = !filterService || (movement.source_location && movement.source_location.toLowerCase() === filterService.value.toLowerCase());
-
-      return matchesType && matchesArticle && matchesQualification && matchesAgency && matchesService;
-    });
-  }, [movements.data, filterMovementType, filterArticle, filterQualification, filterAgency, filterService]);
-
-  // Options pour le sélecteur d'articles
-  const articleOptions = Array.isArray(articles)
-    ? articles.map(article => ({ value: String(article.id), label: article.name }))
-    : [];
-
-  // Options pour le sélecteur d'agences
-  const agencyOptions = Array.isArray(agencies)
-    ? agencies.map(agency => ({ value: String(agency.id), label: agency.name }))
-    : [];
-  
-  // Options pour le sélecteur de services
-  const serviceOptions = [
-    { value: 'magasin', label: 'Magasin' },
-    { value: 'production', label: 'Production' },
-    { value: 'commercial', label: 'Commercial' },
-  ];
-
-  // Définition des variables CSS pour les couleurs en fonction du thème
-  const colors = {
-    '--text-color': 'rgb(31 41 55)',
-    '--placeholder-color': 'rgb(107 114 128)',
-    '--border-color': 'rgb(209 213 219)',
-    '--bg-menu': 'rgb(255 255 255)',
-    '--bg-option-hover': 'rgb(243 244 246)',
-  };
-  if (document.documentElement.classList.contains('dark')) {
-    colors['--text-color'] = 'rgb(249 250 251 / 0.9)';
-    colors['--placeholder-color'] = 'rgb(156 163 175)';
-    colors['--border-color'] = 'rgb(75 85 99)';
-    colors['--bg-menu'] = 'rgb(31 41 55)';
-    colors['--bg-option-hover'] = 'rgb(55 65 81)';
-  }
-
-  // Styles personnalisés pour react-select, utilisant les variables CSS
-  // MODIFICATION : Réduction de la taille de la police pour un meilleur ajustement.
-  const selectStyles = {
-    control: (baseStyles, state) => ({
-      ...baseStyles,
-      height: '44px',
-      minHeight: '44px',
-      borderColor: state.isFocused ? '#3B82F6' : 'var(--border-color)',
-      backgroundColor: 'transparent',
-      boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
-      fontSize: '0.875rem', // Taille de police réduite
-      '&:hover': {
-        borderColor: state.isFocused ? '#3B82F6' : '#9CA3AF',
-      },
-    }),
-    singleValue: (baseStyles) => ({ ...baseStyles, color: 'var(--text-color)', fontSize: '0.875rem' }), // Taille de police réduite
-    placeholder: (baseStyles) => ({ ...baseStyles, color: 'var(--placeholder-color)', fontSize: '0.875rem' }), // Taille de police réduite
-    input: (baseStyles) => ({ ...baseStyles, color: 'var(--text-color)', fontSize: '0.875rem' }), // Taille de police réduite
-    menu: (baseStyles) => ({ ...baseStyles, backgroundColor: 'var(--bg-menu)', zIndex: 9999 }),
-    option: (baseStyles, state) => ({
-      ...baseStyles,
-      backgroundColor: state.isSelected ? '#2563EB' : state.isFocused ? 'var(--bg-option-hover)' : 'var(--bg-menu)',
-      color: state.isSelected ? 'white' : 'var(--text-color)',
-      fontSize: '0.875rem', // Taille de police réduite
-      '&:hover': { backgroundColor: 'var(--bg-option-hover)', color: 'var(--text-color)' },
-    }),
-    indicatorSeparator: (baseStyles) => ({ ...baseStyles, backgroundColor: 'var(--border-color)' }),
-    dropdownIndicator: (baseStyles) => ({ ...baseStyles, color: 'var(--placeholder-color)' }),
-    clearIndicator: (baseStyles) => ({ ...baseStyles, color: 'var(--placeholder-color)', '&:hover': { color: '#EF4444' } }),
   };
 
   return (
     <>
-      <Head title="Mouvements" />
-      <div className="p-6" style={colors}>
-        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
-          <div className="flex flex-col gap-2 mb-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-                <FontAwesomeIcon icon={faCube} className="mr-3 text-brand-600" />
-                Liste des Mouvements
-              </h3>
+      <Head title="Gestion des Mouvements" />
+      <div className="p-4 md:p-6 space-y-6">
+        
+        {/* En-tête avec Bouton Export */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+          <div>
+            <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
+              <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-blue-600 dark:text-blue-400">
+                <FontAwesomeIcon icon={faCube} />
+              </div>
+              Mouvements de Stock
+            </h2>
+          </div>
+          <Button onClick={() => setIsPDFExcelModalOpen(true)} variant="secondary" className="shadow-sm border-gray-200 dark:border-gray-600">
+            <FontAwesomeIcon icon={faFileExport} className="mr-2" />
+            Exporter
+          </Button>
+        </div>
+
+        {/* Zone de Filtres */}
+        <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="flex items-center gap-2 mb-4 text-sm font-semibold text-gray-600 dark:text-gray-300">
+            <FontAwesomeIcon icon={faFilter} className="text-blue-500" /> Filtres
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="z-40">
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Article</label>
+                <Select placeholder="Article..." options={articleOptions} styles={getSelectStyles(isDark)} isClearable
+                    value={articleOptions.find(op => op.value === values.article_name) || null}
+                    onChange={(opt) => handleFilterChange('article_name', opt ? opt.value : '')} />
             </div>
-            <div className="flex items-center gap-3">
-              <Button
-                onClick={openPDFExcelModal}
-                variant="secondary"
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
-              >
-                <FontAwesomeIcon icon={faFileExport} />
-                Exporter
-              </Button>
+            <div className="z-30">
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Qualification</label>
+                <Select placeholder="Opération..." options={qualificationOptions} styles={getSelectStyles(isDark)} isClearable
+                    value={qualificationOptions.find(op => op.value === values.qualification) || null}
+                    onChange={(opt) => handleFilterChange('qualification', opt ? opt.value : '')} />
+            </div>
+            <div className="z-20">
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Agence</label>
+                <Select placeholder="Site..." options={agencyOptions} styles={getSelectStyles(isDark)} isClearable
+                    value={agencyOptions.find(op => op.value === values.agency_id) || null}
+                    onChange={(opt) => handleFilterChange('agency_id', opt ? opt.value : '')}
+                    isDisabled={agencies.length <= 1} />
+            </div>
+            <div className="z-10">
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Service</label>
+                <Select placeholder="Service..." options={serviceOptions} styles={getSelectStyles(isDark)} isClearable
+                    value={serviceOptions.find(op => op.value === values.service) || null}
+                    onChange={(opt) => handleFilterChange('service', opt ? opt.value : '')} />
             </div>
           </div>
+        </div>
 
-          <div className="mb-6 p-4 border border-gray-200 rounded-lg dark:border-gray-700 dark:bg-white/[0.02]">
-            <h4 className="text-md font-semibold text-gray-700 dark:text-white/80 mb-3">
-              <FontAwesomeIcon icon={faFilter} className="mr-2 text-blue-500" />
-              Filtres
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4"> 
-              {/* Filtre par type de mouvement */}
-              <div>
-                <label htmlFor="filterMovementType" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Type de Mouvement
-                </label>
-                <select
-                  id="filterMovementType"
-                  className="h-11 w-full rounded-lg border px-4 py-2.5 text-sm shadow-theme-xs border-gray-300 dark:border-gray-700 bg-transparent placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                  value={filterMovementType}
-                  onChange={(e) => setFilterMovementType(e.target.value)}
-                >
-                  <option value="">Tous les types</option>
-                  <option value="entree">Entrée</option>
-                  <option value="sortie">Sortie</option>
-                </select>
-              </div>
-
-              {/* Filtre par nom d'article (maintenant avec react-select) */}
-              <div>
-                <label htmlFor="filterArticle" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Article
-                </label>
-                <Select
-                  id="filterArticle"
-                  options={articleOptions}
-                  value={filterArticle}
-                  onChange={setFilterArticle}
-                  isClearable={true}
-                  placeholder="Rechercher par article..."
-                  classNamePrefix="react-select"
-                  styles={selectStyles}
-                />
-              </div>
-
-              {/* Filtre par qualification */}
-              <div>
-                <label htmlFor="filterQualification" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Qualification
-                </label>
-                <select
-                  id="filterQualification"
-                  className="h-11 w-full rounded-lg border px-4 py-2.5 text-sm shadow-theme-xs border-gray-300 dark:border-gray-700 bg-transparent placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                  value={filterQualification}
-                  onChange={(e) => setFilterQualification(e.target.value)}
-                >
-                  <option value="">Toutes les qualifications</option>
-                  <option value="reepreuve">Réépreuve</option>
-                  <option value="achat">Achat</option>
-                  <option value="perte">Perte</option>
-                  <option value="transfert">Transfert</option>
-                </select>
-              </div>
-
-              {/* Filtre par agence (maintenant avec react-select) */}
-              <div>
-                <label htmlFor="filterAgency" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Agence
-                </label>
-                <Select
-                  id="filterAgency"
-                  options={agencyOptions}
-                  value={filterAgency}
-                  onChange={setFilterAgency}
-                  isClearable={true}
-                  placeholder="Toutes les agences"
-                  classNamePrefix="react-select"
-                  styles={selectStyles}
-                />
-              </div>
-              
-              {/* Filtre par service */}
-              <div>
-                <label htmlFor="filterService" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Service
-                </label>
-                <Select
-                  id="filterService"
-                  options={serviceOptions}
-                  value={filterService}
-                  onChange={setFilterService}
-                  isClearable={true}
-                  placeholder="Tous les services"
-                  classNamePrefix="react-select"
-                  styles={selectStyles}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="max-w-full overflow-x-auto">
+        {/* Tableau des Données */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col h-full">
+          <div className="overflow-x-auto">
             <Table>
-              <TableHeader className="border-gray-100 dark:border-gray-800 border-y">
+              <TableHeader className="bg-gray-50/50 dark:bg-gray-700/50">
                 <TableRow>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Article</TableCell>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Agence</TableCell>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Quantité</TableCell>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Date</TableCell>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Type Mouvement</TableCell>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Qualification</TableCell>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Actions</TableCell>
+                  <TableCell isHeader>Article</TableCell>
+                  <TableCell isHeader>Agence</TableCell>
+                  <TableCell isHeader className="text-right">Quantité</TableCell>
+                  <TableCell isHeader className="text-center">Type</TableCell>
+                  <TableCell isHeader>Qualification</TableCell>
+                  <TableCell isHeader>Date</TableCell>
+                  <TableCell isHeader className="text-center">Actions</TableCell>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredMovements.length === 0 ? (
+                {movements.data.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="py-6 text-center text-gray-400">Aucun mouvement trouvé pour les filtres appliqués, monsieur.</TableCell>
+                    <TableCell colSpan={7} className="h-32 text-center text-gray-500 dark:text-gray-400">
+                        <div className="flex flex-col items-center justify-center opacity-50">
+                            <FontAwesomeIcon icon={faSearch} className="text-2xl mb-2" />
+                            <p>Aucun résultat trouvé</p>
+                        </div>
+                    </TableCell>
                   </TableRow>
                 ) : (
-                  filteredMovements.map(movement => (
-                    <TableRow key={movement.id}>
-                      <TableCell>{movement.article ? movement.article.name : '—'}</TableCell>
-                      <TableCell>{movement.agency ? movement.agency.name : '—'}</TableCell>
-                      <TableCell>{movement.quantity}</TableCell>
-                      <TableCell>{new Date(movement.created_at).toLocaleDateString('fr-FR', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}</TableCell>
-                      <TableCell className={`font-semibold capitalize ${movement.movement_type === 'entree' ? 'text-green-600' : 'text-red-600'}`}>
-                        {movement.movement_type}
+                  movements.data.map((movement) => (
+                    <TableRow key={movement.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                      <TableCell className="font-medium text-gray-900 dark:text-gray-100">
+                        {movement.article?.name || 'Inconnu'}
                       </TableCell>
-                      <TableCell>{movement.qualification || '—'}</TableCell>
-                      <TableCell>
+                      <TableCell className="text-gray-500 dark:text-gray-400 text-sm">
+                        {movement.agency?.name || '-'}
+                      </TableCell>
+                      <TableCell className="text-right font-mono font-bold text-gray-700 dark:text-gray-300">
+                        {parseFloat(movement.quantity).toLocaleString('fr-FR')}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <MovementBadge type={movement.movement_type} />
+                      </TableCell>
+                      <TableCell className="text-sm capitalize text-gray-600 dark:text-gray-300">
+                        {movement.qualification}
+                        {movement.source_location && <span className="text-xs text-gray-400 block">Via {movement.source_location}</span>}
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-500">
+                        {new Date(movement.created_at).toLocaleDateString('fr-FR')}
+                        <span className="text-xs text-gray-400 ml-2">
+                          {new Date(movement.created_at).toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {/* Affichage conditionnel du bouton supprimer */}
                         {canDelete(movement.created_at) && (
-                          <button
-                            disabled={processing}
-                            onClick={() => handleDelete(movement.id)}
-                            title="Supprimer ce mouvement"
-                            className="text-red-600 hover:text-red-800 transition-colors"
-                            type="button"
+                          <button 
+                            onClick={() => handleDelete(movement.id)} 
+                            className="p-2 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all" 
+                            title="Supprimer"
                           >
                             <FontAwesomeIcon icon={faTrash} />
                           </button>
@@ -342,102 +307,46 @@ console.log(auth);
                 )}
               </TableBody>
             </Table>
-
-            {movements.links && movements.links.length > 3 && (
-              <nav className="flex justify-end mt-4">
-                <div className="flex gap-2">
-                  {movements.links.map((link, index) => (
-                    <Link
-                      key={index}
-                      href={link.url || '#'}
-                      className={`px-3 py-1 text-sm font-medium border rounded-lg shadow-sm
-                        ${link.active
-                          ? 'bg-blue-600 text-white border-blue-600 cursor-default'
-                          : link.url === null
-                            ? 'bg-white border-gray-300 text-gray-700 disabled:opacity-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 cursor-not-allowed'
-                            : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-800 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 dark:hover:bg-white/[0.03] dark:hover:text-gray-200'
-                        }`}
-                      preserveState
-                      preserveScroll
-                      only={['movements', 'articles', 'agencies', 'services']}
-                      onClick={(e) => {
-                        if (!link.url) e.preventDefault();
-                      }}
-                      dangerouslySetInnerHTML={{ __html: link.label }}
-                    />
-                  ))}
-                </div>
-              </nav>
-            )}
           </div>
+          
+          {/* Pagination */}
+          <Pagination links={movements.links} />
         </div>
       </div>
 
       <MovementHistoryPDFExcelModal
         isOpen={isPDFExcelModalOpen}
-        onClose={closePDFExcelModal}
+        onClose={() => setIsPDFExcelModalOpen(false)}
         articles={articles}
         agencies={agencies}
         services={services}
+        currentFilters={values} // Passage des filtres pour pré-remplir la modale
       />
     </>
   );
 };
 
-// --- Composant principal Entree: Gère le layout en fonction du rôle de l'utilisateur ---
-const Entree = ({ movements, articles, agencies, services }) => {
-    const { auth } = usePage().props;
-    const userRole = auth.user.role;
-    const {licence,DirLicence} = useLicenceChoice();
-    if (userRole === "production") {
-        return (
-            <ProdLayout>
-                <PageContent movements={movements} articles={articles} agencies={agencies} services={services} />
-            </ProdLayout>
-        );
-    }
-    if (userRole === "magasin") {
-      if (licence=="gaz"){
-        return (
-            <MagLayout>
-                <PageContent movements={movements} articles={articles} agencies={agencies} services={services} />
-            </MagLayout>
-        );
-      }else{
-        return (
-          <MagFuelLayout>
-                  <PageContent movements={movements} articles={articles} agencies={agencies} services={services} />
-          </MagFuelLayout>
-        )
-      }
-    }
-    if (userRole === "controleur") {
-       return (
-          <RegLayout>
-            <PageContent movements={movements} articles={articles} agencies={agencies} services={services} />
-          </RegLayout>
-        );
-    }
-    if (userRole === "direction") {
-       if(DirLicence == "gaz"){
-    return(
-      <DirLayout>
-           <PageContent movements={movements} articles={articles} agencies={agencies} services={services} />
-           </DirLayout>
-    )
-  }else{
-    return(
-      <DirFuelLayout>
-           <PageContent movements={movements} articles={articles} agencies={agencies} services={services} />
-          </DirFuelLayout>
-    )
-  }
-    }
-    return (
-        <MagLayout>
-            <PageContent movements={movements} articles={articles} agencies={agencies} services={services} />
-        </MagLayout>
-    );
+// --- 5. Wrapper Principal (Layout dynamique) ---
+const Entree = (props) => {
+  const { auth } = usePage().props;
+  const userRole = auth.user.role?.name || auth.user.role;
+  const { licence, DirLicence } = useLicenceChoice();
+
+  // Mapping des rôles vers les Layouts
+  const LayoutMap = {
+    production: ProdLayout,
+    controleur: RegLayout, // Contrôleur = Régional
+    magasin: licence === "gaz" ? MagLayout : MagFuelLayout,
+    direction: DirLicence === "gaz" ? DirLayout : DirFuelLayout,
+  };
+  
+  const SelectedLayout = LayoutMap[userRole] || MagLayout;
+
+  return (
+    <SelectedLayout>
+      <PageContent {...props} />
+    </SelectedLayout>
+  );
 };
 
 export default Entree;

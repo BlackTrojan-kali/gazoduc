@@ -16,7 +16,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger("citerne_id");
             $table->unsignedBigInteger("agency_id");
-            $table->unsignedBigInteger("stock_id");
+            $table->unsignedBigInteger("stock_id")->nullable();
             $table->unsignedBigInteger("user_id");
             $table->decimal("theorical_quantity");
             $table->decimal("measured_quantity");

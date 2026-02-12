@@ -43,7 +43,7 @@ const Modal = ({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[9999999] flex items-center justify-center overflow-x-hidden overflow-y-auto outline-none focus:outline-none bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm transition-all"
+      className="fixed inset-0 z-[9999999] flex items-center justify-center overflow-x-hidden overflow-y-auto outline-none focus:outline-none bg-gray-900/50 dark:bg-black/60  transition-all"
       onClick={onClose} // Ferme la modale si on clique sur le fond gris
     >
       <div

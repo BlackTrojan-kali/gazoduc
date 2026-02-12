@@ -328,8 +328,25 @@ class CommercialController extends Controller
                                     ->first();
                  
                  if($stock_parent){
+                      // Création du Mouvement de Sortie
+            $mouvement = new Mouvement();
+            $mouvement->article_id = $stock_parent->article_id;
+            $mouvement->agency_id = $agencyId;
+            $mouvement->entreprise_id = Auth::user()->entreprise_id;
+            $mouvement->recorded_by_user_id = Auth::user()->id;
+            $mouvement->movement_type = "entree";
+            $mouvement->quantity = $item["quantity"];
+            $mouvement->stock = $newStock; // Nouveau stock après mouvement
+            $mouvement->qualification = "retour sur vente"; // 'vente' ou 'consigne'
+            $mouvement->source_location = $storageType;
+            $mouvement->description = "Mouvement automatique pour " . $saleType . " (Facture ID: " . $facture->id . ")";
+            $mouvement->facture_id = $facture->id;
+            $mouvement->save();
+
                     $stock_parent->quantity += $item["quantity"];
                     $stock_parent->save();
+
+                    
                     // Création du mouvement d'ENTRÉE du parent
                     // (Le code du mouvement parent est omis pour la clarté, mais doit être recréé ici si nécessaire)
                  }

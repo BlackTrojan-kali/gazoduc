@@ -17,12 +17,14 @@ class VehiculeController extends Controller
         $request->validate([
             "licence_plate"=>"string|required |min:4|unique:vehicules,licence_plate",
             "type"=>"string| required",
+            "brand"=>"string| nullable",
             "capacity_liters"=>"numeric|nullable",
             "owner_type"=>"string |required",
         ]);
         $vehicle = new Vehicule();
         $vehicle->licence_plate = $request->licence_plate;
         $vehicle->type= $request->type;
+        $vehicle->brand = $request->brand;
         $vehicle->capacity_liters = $request->capacity_liters;
         $vehicle->owner_type = $request->owner_type;
         $vehicle->save();
@@ -32,12 +34,14 @@ class VehiculeController extends Controller
         $request->validate([
             "licence_plate"=>"string|required |min:4",
             "type"=>"string| required",
+            "brand"=>"string| nullable",
             "capacity_liters"=>"numeric|nullable",
             "owner_type"=>"string |required",
         ]);
         $vehicle = Vehicule::findOrFail($Vid);
         $vehicle->licence_plate = $request->licence_plate;
         $vehicle->type= $request->type;
+        $vehicle->brand = $request->brand;
         $vehicle->capacity_liters = $request->capacity_liters;
         $vehicle->owner_type = $request->owner_type;
         $vehicle->save();

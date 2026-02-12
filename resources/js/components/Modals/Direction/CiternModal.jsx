@@ -7,15 +7,11 @@ import InputField from "../../form/input/InputField";
 import Button from '../../ui/button/Button';
 import Swal from 'sweetalert2';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { faSpinner } from '@fortawesome/free-solid-svg-icons'; // J'ai ajouté faMicrochip si dispo, sinon retirez-le
 
-// La prop 'selectedCiterne' est maintenant optionnelle (null pour la création)
 const CiterneFormModal = ({ isOpen, onClose, entreprises, agencies, products, selectedCiterne = null }) => {
-    // Déterminez le titre de la modal en fonction de la présence de selectedCiterne
     const modalTitle = selectedCiterne ? "Modifier la Citerne" : "Créer une Nouvelle Citerne";
 
-    // useForm d'Inertia. Si selectedCiterne est fournie, on pré-remplit les données.
-    // Sinon, on utilise les valeurs par défaut pour la création.
     const { data, setData, post, put, processing, errors, reset } = useForm({
         name: selectedCiterne?.name || '',
         type: selectedCiterne?.type || 'fixed',
@@ -25,6 +21,11 @@ const CiterneFormModal = ({ isOpen, onClose, entreprises, agencies, products, se
         current_product_id: selectedCiterne?.current_product_id ? String(selectedCiterne.current_product_id) : '',
         agency_id: selectedCiterne?.agency_id ? String(selectedCiterne.agency_id) : '',
         entreprise_id: selectedCiterne?.entreprise_id ? String(selectedCiterne.entreprise_id) : '',
+        
+        // --- NOUVEAUX CHAMPS IOT ---
+        sensor_token: selectedCiterne?.sensor_token || '',
+        total_height_cm: selectedCiterne?.total_height_cm || '',
+        diameter_cm: selectedCiterne?.diameter_cm || '',
     });
 
     const [filteredAgencies, setFilteredAgencies] = useState([]);
@@ -42,8 +43,6 @@ const CiterneFormModal = ({ isOpen, onClose, entreprises, agencies, products, se
 
     useEffect(() => {
         if (isOpen) {
-            // Réinitialise le formulaire quand la modal s'ouvre
-            // et pré-remplit si selectedCiterne est présente
             reset();
             setData({
                 name: selectedCiterne?.name || '',
@@ -54,6 +53,11 @@ const CiterneFormModal = ({ isOpen, onClose, entreprises, agencies, products, se
                 current_product_id: selectedCiterne?.current_product_id ? String(selectedCiterne.current_product_id) : '',
                 agency_id: selectedCiterne?.agency_id ? String(selectedCiterne.agency_id) : '',
                 entreprise_id: selectedCiterne?.entreprise_id ? String(selectedCiterne.entreprise_id) : entreprises.length > 0 ? String(entreprises[0].id) : '',
+                
+                // --- RESET DES NOUVEAUX CHAMPS ---
+                sensor_token: selectedCiterne?.sensor_token || '',
+                total_height_cm: selectedCiterne?.total_height_cm || '',
+                diameter_cm: selectedCiterne?.diameter_cm || '',
             });
         }
     }, [isOpen, selectedCiterne, entreprises, reset, setData]);
@@ -85,7 +89,6 @@ const CiterneFormModal = ({ isOpen, onClose, entreprises, agencies, products, se
         e.preventDefault();
 
         if (selectedCiterne) {
-            // Mode modification: utiliser PUT
             put(route('citernes.update', selectedCiterne.id), data, {
                 onSuccess: () => {
                     Swal.fire({
@@ -102,14 +105,12 @@ const CiterneFormModal = ({ isOpen, onClose, entreprises, agencies, products, se
                     Swal.fire({
                         icon: 'error',
                         title: 'Oops...',
-                        text: 'Erreur lors de la mise à jour de la citerne.',
+                        text: 'Erreur lors de la mise à jour.',
                         confirmButtonText: 'Compris'
                     });
-                    console.error("Erreurs de validation:", validationErrors);
                 },
             });
         } else {
-            // Mode création: utiliser POST
             post(route('citernes.store'), data, {
                 onSuccess: () => {
                     Swal.fire({
@@ -126,10 +127,9 @@ const CiterneFormModal = ({ isOpen, onClose, entreprises, agencies, products, se
                     Swal.fire({
                         icon: 'error',
                         title: 'Oops...',
-                        text: 'Erreur lors de la création de la citerne.',
+                        text: 'Erreur lors de la création.',
                         confirmButtonText: 'Compris'
                     });
-                    console.error("Erreurs de validation:", validationErrors);
                 },
             });
         }
@@ -149,7 +149,6 @@ const CiterneFormModal = ({ isOpen, onClose, entreprises, agencies, products, se
                     required
                 />
                 
-                {/* Conteneur pour aligner les deux champs de type sur la même ligne */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="mb-4">
                         <label htmlFor="type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -176,7 +175,7 @@ const CiterneFormModal = ({ isOpen, onClose, entreprises, agencies, products, se
 
                     <div className="mb-4">
                         <label htmlFor="product_type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Type de Produit Stocké
+                            Type de Produit
                         </label>
                         <select
                             id="product_type"
@@ -198,7 +197,6 @@ const CiterneFormModal = ({ isOpen, onClose, entreprises, agencies, products, se
                     </div>
                 </div>
 
-                {/* Conteneur pour aligner les deux champs de capacité sur la même ligne */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <InputField
                         id="capacity_liter"
@@ -221,14 +219,14 @@ const CiterneFormModal = ({ isOpen, onClose, entreprises, agencies, products, se
                         value={data.capacity_kg}
                         onChange={handleChange}
                         error={errors.capacity_kg}
-                        placeholder="Capacité en Kilogrammes"
+                        placeholder="Capacité en Kg"
                         min="0"
                     />
                 </div>
 
                 <div className="mb-4">
                     <label htmlFor="current_product_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Produit Actuellement dans la Citerne
+                        Produit Actuel
                     </label>
                     <select
                         id="current_product_id"
@@ -302,6 +300,55 @@ const CiterneFormModal = ({ isOpen, onClose, entreprises, agencies, products, se
                     {errors.agency_id && <p className="text-sm text-red-600 mt-1">{errors.agency_id}</p>}
                 </div>
 
+                {/* --- SECTION IOT : Affichée UNIQUEMENT en modification --- */}
+                {selectedCiterne && (
+                    <div className="border-t border-gray-200 dark:border-gray-700 pt-5 mt-6 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
+                        <h4 className="text-md font-semibold text-brand-600 dark:text-brand-400 mb-4 flex items-center gap-2">
+                             {/* Vous pouvez ajouter l'icone ici si vous l'avez importée */}
+                            Configuration Sonde (IoT)
+                        </h4>
+                        
+                        <div className="mb-4">
+                            <InputField
+                                id="sensor_token"
+                                type="text"
+                                label="Token de la Sonde (Identifiant unique)"
+                                value={data.sensor_token}
+                                onChange={handleChange}
+                                error={errors.sensor_token}
+                                placeholder="Ex: CITERNE_YDE_01"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                                Identifiant que la sonde ESP32 enverra à l'API. Gardez-le secret.
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <InputField
+                                id="total_height_cm"
+                                type="number"
+                                label="Hauteur Totale (cm)"
+                                value={data.total_height_cm}
+                                onChange={handleChange}
+                                error={errors.total_height_cm}
+                                placeholder="Hauteur du fond au sommet"
+                                min="0"
+                            />
+
+                            <InputField
+                                id="diameter_cm"
+                                type="number"
+                                label="Diamètre (cm)"
+                                value={data.diameter_cm}
+                                onChange={handleChange}
+                                error={errors.diameter_cm}
+                                placeholder="Diamètre intérieur"
+                                min="0"
+                            />
+                        </div>
+                    </div>
+                )}
+                {/* --- FIN SECTION IOT --- */}
 
                 <div className="flex justify-end mt-6">
                     <Button

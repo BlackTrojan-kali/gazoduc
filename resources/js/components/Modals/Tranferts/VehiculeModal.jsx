@@ -18,6 +18,7 @@ const VehicleFormModal = ({ isOpen, onClose, vehicle, routeName }) => {
   const { data, setData, post, put, processing, errors, reset, recentlySuccessful } = useForm({
     licence_plate: '',
     type: '',
+    brand:'',
     capacity_liters: '', // Facultatif
     owner_type: '',
     // 'archived' est retiré de l'état du formulaire
@@ -30,6 +31,7 @@ const VehicleFormModal = ({ isOpen, onClose, vehicle, routeName }) => {
         setData({
           licence_plate: vehicle.licence_plate || '',
           type: vehicle.type || '',
+          brand: vehicle.brand || '',
           capacity_liters: vehicle.capacity_liters || '',
           owner_type: vehicle.owner_type || '',
           // 'archived' n'est plus initialisé ici
@@ -97,6 +99,21 @@ const VehicleFormModal = ({ isOpen, onClose, vehicle, routeName }) => {
             disabled={processing}
             error={!!errors.licence_plate}
             hint={errors.licence_plate}
+            required
+          />
+        </div>
+        {/* Champ Plaque marque */}
+        <div>
+          <Label htmlFor="brand">Marque <span className="text-red-500">*</span></Label>
+          <Input
+            type="text"
+            id="brand"
+            name="brand"
+            value={data.brand}
+            onChange={(e) => setData('brand', e.target.value)}
+            disabled={processing}
+            error={!!errors.brand}
+            hint={errors.brand}
             required
           />
         </div>

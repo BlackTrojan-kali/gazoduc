@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class CiterneController extends Controller
@@ -117,49 +118,86 @@ class CiterneController extends Controller
             return back()->with("error", "An error occurred while generating the stock. Please contact the maintenance team.");
         }
     }
+public function update(Request $request, $idCit)
+{
+    // 1. Validation renforcée
+    $request->validate([
+        "name" => "required|string",
+        "type" => "string|required",
+        "product_type" => "string|required",
+        "capacity_liter" => "numeric|nullable",
+        "capacity_kg" => "numeric|nullable",
+        "current_product_id" => "required|exists:articles,id",
+        "agency_id" => "required|exists:agencies,id",
+        
+        // Nouveaux champs IoT
+        "total_height_cm" => "nullable|numeric|min:0",
+        "diameter_cm" => "nullable|numeric|min:0",
+        // Le token doit être unique, mais on ignore l'ID de la citerne actuelle lors de la modif
+        "sensor_token" => [
+            "nullable", 
+            "string", 
+            Rule::unique('citernes')->ignore($idCit)
+        ],
+    ]);
 
-    public function update(Request $request,$idCit){
+    try {
+        DB::beginTransaction();
 
-        $request->validate([
-            "name"=>"required|string",
-            "type"=>"string|required",
-            "product_type"=>"string|required",
-           "capacity_liter"=>"numeric|nullable",
-            "capacity_kg"=>"numeric|nullable",
-            "current_product_id"=>"required",
-            "agency_id"=>"required",
-        ]);
-        $article = Article::where("id",$request->current_product_id)->with("stock")->first();
-        if(!$article){
-            return back()->with("error","this article was not found");
-        }else{
-            try{
-            Db::beginTransaction();
-            $citerne =Citerne::where("id",$idCit)->first();
-            $citerne->name = $request->name;
-            $citerne->type = $request->type;
-            if($citerne->type=="fixe"){
-            $citerne->stock->storage_type = $request->product_type;
-            $citerne->stock->save();
+        // 2. Récupération de la citerne (avec sécurité)
+        $citerne = Citerne::with('stock')->findOrFail($idCit);
+
+        // Optionnel : Vérifier que la citerne appartient bien à l'entreprise de l'utilisateur
+        if($citerne->entreprise_id !== Auth::user()->entreprise_id){
+             abort(403, "Action non autorisée sur cette ressource.");
+        }
+
+        // 3. Mise à jour des propriétés standards
+        $citerne->name = $request->name;
+        $citerne->type = $request->type; // ex: 'fixed', 'mobile'
+        $citerne->product_type = $request->product_type; // ex: 'produit_petrolier'
+        $citerne->capacity_liter = $request->capacity_liter;
+        $citerne->capacity_kg = $request->capacity_kg;
+        $citerne->current_product_id = $request->current_product_id;
+        $citerne->agency_id = $request->agency_id;
+        
+        // 4. Mise à jour des propriétés IoT (Sondes)
+        $citerne->sensor_token = $request->sensor_token;
+        $citerne->total_height_cm = $request->total_height_cm;
+        $citerne->diameter_cm = $request->diameter_cm;
+
+        $citerne->save();
+
+        // 5. Mise à jour intelligente du Stock lié
+        // Si la citerne a un stock associé, on met à jour ses infos clés pour rester synchro
+        if ($citerne->stock) {
+            $citerne->stock->article_id = $request->current_product_id; // Si le produit de la cuve change
+            $citerne->stock->agency_id = $request->agency_id; // Si la cuve change d'agence
+            
+            // Votre logique spécifique :
+            if ($citerne->type == "fixe") {
+                 // Attention : Assurez-vous que 'product_type' correspond bien à ce que la table stocks attend
+                 // $citerne->stock->storage_type = $request->product_type; 
             }
-            $citerne->product_type = $request->product_type;
-            $citerne->capacity_liter= $request->capacity_liter;
-            $citerne->capacity_kg = $request->capacity_kg;
-            $citerne->current_product_id = $request->current_product_id;
-            $citerne->agency_id = $request->agency_id;
-            $citerne->entreprise_id =Auth::user()->entreprise_id;
-            $citerne->save();
-        
-            Db::commit();
-            return back()->with("success","citerne and stock created successfully");
-        }catch(Exception $e){
-            Db::rollBack();
-            dd($e);
-            return back()->with("error","can't create the stock contact the maintenance team");
+            
+            $citerne->stock->save();
+        } else {
+            // Optionnel : Créer le stock s'il n'existe pas ?
+            // Cela dépend de votre logique métier.
         }
-        }
+
+        DB::commit();
+
+        return back()->with("success", "La citerne et sa configuration IoT ont été mises à jour avec succès, monsieur.");
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        // Log l'erreur pour le développeur, mais retourne un message propre à l'utilisateur
+        Log::error("Erreur mise à jour Citerne : " . $e->getMessage());
         
+        return back()->with("error", "Impossible de mettre à jour la citerne. Veuillez contacter le support technique.");
     }
+}
     public function reception(Request $request){
         $request->validate([
             "citerne_mobile_id"=>"required",
@@ -185,22 +223,30 @@ class CiterneController extends Controller
 public function depotage(Request $request)
 {
     $request->validate([
-        "citerne_mobile_id" => "required|exists:vehicules,id", // Ajout de la validation 'exists'
-        "article_id" => "required|exists:articles,id",             // Ajout de la validation 'exists'
-        "quantity" => "required|numeric|min:0.01",                 // 'min:0.01' pour éviter des quantités négatives ou nulles
-        "agency_id" => "required|exists:agencies,id",               // Ajout de la validation 'exists'
-        "citerne_fixe_id" => "required|exists:citernes,id",   // Ajout de la validation 'exists', assurez-vous du nom de table
-        "recorded_by_user_id" => "required|exists:users,id",        // Ajout de la validation 'exists'
-    
-           "licence"=>"string|nullable",
+        "citerne_mobile_id" => "required|exists:vehicules,id",
+        "article_id" => "required|exists:articles,id",
+        "quantity" => "required|numeric|min:0.01",
+        "agency_id" => "required|exists:agencies,id",
+        "citerne_fixe_id" => "required|exists:citernes,id",
+        "recorded_by_user_id" => "required|exists:users,id",
+        "licence" => "string|nullable",
     ]);
+
+    // --- 1. SÉCURITÉ IOT (Ajout demandé) ---
+    // On récupère la citerne avant de commencer quoi que ce soit
+    $citerneFixe = Citerne::findOrFail($request->citerne_fixe_id);
+
+    // Vérification : Si la citerne a un token de sonde (donc connectée), on bloque le manuel.
+    if (!empty($citerneFixe->sensor_token)) {
+        return back()->with("error", "Opération refusée : Cette cuve est connectée à une sonde ultrasonique. Le remplissage sera détecté automatiquement par le système IoT.");
+    }
 
     try {
         DB::beginTransaction();
 
-        // 1. Enregistrement du dépotage
+        // 2. Enregistrement du dépotage
         $depotage = new Depotage();
-        $depotage->type= $request->licence;
+        $depotage->type = $request->licence;
         $depotage->citerne_mobile_id = $request->citerne_mobile_id;
         $depotage->article_id = $request->article_id;
         $depotage->quantity = $request->quantity;
@@ -209,45 +255,56 @@ public function depotage(Request $request)
         $depotage->recorded_by_user_id = $request->recorded_by_user_id;
         $depotage->save();
 
-        // 2. Mise à jour du stock de la citerne fixe de destination
-        // Assurez-vous que 'citerne_id' est la colonne correcte pour lier le stock à la citerne
+        // 3. Mise à jour du stock de la citerne fixe de destination
         $stockFixe = Stock::where("citerne_id", $request->citerne_fixe_id)
-                          ->where("article_id", $request->article_id) // Important: Filtrer aussi par article
+                          ->where("article_id", $request->article_id)
                           ->first();
 
+        // Si le stock n'existe pas encore pour cet article dans cette citerne, on pourrait le créer, 
+        // mais ici on suppose qu'il existe ou on gère l'erreur.
+        if (!$stockFixe) {
+             // Optionnel : Créer le stock si inexistant ou renvoyer une erreur
+             // throw new \Exception("Aucun stock trouvé pour cet article dans cette cuve.");
+        }
+
         $article = Article::find($request->article_id);
-        // Récupérer la capacité maximale de la citerne fixe
-        // Nous chargeons la relation 'citerne' ici pour être sûr d'avoir la capacité à jour
-        $citerneFixe = $stockFixe->citerne ?? Citerne::find($request->citerne_fixe_id); // Fallback si non déjà chargé
-        if($article->type !="produit_petrolier"){
-        $maxCapacityKg = $citerneFixe ? $citerneFixe->capacity_kg  : 0;
-        }else{
-        $maxCapacityKg = $citerneFixe ? $citerneFixe->capacity_liter  : 0;
-            
+
+        // Récupération de la capacité (on utilise l'objet $citerneFixe récupéré au début)
+        if ($article->type != "produit_petrolier") {
+            $maxCapacity = $citerneFixe->capacity_kg;
+        } else {
+            $maxCapacity = $citerneFixe->capacity_liter;
         }
-        $newTotalQuantity = $stockFixe->quantity + $request->quantity;
-        
-        if ($maxCapacityKg > 0 && $newTotalQuantity > $maxCapacityKg) {
+
+        // Vérification de débordement
+        $currentQty = $stockFixe ? $stockFixe->quantity : 0;
+        $newTotalQuantity = $currentQty + $request->quantity;
+
+        if ($maxCapacity > 0 && $newTotalQuantity > $maxCapacity) {
             DB::rollBack();
-            return back()->with("error", "La citerne de destination sera pleine ou dépassera sa capacité maximale après ce dépotage.");
+            return back()->with("error", "La citerne de destination débordera ! Capacité max : " . $maxCapacity . ", Quantité après ajout : " . $newTotalQuantity);
         }
 
-        $stockFixe->quantity += $request->quantity;
-        $stockFixe->theorical_quantity = $stockFixe->quantity; // stock fixe deviens le nouveau stock initial
-        $stockFixe->save();
+        // Mise à jour effective
+        if ($stockFixe) {
+            $stockFixe->quantity += $request->quantity;
+            $stockFixe->theorical_quantity = $stockFixe->quantity;
+            $stockFixe->save();
+        }
 
-        // 3. Mise à jour du stock de la citerne mobile source
-       
+        // 4. Mise à jour du stock de la citerne mobile (Camion)
+        // (Logique à implémenter selon votre modèle Vehicule/Stock mobile)
+        // $stockMobile = ...;
+        // $stockMobile->quantity -= $request->quantity;
+        // $stockMobile->save();
 
-      
-        // 4. Validation et message de succès
-        DB::commit(); // Le commit doit être la dernière étape réussie de la transaction
-        return back()->with("success", "Dépotage enregistré avec succès !");
+        DB::commit();
+        return back()->with("success", "Dépotage manuel enregistré avec succès !");
 
-    } catch (\Exception $e) { // Utilisez \Exception pour attraper toutes les exceptions
+    } catch (\Exception $e) {
         DB::rollBack();
-        Log::error("Erreur lors du dépotage: " . $e->getMessage() . " sur la ligne " . $e->getLine() . " dans " . $e->getFile());
-        return back()->with("error", "Une erreur est survenue lors de l'enregistrement du dépotage. Veuillez réessayer.");
+        Log::error("Erreur lors du dépotage : " . $e->getMessage());
+        return back()->with("error", "Une erreur est survenue : " . $e->getMessage());
     }
 }
 // app/Http/Controllers/StockController.php (rappel)

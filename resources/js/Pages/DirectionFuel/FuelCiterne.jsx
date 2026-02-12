@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import DirFuelLayout from '../../layout/DirFuelLayout/DirFuelLayout';
 import { Head, useForm, usePage, Link } from '@inertiajs/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -7,13 +7,17 @@ import {
     faPlus, 
     faTrash, 
     faBoxesStacked, 
-    faDatabase, // Pour représenter le réservoir physique
-    faIndustry, 
+    faDatabase, 
     faMapMarkerAlt,
     faSearch,
     faFilter,
     faTruckDroplet,
     faWeightHanging,
+    faFolder,
+    faFolderOpen,
+    faChevronRight,
+    faChevronDown,
+    faBuilding,
     faGasPump
 } from '@fortawesome/free-solid-svg-icons';
 
@@ -21,14 +25,18 @@ import CiterneFormModal from '../../components/Modals/Direction/CiternModal';
 import Swal from 'sweetalert2';
 
 const FuelCiternes = ({ citernes, entreprises, products, agencies }) => {
-    // --- États (Inchangés) ---
+    // --- États ---
     const [isCiterneFormModalOpen, setIsCiterneFormModalOpen] = useState(false);
     const [selectedCiterne, setSelectedCiterne] = useState(null);
 
-    // --- Filtres ---
+    // --- États Filtres ---
     const [filterAgency, setFilterAgency] = useState('');
     const [filterProduct, setFilterProduct] = useState('');
     const [filterName, setFilterName] = useState('');
+
+    // --- États Dossiers (Expansion) ---
+    const [expandedAgencies, setExpandedAgencies] = useState({});
+    const [expandedProducts, setExpandedProducts] = useState({});
 
     const { delete: inertiaDelete, post: inertiaPost } = useForm();
 
@@ -46,7 +54,7 @@ const FuelCiternes = ({ citernes, entreprises, products, agencies }) => {
         return 'border-blue-400 text-blue-600 bg-blue-50 dark:bg-blue-900/20';
     };
 
-    // --- Suppression (Style SweetAlert unifié) ---
+    // --- Suppression ---
     const handleDeleteCiterne = (citerneId, citerneName) => {
         Swal.fire({
             title: 'Supprimer ce réservoir ?',
@@ -94,7 +102,7 @@ const FuelCiternes = ({ citernes, entreprises, products, agencies }) => {
         });
     };
 
-    // --- Logique de Filtrage ---
+    // --- 1. Filtrage à plat ---
     const filteredCiternes = useMemo(() => {
         if (!citernes.data) return [];
         return citernes.data.filter(citerne => {
@@ -105,17 +113,57 @@ const FuelCiternes = ({ citernes, entreprises, products, agencies }) => {
         });
     }, [citernes.data, filterAgency, filterProduct, filterName]);
 
+    // --- 2. Regroupement Hiérarchique (Agence -> Produit) ---
+    const groupedData = useMemo(() => {
+        const structure = {};
+        filteredCiternes.forEach(citerne => {
+            const agencyName = citerne.agency?.name || 'Agence Inconnue';
+            // On utilise le nom de l'article ou le type de produit
+            const productName = citerne.article?.name || citerne.product_type || 'Produit non défini';
+
+            if (!structure[agencyName]) structure[agencyName] = {};
+            if (!structure[agencyName][productName]) structure[agencyName][productName] = [];
+            
+            structure[agencyName][productName].push(citerne);
+        });
+        return structure;
+    }, [filteredCiternes]);
+
+    // --- 3. Ouverture automatique lors de la recherche ---
+    useEffect(() => {
+        if (filterName) {
+            const allAgencies = {};
+            const allProducts = {};
+            Object.keys(groupedData).forEach(agency => {
+                allAgencies[agency] = true;
+                Object.keys(groupedData[agency]).forEach(prod => {
+                    allProducts[`${agency}-${prod}`] = true;
+                });
+            });
+            setExpandedAgencies(allAgencies);
+            setExpandedProducts(allProducts);
+        }
+    }, [filterName, groupedData]);
+
+    // --- Helpers Toggle ---
+    const toggleAgency = (agencyName) => {
+        setExpandedAgencies(prev => ({ ...prev, [agencyName]: !prev[agencyName] }));
+    };
+    const toggleProduct = (agencyName, productName) => {
+        const key = `${agencyName}-${productName}`;
+        setExpandedProducts(prev => ({ ...prev, [key]: !prev[key] }));
+    };
+
     return (
         <>
             <Head title='Gestion Fuel - Citernes' />
             
-            {/* Background avec effet Canevas Industriel */}
             <div className="min-h-screen bg-slate-50 dark:bg-slate-900 relative p-6">
-                 <div className="absolute inset-0 opacity-[0.05] pointer-events-none" 
+                <div className="absolute inset-0 opacity-[0.05] pointer-events-none" 
                      style={{ backgroundImage: 'radial-gradient(#64748b 1px, transparent 1px)', backgroundSize: '24px 24px' }}>
                 </div>
 
-                {/* En-tête de page & Contrôles */}
+                {/* En-tête & Contrôles */}
                 <div className="relative z-10 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-8 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
                     <div>
                         <h1 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-3">
@@ -125,12 +173,11 @@ const FuelCiternes = ({ citernes, entreprises, products, agencies }) => {
                             Parc Citernes (Fuel)
                         </h1>
                         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 ml-14">
-                            Supervision des capacités de stockage carburant.
+                            Supervision et configuration des réservoirs.
                         </p>
                     </div>
 
                     <div className="flex flex-col md:flex-row gap-3 w-full xl:w-auto">
-                        {/* Recherche */}
                         <div className="relative group flex-grow md:flex-grow-0">
                             <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                             <input 
@@ -142,7 +189,6 @@ const FuelCiternes = ({ citernes, entreprises, products, agencies }) => {
                             />
                         </div>
 
-                        {/* Filtres */}
                         <div className="flex gap-2">
                              <div className="relative flex-grow">
                                 <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 z-10" />
@@ -178,121 +224,164 @@ const FuelCiternes = ({ citernes, entreprises, products, agencies }) => {
                     </div>
                 </div>
 
-                {/* Grille des Cartes */}
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 relative z-10">
-                    {filteredCiternes.length > 0 ? filteredCiternes.map((citerne) => {
-                        const themeClass = getProductColor(citerne.article?.name); // Couleur dynamique
-                        
-                        return (
-                            <div key={citerne.id} className="group relative bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col overflow-hidden">
-                                
-                                {/* Indicateur couleur produit */}
-                                <div className={`h-2 w-full border-b ${themeClass.split(' ')[0]} bg-gradient-to-r from-transparent via-current to-transparent opacity-50`}></div>
+                {/* --- RENDU DES DOSSIERS --- */}
+                <div className="space-y-6 relative z-10">
+                    {Object.entries(groupedData).map(([agencyName, productsMap]) => {
+                        const isAgencyOpen = expandedAgencies[agencyName];
+                        // Calcul du nombre total de cuves pour cette agence
+                        const totalCuves = Object.values(productsMap).flat().length;
 
-                                <div className="p-5 flex-1 flex flex-col">
-                                    {/* En-tête Carte */}
-                                    <div className="flex justify-between items-start mb-4">
-                                        <div className="flex items-center gap-3">
-                                            {/* Icône Réservoir */}
-                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl shadow-inner ${themeClass}`}>
-                                                <FontAwesomeIcon icon={faDatabase} />
-                                            </div>
-                                            <div>
-                                                <h3 className="font-bold text-slate-800 dark:text-white text-lg leading-tight">{citerne.name}</h3>
-                                                <div className="flex items-center gap-2 text-xs font-medium mt-1">
-                                                    <span className={`px-2 py-0.5 rounded text-[10px] uppercase tracking-wide border ${citerne.type === 'fixed' ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-orange-50 text-orange-600 border-orange-200'}`}>
-                                                        {citerne.type === 'fixed' ? 'Fixe' : 'Fixe'}
-                                                    </span>
-                                                    {citerne.product_type && (
-                                                        <span className="text-slate-400">• {citerne.product_type}</span>
+                        return (
+                            <div key={agencyName} className="border border-slate-200 dark:border-slate-700 rounded-2xl bg-white dark:bg-slate-800 overflow-hidden shadow-sm">
+                                
+                                {/* NIVEAU 1 : AGENCE */}
+                                <div 
+                                    onClick={() => toggleAgency(agencyName)}
+                                    className="flex items-center justify-between p-4 cursor-pointer bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isAgencyOpen ? 'bg-blue-100 text-blue-600' : 'bg-slate-200 text-slate-500'}`}>
+                                            <FontAwesomeIcon icon={faBuilding} size="lg" />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-lg font-bold text-slate-800 dark:text-white">{agencyName}</h2>
+                                            <p className="text-xs text-slate-500">{Object.keys(productsMap).length} type(s) de produit • {totalCuves} citerne(s)</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-slate-400">
+                                        <FontAwesomeIcon icon={isAgencyOpen ? faChevronDown : faChevronRight} />
+                                    </div>
+                                </div>
+
+                                {/* CONTENU AGENCE */}
+                                {isAgencyOpen && (
+                                    <div className="p-5 space-y-4 bg-white dark:bg-slate-800">
+                                        {Object.entries(productsMap).map(([productName, cuvesList]) => {
+                                            const productKey = `${agencyName}-${productName}`;
+                                            const isProductOpen = expandedProducts[productKey];
+
+                                            return (
+                                                <div key={productKey} className="ml-2 md:ml-6 border-l-2 border-slate-100 dark:border-slate-700 pl-4">
+                                                    
+                                                    {/* NIVEAU 2 : PRODUIT */}
+                                                    <div 
+                                                        onClick={() => toggleProduct(agencyName, productName)}
+                                                        className="flex items-center justify-between py-2 pr-2 cursor-pointer group select-none"
+                                                    >
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="text-amber-400 dark:text-amber-500">
+                                                                <FontAwesomeIcon icon={isProductOpen ? faFolderOpen : faFolder} size="lg" />
+                                                            </div>
+                                                            <h3 className="font-semibold text-slate-700 dark:text-slate-200 group-hover:text-blue-600 transition-colors">
+                                                                {productName}
+                                                            </h3>
+                                                            <span className="text-xs bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full text-slate-500 font-medium">
+                                                                {cuvesList.length}
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-slate-300 group-hover:text-slate-500">
+                                                            <FontAwesomeIcon icon={isProductOpen ? faChevronDown : faChevronRight} size="sm" />
+                                                        </div>
+                                                    </div>
+
+                                                    {/* NIVEAU 3 : GRILLE DES CUVES */}
+                                                    {isProductOpen && (
+                                                        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-fadeIn">
+                                                            {cuvesList.map((citerne) => {
+                                                                const themeClass = getProductColor(citerne.article?.name);
+                                                                
+                                                                return (
+                                                                    <div key={citerne.id} className="group relative bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden">
+                                                                        
+                                                                        {/* Barre Couleur */}
+                                                                        <div className={`h-1 w-full ${themeClass.split(' ')[0].replace('border', 'bg')}`}></div>
+
+                                                                        <div className="p-4 flex-1 flex flex-col">
+                                                                            {/* En-tête Carte */}
+                                                                            <div className="flex justify-between items-start mb-3">
+                                                                                <div className="flex items-center gap-3">
+                                                                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg shadow-inner ${themeClass}`}>
+                                                                                        <FontAwesomeIcon icon={faGasPump} />
+                                                                                    </div>
+                                                                                    <div>
+                                                                                        <h3 className="font-bold text-slate-800 dark:text-white text-md">{citerne.name}</h3>
+                                                                                        <div className="flex items-center gap-2 text-[10px] font-medium mt-0.5 text-slate-500">
+                                                                                            <span className="uppercase">{citerne.type === 'fixed' ? 'Fixe' : 'Mobile'}</span>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+
+                                                                            {/* Stats */}
+                                                                            <div className="grid grid-cols-2 gap-2 mb-4 bg-slate-50 dark:bg-slate-800/50 p-2 rounded-lg border border-slate-100 dark:border-slate-700/50">
+                                                                                <div>
+                                                                                    <span className="text-[9px] uppercase text-slate-400 font-bold">Volume</span>
+                                                                                    <div className="flex items-center gap-1 text-slate-700 dark:text-slate-200 font-semibold text-xs">
+                                                                                        <FontAwesomeIcon icon={faTruckDroplet} className="text-orange-400" />
+                                                                                        {parseInt(citerne.capacity_liter).toLocaleString()} L
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div className="pl-2 border-l border-slate-200 dark:border-slate-700">
+                                                                                    <span className="text-[9px] uppercase text-slate-400 font-bold">Masse</span>
+                                                                                    <div className="flex items-center gap-1 text-slate-700 dark:text-slate-200 font-semibold text-xs">
+                                                                                        <FontAwesomeIcon icon={faWeightHanging} className="text-orange-400" />
+                                                                                        {parseInt(citerne.capacity_kg).toLocaleString()} kg
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+
+                                                                            {/* Actions */}
+                                                                            <div className="flex gap-2 mt-auto">
+                                                                                <button 
+                                                                                    onClick={() => openEditCiterneModal(citerne)}
+                                                                                    className="flex-1 py-1.5 rounded-md text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 transition-colors flex items-center justify-center gap-1"
+                                                                                >
+                                                                                    <FontAwesomeIcon icon={faEdit} /> Éditer
+                                                                                </button>
+                                                                                
+                                                                                <button 
+                                                                                    onClick={() => handleCreateCiterneStock(citerne.id, citerne.name, citerne.current_product_id)}
+                                                                                    className="px-2 py-1.5 rounded-md text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-colors"
+                                                                                    title="Init Stock"
+                                                                                >
+                                                                                    <FontAwesomeIcon icon={faBoxesStacked} />
+                                                                                </button>
+
+                                                                                <button 
+                                                                                    onClick={() => handleDeleteCiterne(citerne.id, citerne.name)}
+                                                                                    className="px-2 py-1.5 rounded-md text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
+                                                                                    title="Supprimer"
+                                                                                >
+                                                                                    <FontAwesomeIcon icon={faTrash} />
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
                                                     )}
                                                 </div>
-                                            </div>
-                                        </div>
+                                            );
+                                        })}
                                     </div>
-
-                                    {/* Stats Techniques */}
-                                    <div className="grid grid-cols-2 gap-3 mb-5 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50">
-                                        <div className="space-y-1">
-                                            <span className="text-[10px] uppercase text-slate-400 font-bold tracking-wider">Volume</span>
-                                            <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-200 font-semibold">
-                                                <FontAwesomeIcon icon={faTruckDroplet} className="text-orange-400 text-xs" />
-                                                {parseInt(citerne.capacity_liter).toLocaleString()} L
-                                            </div>
-                                        </div>
-                                        <div className="space-y-1 pl-3 border-l border-slate-200 dark:border-slate-700">
-                                            <span className="text-[10px] uppercase text-slate-400 font-bold tracking-wider">Masse</span>
-                                            <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-200 font-semibold">
-                                                <FontAwesomeIcon icon={faWeightHanging} className="text-orange-400 text-xs" />
-                                                {parseInt(citerne.capacity_kg).toLocaleString()} kg
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Infos Localisation & Produit */}
-                                    <div className="space-y-2 mb-4">
-                                        <div className="flex items-center justify-between text-sm">
-                                            <span className="text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                                                <FontAwesomeIcon icon={faMapMarkerAlt} className="w-4" /> Agence
-                                            </span>
-                                            <span className="font-medium text-slate-800 dark:text-white">{citerne.agency?.name || 'N/A'}</span>
-                                        </div>
-                                        <div className="flex items-center justify-between text-sm">
-                                            <span className="text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                                                <FontAwesomeIcon icon={faIndustry} className="w-4" /> Entreprise
-                                            </span>
-                                            <span className="font-medium text-slate-800 dark:text-white truncate max-w-[150px]">{citerne.entreprise?.name || 'N/A'}</span>
-                                        </div>
-                                        <div className="flex items-center justify-between text-sm pt-2 border-t border-slate-100 dark:border-slate-700">
-                                            <span className="text-slate-500 dark:text-slate-400">Contenu</span>
-                                            <span className={`font-bold ${themeClass.split(' ')[1]}`}>
-                                                {citerne.article?.name || 'Vide'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Actions Footer */}
-                                <div className="bg-slate-50 dark:bg-slate-900/30 p-3 border-t border-slate-100 dark:border-slate-700 flex gap-2">
-                                    <button 
-                                        onClick={() => openEditCiterneModal(citerne)}
-                                        className="flex-1 py-2 rounded-lg text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 transition-colors flex items-center justify-center gap-2"
-                                    >
-                                        <FontAwesomeIcon icon={faEdit} /> Éditer
-                                    </button>
-                                    
-                                        <button 
-                                            onClick={() => handleCreateCiterneStock(citerne.id, citerne.name, citerne.current_product_id)}
-                                            className="px-3 py-2 rounded-lg text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-colors"
-                                            title="Initialiser le stock"
-                                        >
-                                            <FontAwesomeIcon icon={faBoxesStacked} />
-                                        </button>
-                                
-
-                                    <button 
-                                        onClick={() => handleDeleteCiterne(citerne.id, citerne.name)}
-                                        className="px-3 py-2 rounded-lg text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
-                                        title="Supprimer"
-                                    >
-                                        <FontAwesomeIcon icon={faTrash} />
-                                    </button>
-                                </div>
+                                )}
                             </div>
                         );
-                    }) : (
-                        /* Empty State */
-                        <div className="col-span-full flex flex-col items-center justify-center py-24 text-slate-400 bg-white/50 dark:bg-slate-800/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700">
-                            <div className="w-20 h-20 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mb-4 text-3xl opacity-50">
-                                <FontAwesomeIcon icon={faDatabase} />
+                    })}
+
+                    {Object.keys(groupedData).length === 0 && (
+                        <div className="flex flex-col items-center justify-center py-24 text-slate-400 bg-white/50 dark:bg-slate-800/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700">
+                            <div className="w-16 h-16 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mb-4 text-2xl opacity-50">
+                                <FontAwesomeIcon icon={faSearch} />
                             </div>
                             <h3 className="text-lg font-bold text-slate-600 dark:text-slate-300">Aucune Citerne Trouvée</h3>
-                            <p className="text-sm">Vérifiez vos filtres ou ajoutez une nouvelle cuve.</p>
+                            <p className="text-sm">Vérifiez vos filtres ou créez une nouvelle citerne.</p>
                         </div>
                     )}
                 </div>
 
-                {/* Pagination Flottante */}
+                {/* Pagination */}
                 {(citernes.links && citernes.links.length > 3) && (
                     <div className="mt-10 flex justify-center pb-8">
                         <nav className="inline-flex rounded-xl shadow-lg bg-white dark:bg-slate-800 p-1.5 border border-slate-200 dark:border-slate-700 gap-1">
@@ -329,6 +418,5 @@ const FuelCiternes = ({ citernes, entreprises, products, agencies }) => {
     );
 };
 
-// Utilisation du layout spécifique au Module Fuel
 FuelCiternes.layout = page => <DirFuelLayout children={page} />;
 export default FuelCiternes;

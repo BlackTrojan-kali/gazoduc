@@ -1,42 +1,39 @@
 import React, { useState } from 'react';
 import MagLayout from '../../layout/MagLayout/MagLayout';
 import { Head } from '@inertiajs/react';
-import GaugeBottle from '../../components/GaugeBottle';
+// On remplace l'ancienne jauge par le nouveau visualiseur hybride
+import TankLevelVisualizer from '../../components/GaugeBottle'; 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faEdit, faClipboardCheck } from '@fortawesome/free-solid-svg-icons'; // Importez faEdit et faClipboardCheck
+import { 
+    faPlus, 
+    faClipboardCheck, 
+    faWifi, 
+    faTriangleExclamation, 
+    faGasPump, 
+    faWarehouse 
+} from '@fortawesome/free-solid-svg-icons';
 
 import ReceptionFormModal from '../../components/Modals/Magasin/ReceptionModal';
 import DepotageFormModal from '../../components/Modals/Magasin/DepotageModal';
-import EditCiterneStockModal from '../../components/Modals/Magasin/ReleveModal'; // Importez la modal d'édition
+import EditCiterneStockModal from '../../components/Modals/Magasin/ReleveModal';
 import useLicenceChoice from '../../hooks/useLicenceChoice';
- 
-const MagCiterne = ({ stocks, articles, citernes, agencies, citernesFixes, citernesMobiles }) => {
+
+const MagCiterne = ({ stocks, articles, agencies, citernesFixes, citernesMobiles }) => {
   const [isReceptionModalOpen, setIsReceptionModalModalOpen] = useState(false);
   const [isDepotageModalOpen, setIsDepotageModalOpen] = useState(false);
-  const [isEditStockModalOpen, setIsEditStockModalOpen] = useState(false); // État pour la modal de modification
-  const [selectedStock, setSelectedStock] = useState(null); // Stock en cours de modification
+  const [isEditStockModalOpen, setIsEditStockModalOpen] = useState(false);
+  const [selectedStock, setSelectedStock] = useState(null);
 
-  const {licence,DirLicence} = useLicenceChoice()
-  const openReceptionModal = () => {
-    setIsReceptionModalModalOpen(true);
-  };
+  const { licence } = useLicenceChoice();
 
-  const closeReceptionModal = () => {
-    setIsReceptionModalModalOpen(false);
-  };
+  // --- Gestionnaires de Modales ---
+  const openReceptionModal = () => setIsReceptionModalModalOpen(true);
+  const closeReceptionModal = () => setIsReceptionModalModalOpen(false);
+  const openDepotageModal = () => setIsDepotageModalOpen(true);
+  const closeDepotageModal = () => setIsDepotageModalOpen(false);
 
-  const openDepotageModal = () => {
-    setIsDepotageModalOpen(true);
-  };
-
-  const closeDepotageModal = () => {
-    setIsDepotageModalOpen(false);
-  };
-
-  // Fonctions pour la modal d'édition de stock
-  // Cette fonction recevra un type d'action pour savoir quel champ pré-remplir ou mettre en focus
   const openEditStockModal = (stock, actionType) => {
-    setSelectedStock({ ...stock, actionType }); // Passe le stock complet et le type d'action
+    setSelectedStock({ ...stock, actionType });
     setIsEditStockModalOpen(true);
   };
 
@@ -47,110 +44,165 @@ const MagCiterne = ({ stocks, articles, citernes, agencies, citernesFixes, citer
 
   return (
     <>
-      <Head title="Stocks Citernes" />
-      <div className="p-6">
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white/90 mb-6">
-          Gestion des Stocks de Citernes
-        </h1>
-
-        {/* --- Bloc des actions (Réception et Dépotage en haut) --- */}
-        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 mb-6 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <Head title="Tableau de Bord Citernes" />
+      <div className="p-6 space-y-8">
+        
+        {/* --- En-tête et Actions Globales --- */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-                Actions Globales sur les Stocks
-              </h3>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                    <FontAwesomeIcon icon={faGasPump} className="text-blue-600" />
+                    Parc de Citernes
+                </h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Vue d'ensemble des niveaux et gestion des approvisionnements.
+                </p>
             </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={openReceptionModal}
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
-              >
-                <FontAwesomeIcon icon={faPlus} />
-                Enregistrer une Réception
-              </button>
 
-              <button
-                onClick={openDepotageModal}
-                className="inline-flex items-center gap-2 rounded-lg border border-brand-300 bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 dark:border-brand-700 dark:bg-brand-700 dark:hover:bg-brand-600"
-              >
-                <FontAwesomeIcon icon={faPlus} /> {/* Vous pouvez utiliser faArrowsSplitUpAndMerge si vous le préférez */}
-                Enregistrer un Dépotage
-              </button>
+            <div className="flex flex-wrap items-center gap-3">
+                <button
+                    onClick={openReceptionModal}
+                    className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700/50 transition-colors"
+                >
+                    <FontAwesomeIcon icon={faPlus} className="text-green-500" />
+                    Réception Fournisseur
+                </button>
+
+                <button
+                    onClick={openDepotageModal}
+                    className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-colors"
+                >
+                    <FontAwesomeIcon icon={faPlus} />
+                    Dépotage Interne
+                </button>
             </div>
-          </div>
         </div>
-        {/* --- Fin du bloc des actions --- */}
 
+        {/* --- Grille des Citernes --- */}
         {stocks && stocks.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
             {stocks.map((stock) => {
-              const citerneName = stock.citerne ? stock.citerne.name : 'Citerne inconnue';
-              const maxCapacityKg = stock.citerne ? stock.citerne.capacity_kg : 0;
-
-              const theoreticalQuantity = stock.theorical_quantity || 0;
-              const actualQuantity = stock.quantity || 0;
-
-              const discrepancy = actualQuantity - theoreticalQuantity  ;
-              let discrepancyColorClass = 'text-gray-600 dark:text-gray-300';
-              if (discrepancy < 0) {
-                discrepancyColorClass = 'text-red-500 font-semibold';
-              } else if (discrepancy > 0) {
-                discrepancyColorClass = 'text-green-500 font-semibold';
-              }
+              // 1. Extraction des données
+              const citerne = stock.citerne || {};
+              const citerneName = citerne.name || 'Citerne #ID' + stock.id;
+              const agencyName = citerne.agency?.name || 'Agence inconnue';
+              
+              // Détermination de la capacité (Litres pour carburant, Kg pour gaz selon votre logique métier)
+              // Ici on affiche génériquement, mais vous pouvez adapter l'unité
+              const maxCapacity = parseFloat(citerne.capacity_liter || citerne.capacity_kg || 0);
+              
+              const theoreticalQuantity = parseFloat(stock.theorical_quantity || 0);
+              const actualQuantity = parseFloat(stock.quantity || 0); // C'est celui-ci qu'on affiche sur la jauge
+              
+              // Calcul de l'écart
+              const discrepancy = actualQuantity - theoreticalQuantity;
+              const isDiscrepancyNegative = discrepancy < -0.5; // Tolérance de 0.5
+              
+              // 2. LOGIQUE IOT : Vérification de la sonde
+              const isIotConnected = citerne.sensor_token && citerne.sensor_token.trim() !== '';
 
               return (
                 <div
                   key={stock.id}
-                  className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow duration-200 flex flex-col items-center"
+                  className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-md transition-all duration-300 group"
                 >
-                  <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 text-center">
-                    Citerne: {citerneName}
-                  </h2>
-                  <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
-                    Capacité Maximale: <span className="font-bold">{maxCapacityKg} kg</span>
-                  </p>
+                  {/* Indicateur IoT (Badge Absolu) */}
+                  {isIotConnected && (
+                      <div className="absolute top-4 right-4 z-10 flex items-center gap-1.5 px-2.5 py-1 bg-blue-50/90 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm border border-blue-100 dark:border-blue-800">
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                          </span>
+                          IoT Online
+                      </div>
+                  )}
 
-                  <div className="flex justify-around w-full mb-4">
-                    <GaugeBottle
-                      quantity={theoreticalQuantity}
-                      maxCapacity={maxCapacityKg}
-                      label="Théorique"
-                    />
-                    <GaugeBottle
-                      quantity={actualQuantity}
-                      maxCapacity={maxCapacityKg}
-                      label="Relevé"
-                    />
-                  </div>
+                  <div className="p-5">
+                    {/* En-tête Carte */}
+                    <div className="mb-4">
+                        <h2 className="text-lg font-bold text-gray-800 dark:text-white truncate" title={citerneName}>
+                            {citerneName}
+                        </h2>
+                        <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            <FontAwesomeIcon icon={faWarehouse} className="mr-1.5 opacity-70" />
+                            {agencyName}
+                        </div>
+                    </div>
 
-                  <p className={`text-sm mt-3 ${discrepancyColorClass}`}>
-                    Écart: <span className="font-bold">{discrepancy} kg</span>
-                  </p>
+                    {/* --- VISUALISEUR PRINCIPAL (Nouveau Composant) --- */}
+                    <div className="my-2">
+                        <TankLevelVisualizer 
+                            quantity={actualQuantity}
+                            maxCapacity={maxCapacity}
+                            label={stock.article?.name || 'Produit Inconnu'}
+                        />
+                    </div>
 
-                  {/* Nouveaux Boutons par carte de citerne */}
-                  <div className="mt-4 flex flex-col sm:flex-row gap-2 w-full justify-center">
-                    <button
-                      onClick={() => openEditStockModal(stock, 'actual')} // Action pour le stock réel
-                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-blue-500 px-3 py-2 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-blue-600 dark:border-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 w-full sm:w-auto"
-                    >
-                      <FontAwesomeIcon icon={faClipboardCheck} />
-                      Relever Stock
-                    </button>
-                    
+                    {/* --- Comparatif Théorique vs Réel --- */}
+                    <div className="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-3 mb-4 border border-gray-100 dark:border-gray-600">
+                        <div className="flex justify-between items-center text-xs mb-1">
+                            <span className="text-gray-500 dark:text-gray-400">Stock Théorique</span>
+                            <span className="font-mono font-semibold text-gray-700 dark:text-gray-200">
+                                {theoreticalQuantity.toLocaleString('fr-FR')}
+                            </span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5 mb-2">
+                            <div 
+                                className="bg-gray-400 h-1.5 rounded-full" 
+                                style={{ width: `${Math.min(100, (theoreticalQuantity/maxCapacity)*100)}%` }}
+                            ></div>
+                        </div>
+                        
+                        <div className="flex justify-between items-center text-xs pt-1 border-t border-gray-200 dark:border-gray-600">
+                            <span className="text-gray-500">Écart constatée</span>
+                            <span className={`font-bold font-mono ${isDiscrepancyNegative ? 'text-red-500' : 'text-green-500'}`}>
+                                {discrepancy > 0 ? '+' : ''}{discrepancy.toLocaleString('fr-FR')}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* --- Zone d'Actions (Conditionnelle) --- */}
+                    <div>
+                        {isIotConnected ? (
+                            // CAS 1: Connecté à une sonde -> Pas de modification manuelle
+                            <div className="flex flex-col items-center justify-center p-3 text-center bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-800/30">
+                                <FontAwesomeIcon icon={faWifi} className="text-blue-500 text-lg mb-1" />
+                                <p className="text-xs font-semibold text-blue-700 dark:text-blue-300">
+                                    Gestion Automatisée
+                                </p>
+                                <p className="text-[10px] text-blue-600/70 dark:text-blue-400/70 leading-tight mt-0.5">
+                                    Les niveaux sont mis à jour en temps réel par la sonde.
+                                </p>
+                            </div>
+                        ) : (
+                            // CAS 2: Manuel -> Bouton de relevé disponible
+                            <button
+                                onClick={() => openEditStockModal(stock, 'actual')}
+                                className="w-full flex items-center justify-center gap-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 font-semibold py-2.5 px-4 rounded-xl transition-all shadow-sm hover:shadow active:scale-[0.98] text-sm"
+                            >
+                                <FontAwesomeIcon icon={faClipboardCheck} className="text-blue-500" />
+                                Saisir un relevé manuel
+                            </button>
+                        )}
+                    </div>
+
                   </div>
                 </div>
               );
             })}
           </div>
         ) : (
-          <div className="text-center py-10 text-gray-600 dark:text-gray-400">
-            <p className="text-lg">Aucun stock de citerne n'est disponible pour le moment, monsieur. 😔</p>
+          <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
+            <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-full mb-4">
+                <FontAwesomeIcon icon={faGasPump} className="text-3xl text-gray-400" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">Aucune citerne configurée</h3>
+            <p className="text-gray-500 text-sm mt-1">Commencez par ajouter des citernes ou vérifiez vos filtres.</p>
           </div>
         )}
       </div>
 
-      {/* Les modals */}
+      {/* --- Intégration des Modales Existantes --- */}
       <ReceptionFormModal
         isOpen={isReceptionModalOpen}
         onClose={closeReceptionModal}
@@ -170,11 +222,10 @@ const MagCiterne = ({ stocks, articles, citernes, agencies, citernesFixes, citer
         licence={licence}
       />
 
-      {/* La modal de modification de stock (utilisée pour les deux actions) */}
       <EditCiterneStockModal
         isOpen={isEditStockModalOpen}
         onClose={closeEditStockModal}
-        stockToEdit={selectedStock} // Passe le stock sélectionné et le type d'
+        stockToEdit={selectedStock}
         licence={licence}
       />
     </>

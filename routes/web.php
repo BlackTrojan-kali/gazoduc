@@ -222,7 +222,8 @@ Route::delete('/transfers/{id}', [ProductTransfertController::class, 'destroy'])
 
 //common routes to all users
 Route::middleware([isAuthenticatedMiddleware::class,ClosureMiddleware::class])->group(function(){
-    //global boutique pdf routes
+
+//global boutique pdf routes
 Route::get('/product-sales', [DirBoutiqueController::class, 'salesHistory'])->name('admin.reports.sales');
         Route::get('/product-sales/pdf', [DirBoutiqueController::class, 'downloadSalesReport'])->name('admin.reports.sales.pdf');
         

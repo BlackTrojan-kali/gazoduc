@@ -137,46 +137,57 @@ class BrouteController extends Controller
         
         return $pdf->download('bordereau_route_' . $roadbill->id . '.pdf');
     }
-     
-  public function destroy($id)
+    public function destroy($id)
     {
         DB::beginTransaction();
 
         try {
-            $roadbill = Bordereau_route::with('articles',"arrival")->findOrFail($id);
-            
-            // Vérification du statut avant de procéder à la suppression
+            // On charge les articles avec leurs données pivot (quantité)
+            $roadbill = Bordereau_route::with('articles')->findOrFail($id);
+
+            // 1. Vérification de sécurité
             if ($roadbill->status !== 'en_cours') {
-                return back()->with('error', 'Le bordereau ne peut pas être supprimé car il n\'est pas en cours.');
+                return back()->with('error', "Impossible de supprimer ce bordereau. Statut actuel : {$roadbill->status}");
             }
 
-            // Réintégrer les articles dans le stock
+            // 2. Restauration du Stock
             foreach ($roadbill->articles as $article) {
+                // On récupère la quantité qui avait été déduite via la table pivot
+                $qtyRestored = $article->pivot->qty;
+
                 $stock = Stock::where('article_id', $article->id)
                     ->where('agency_id', $roadbill->departure_location_id)
                     ->where('storage_type', 'magasin')
+                    ->lockForUpdate() // Verrouillage pour éviter les conflits pendant la restauration
                     ->first();
-                
+
                 if ($stock) {
-                    $stock->quantity += $article->pivot->qty;
+                    $stock->quantity += $qtyRestored;
                     $stock->save();
+                } else {
+                    // Optionnel : Créer le stock s'il n'existe plus (cas rare)
+                    // Stock::create([...]);
                 }
             }
 
-            // Supprimer les mouvements associés au bordereau avec une description exacte
-            $description = "sortie transfert automatique #" . $roadbill->id." ".$roadbill->arrival->name;
-            Mouvement::where('description', $description)->delete();
+            // 3. Suppression des mouvements associés
+            // CORRECTION ICI : On utilise destination_location qui est plus fiable que la description textuelle
+            // Dans le store : $movement->destination_location = "Bordereau de route #" . $roadbill->id;
+            Mouvement::where('destination_location', "Bordereau de route #" . $roadbill->id)
+                ->where('movement_type', 'sortie') // Sécurité supplémentaire
+                ->delete();
 
-            // Supprimer les relations et le bordereau
+            // 4. Suppression des liaisons et du bordereau
             $roadbill->articles()->detach();
             $roadbill->delete();
 
             DB::commit();
 
-            return back()->with('success', 'Bordereau de route et mouvements associés supprimés avec succès.');
+            return back()->with('success', 'Le bordereau a été annulé, les mouvements supprimés et le stock restauré, monsieur.');
+
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Erreur lors de la suppression du bordereau : ' . $e->getMessage());
+            return back()->with('error', 'Erreur critique lors de la suppression : ' . $e->getMessage());
         }
     }
       public function validateRoadbill(Request $request, Bordereau_route $roadbill)

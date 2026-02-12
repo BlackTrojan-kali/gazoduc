@@ -26,7 +26,7 @@ class FuelController extends Controller
     /**
      * Enregistre une vente de carburant (avec tarification dynamique selon la catégorie client)
      */
-    public function store(Request $request)
+   public function store(Request $request)
     {
         $validated = $request->validate([
             'pompe_id'   => 'required|exists:pompes,id',
@@ -40,58 +40,64 @@ class FuelController extends Controller
         try {
             DB::beginTransaction();
 
-            // 1️⃣ Récupération des entités de base
+            // 1️⃣ Récupération des entités
             $pompe   = Pompe::with('cuves.stock')->findOrFail($validated['pompe_id']);
             $article = Article::findOrFail($validated['article_id']);
             $client  = Client::with('category')->findOrFail($validated['client_id']);
             $quantiteDemandee = $validated['quantity'];
 
-            // 2️⃣ Vérifier les cuves reliées à la pompe
+            // 2️⃣ Vérifications préliminaires
             if ($pompe->cuves->isEmpty()) {
-                throw ValidationException::withMessages([
-                    'pompe_id' => "Cette pompe n’est reliée à aucune cuve. Impossible d’effectuer la vente.",
-                ]);
+                throw ValidationException::withMessages(['pompe_id' => "Cette pompe n’est reliée à aucune cuve."]);
             }
 
-            // 3️⃣ Filtrer les cuves contenant le bon produit
+            // 3️⃣ Filtrage des cuves compatibles
             $citernesCompatibles = $pompe->cuves->filter(function ($citerne) use ($article) {
                 return $citerne->current_product_id == $article->id;
             });
 
             if ($citernesCompatibles->isEmpty()) {
-                throw ValidationException::withMessages([
-                    'article_id' => "Aucune cuve reliée à cette pompe ne contient le produit sélectionné.",
-                ]);
+                throw ValidationException::withMessages(['article_id' => "Aucune cuve reliée ne contient ce produit."]);
             }
 
-            // 4️⃣ Trouver le prix applicable à cette catégorie de client dans cette agence
+            // 4️⃣ Calcul du Prix
             $prixPersonnalise = ArticleCategoryPrice::where('article_id', $article->id)
                 ->where('client_category_id', $client->client_category_id)
                 ->where('agency_id', $request->agency_id)
                 ->first();
-            $unitPrice = $prixPersonnalise
-                ? $prixPersonnalise->price
-                : ($article->unit_price ?? 0);
+            
+            $unitPrice = $prixPersonnalise ? $prixPersonnalise->price : ($article->unit_price ?? 0);
 
             if ($unitPrice <= 0) {
-                throw ValidationException::withMessages([
-                    'article_id' => "Aucun prix défini pour ce produit dans cette agence et cette catégorie de client.",
-                ]);
+                throw ValidationException::withMessages(['article_id' => "Aucun prix défini."]);
             }
 
-            // 5️⃣ Déduire la quantité demandée depuis les cuves reliées
+            // 5️⃣ Gestion du Stock (Hybride : Manuel vs IoT)
             $quantiteRestante = $quantiteDemandee;
             $cuvesUtilisees = [];
 
             foreach ($citernesCompatibles as $citerne) {
                 $stock = $citerne->stock;
+                
+                // Si pas de stock ou vide, on passe
                 if (!$stock || $stock->quantity <= 0) continue;
 
+                // --- DETECTION IOT ---
+                // Si un token existe, la cuve est gérée par une sonde
+                $isIotManaged = !empty($citerne->sensor_token); 
+
                 if ($stock->quantity >= $quantiteRestante) {
-                    // Suffisant : on déduit et sort de la boucle
-                    $stock->quantity -= $quantiteRestante;
-                    $stock->theorical_quantity = $stock->quantity;
-                    $stock->save();
+                    // Cas A : La cuve a assez de carburant pour tout couvrir
+                    
+                    if (!$isIotManaged) {
+                        // MODE MANUEL : On déduit le stock
+                        $stock->quantity -= $quantiteRestante;
+                        $stock->theorical_quantity = $stock->quantity;
+                        $stock->save(); 
+                    } else {
+                        // MODE IOT : On ne fait rien en base de données.
+                        // La quantité baissera physiquement et la sonde mettra à jour le stock au prochain relevé.
+                    }
 
                     $cuvesUtilisees[] = [
                         'citerne_id' => $citerne->id,
@@ -99,65 +105,60 @@ class FuelController extends Controller
                     ];
 
                     $quantiteRestante = 0;
-                    break;
+                    break; // Vente satisfaite, on sort
                 } else {
-                    // Pas assez, on vide cette citerne et on continue
+                    // Cas B : La cuve n'a pas assez, on la vide (virtuellement) et on passe à la suivante
+                    
+                    $quantitePrelevable = $stock->quantity;
+
+                    if (!$isIotManaged) {
+                        // MODE MANUEL : On vide la cuve à 0
+                        $stock->quantity = 0;
+                        $stock->theorical_quantity = 0;
+                        $stock->save();
+                    } else {
+                        // MODE IOT : On ne touche pas au stock BDD
+                    }
+
                     $cuvesUtilisees[] = [
                         'citerne_id' => $citerne->id,
-                        'quantite_tiree' => $stock->quantity,
+                        'quantite_tiree' => $quantitePrelevable,
                     ];
 
-                    $quantiteRestante -= $stock->quantity;
-                    $stock->quantity = 0;
-                    $stock->save();
+                    $quantiteRestante -= $quantitePrelevable;
                 }
             }
 
-            // 6️⃣ Vérification finale du stock
+            // 6️⃣ Vérification finale (On bloque la vente si même théoriquement il n'y a pas assez)
             if ($quantiteRestante > 0) {
                 throw ValidationException::withMessages([
-                    'quantity' => "Stock insuffisant dans les cuves reliées à cette pompe pour cette quantité.",
+                    'quantity' => "Stock insuffisant dans les cuves (manque $quantiteRestante L).",
                 ]);
             }
 
             // 7️⃣ Création de la vente
-            $fuelSale = FuelSale::create([
+            FuelSale::create([
                 'pompe_id'    => $validated['pompe_id'],
                 'agency_id'   => $validated['agency_id'],
                 'article_id'  => $validated['article_id'],
                 'user_id'     => $validated['user_id'],
                 'client_id'   => $validated['client_id'],
                 'quantity'    => $quantiteDemandee,
-                'unitPrice'  => $unitPrice,
+                'unitPrice'   => $unitPrice,
                 'sub_total'   => $unitPrice * $quantiteDemandee,
                 'total_price' => $unitPrice * $quantiteDemandee,
                 'status'      => 'VALIDATED',
             ]);
 
-            // 8️⃣ (Optionnel) Sauvegarder les cuves utilisées pour traçabilité
-            // if (!empty($cuvesUtilisees)) {
-            //     foreach ($cuvesUtilisees as $entry) {
-            //         DB::table('fuel_sale_citerne')->insert([
-            //             'fuel_sale_id' => $fuelSale->id,
-            //             'citerne_id'   => $entry['citerne_id'],
-            //             'quantite'     => $entry['quantite_tiree'],
-            //             'created_at'   => now(),
-            //         ]);
-            //     }
-            // }
-
             DB::commit();
 
-            return redirect()->back()->with('success', 'Vente enregistrée avec succès et stock mis à jour.');
+            return redirect()->back()->with('success', 'Vente enregistrée avec succès.');
+
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withErrors([
-                'error' => "Erreur lors de l’enregistrement de la vente : " . $e->getMessage()
-            ]);
+            return back()->withErrors(['error' => "Erreur : " . $e->getMessage()]);
         }
     }
-
-
     public function history(Request $request){
         $fuelSales = FuelSale::with("article","user","agency","pompe","client")->paginate(350);
   
