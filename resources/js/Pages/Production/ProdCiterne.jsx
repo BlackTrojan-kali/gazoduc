@@ -1,176 +1,228 @@
 import React, { useState } from 'react';
 import { Head, usePage } from '@inertiajs/react';
-import GaugeBottle from '../../components/GaugeBottle';
+// On utilise le nouveau visualiseur
+import TankLevelVisualizer from '../../components/GaugeBottle';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faEdit, faClipboardCheck, faBottleWater } from '@fortawesome/free-solid-svg-icons';
+import { 
+    faPlus, 
+    faEdit, 
+    faClipboardCheck, 
+    faBottleWater, 
+    faIndustry, 
+    faWifi, 
+    faWarehouse,
+    faTriangleExclamation
+} from '@fortawesome/free-solid-svg-icons';
 
 import ReceptionFormModal from '../../components/Modals/Magasin/ReceptionModal';
 import DepotageFormModal from '../../components/Modals/Magasin/DepotageModal';
 import EditCiterneStockModal from '../../components/Modals/Magasin/ReleveModal';
-import ProductionBottleModal from '../../components/Modals/Production/ProdModal'; // Assurez-vous que le chemin est correct
+import ProductionBottleModal from '../../components/Modals/Production/ProdModal';
 import ProdLayout from '../../layout/ProdLayout/ProdLayout';
 
-const ProdCiterne = ({ stocks, articles,articlesProd, citernes, agencies, citernesFixes, citernesMobiles }) => {
+const ProdCiterne = ({ stocks, articles, articlesProd, citernes, agencies, citernesFixes, citernesMobiles }) => {
   const { auth } = usePage().props;
   const userRole = auth.user?.role?.name;
 
+  // --- États des Modales ---
   const [isReceptionModalOpen, setIsReceptionModalOpen] = useState(false);
   const [isDepotageModalOpen, setIsDepotageModalOpen] = useState(false);
   const [isEditStockModalOpen, setIsEditStockModalOpen] = useState(false);
   const [isProductionBottleModalOpen, setIsProductionBottleModalOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState(null);
 
-  const openReceptionModal = () => {
-    setIsReceptionModalOpen(true);
-  };
-
-  const closeReceptionModal = () => {
-    setIsReceptionModalOpen(false);
-  };
-
-  const openDepotageModal = () => {
-    setIsDepotageModalOpen(true);
-  };
-
-  const closeDepotageModal = () => {
-    setIsDepotageModalOpen(false);
-  };
+  // --- Gestionnaires ---
+  const openReceptionModal = () => setIsReceptionModalOpen(true);
+  const closeReceptionModal = () => setIsReceptionModalOpen(false);
+  const openDepotageModal = () => setIsDepotageModalOpen(true);
+  const closeDepotageModal = () => setIsDepotageModalOpen(false);
 
   const openEditStockModal = (stock, actionType) => {
     setSelectedStock({ ...stock, actionType });
     setIsEditStockModalOpen(true);
   };
-
   const closeEditStockModal = () => {
     setSelectedStock(null);
     setIsEditStockModalOpen(false);
   };
 
-  const openProductionBottleModal = () => {
-    setIsProductionBottleModalOpen(true);
-  };
-
-  const closeProductionBottleModal = () => {
-    setIsProductionBottleModalOpen(false);
-  };
+  const openProductionBottleModal = () => setIsProductionBottleModalOpen(true);
+  const closeProductionBottleModal = () => setIsProductionBottleModalOpen(false);
 
   const isProductionUser = userRole === 'Production';
 
   return (
     <>
-      <Head title="Stocks Citernes" />
-      <div className="p-6">
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white/90 mb-6">
-          Gestion des Stocks de Citernes
-        </h1>
-
-        {/* --- Bloc des actions (Réception, Dépotage, et Production conditionnelle) --- */}
-        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 mb-6 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <Head title="Production - Stocks Citernes" />
+      <div className="p-6 space-y-8">
+        
+        {/* --- En-tête et Actions Globales --- */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-                Actions Globales sur les Stocks
-              </h3>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                    <FontAwesomeIcon icon={faIndustry} className="text-purple-600" />
+                    Atelier Production
+                </h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Gestion des matières premières (Vrac) et lancements de production.
+                </p>
             </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={openReceptionModal}
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
-              >
-                <FontAwesomeIcon icon={faPlus} />
-                Enregistrer une Réception
-              </button>
 
-              {/* CE BOUTON A ÉTÉ MODIFIÉ POUR APPELER openProductionBottleModal */}
-              {/* Le bouton "Produire" ouvrira la modal de production de bouteilles pour tous les utilisateurs,
-                  mais le bouton "Produire Bouteilles Pleines" (plus spécifique) sera conditionnel.
-                  Si "Produire" est aussi spécifique à la production de bouteilles, il pourrait aussi être conditionnel.
-                  J'ai fait en sorte que les deux ouvrent la même modal pour la production de bouteilles.
-              */}
-              <button
-                onClick={openProductionBottleModal}
-                className="inline-flex items-center gap-2 rounded-lg border border-brand-300 bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 dark:border-brand-700 dark:bg-brand-700 dark:hover:bg-brand-600"
-              >
-                <FontAwesomeIcon icon={faPlus} />
-               Produire
-              </button>
-
-              {/* Bouton pour ouvrir la modal de production de bouteilles - Conditionnel */}
-              {isProductionUser && (
+            {/* Barre d'actions */}
+            <div className="flex flex-wrap items-center gap-3">
+                {/* 1. Réception */}
                 <button
-                  onClick={openProductionBottleModal}
-                  className="inline-flex items-center gap-2 rounded-lg border border-purple-300 bg-purple-600 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-purple-700 dark:border-purple-700 dark:bg-purple-800 dark:hover:bg-purple-700"
+                    onClick={openReceptionModal}
+                    className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700/50 transition-colors"
                 >
-                  <FontAwesomeIcon icon={faBottleWater} />
-                  Produire Bouteilles Pleines
+                    <FontAwesomeIcon icon={faPlus} className="text-green-500" />
+                    Réception Vrac
                 </button>
-              )}
+
+                {/* 2. Bouton Principal Produire */}
+                <button
+                    onClick={openProductionBottleModal}
+                    className="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-purple-500/20 hover:bg-purple-700 transition-colors"
+                >
+                    <FontAwesomeIcon icon={faBottleWater} />
+                    Lancer Production
+                </button>
+
+                {/* 3. Bouton Spécifique (Optionnel selon rôle) */}
+                {isProductionUser && (
+                    <button
+                        onClick={openProductionBottleModal} // Ou une autre modal spécifique
+                        className="inline-flex items-center gap-2 rounded-xl border border-purple-200 bg-purple-50 px-4 py-2.5 text-sm font-semibold text-purple-700 hover:bg-purple-100 dark:border-purple-800 dark:bg-purple-900/20 dark:text-purple-300 dark:hover:bg-purple-900/40"
+                    >
+                        <FontAwesomeIcon icon={faPlus} />
+                        Bouteilles Pleines
+                    </button>
+                )}
             </div>
-          </div>
         </div>
-        {/* --- Fin du bloc des actions --- */}
 
+        {/* --- Grille des Citernes --- */}
         {stocks && stocks.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
             {stocks.map((stock) => {
-              const citerneName = stock.citerne ? stock.citerne.name : 'Citerne inconnue';
-              const maxCapacityKg = stock.citerne ? stock.citerne.capacity_kg : 0;
+              // 1. Extraction et calculs
+              const citerne = stock.citerne || {};
+              const citerneName = citerne.name || 'Citerne Inconnue';
+              const agencyName = citerne.agency?.name || 'Agence Inconnue';
+              
+              // Capacité : Litres ou Kg selon le type de produit
+              const maxCapacity = parseFloat(citerne.capacity_kg || citerne.capacity_liter || 0);
+              
+              const theoreticalQuantity = parseFloat(stock.theorical_quantity || 0);
+              const actualQuantity = parseFloat(stock.quantity || 0);
+              
+              // Écart
+              const discrepancy = actualQuantity - theoreticalQuantity;
+              const isDiscrepancyNegative = discrepancy < -0.5;
 
-              const theoreticalQuantity = stock.theorical_quantity || 0;
-              const actualQuantity = stock.quantity || 0;
-
-              const discrepancy = theoreticalQuantity - actualQuantity;
-              let discrepancyColorClass = 'text-gray-600 dark:text-gray-300';
-              if (discrepancy > 0) {
-                discrepancyColorClass = 'text-red-500 font-semibold';
-              } else if (discrepancy < 0) {
-                discrepancyColorClass = 'text-green-500 font-semibold';
-              }
+              // 2. LOGIQUE IOT
+              const isIotConnected = citerne.sensor_token && citerne.sensor_token.trim() !== '';
 
               return (
                 <div
                   key={stock.id}
-                  className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow duration-200 flex flex-col items-center"
+                  className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-md transition-all duration-300 group"
                 >
-                  <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 text-center">
-                    Citerne: {citerneName}
-                  </h2>
-                  <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
-                    Capacité Maximale: <span className="font-bold">{maxCapacityKg} kg</span>
-                  </p>
+                  {/* Indicateur IoT (Badge Absolu) */}
+                  {isIotConnected && (
+                      <div className="absolute top-4 right-4 z-10 flex items-center gap-1.5 px-2.5 py-1 bg-blue-50/90 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm border border-blue-100 dark:border-blue-800">
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                          </span>
+                          IoT Online
+                      </div>
+                  )}
 
-                  <div className="flex justify-around w-full mb-4">
-                    <GaugeBottle
-                      quantity={theoreticalQuantity}
-                      maxCapacity={maxCapacityKg}
-                      label="Théorique"
-                    />
-                    <GaugeBottle
-                      quantity={actualQuantity}
-                      maxCapacity={maxCapacityKg}
-                      label="Relevé"
-                    />
-                  </div>
+                  <div className="p-5">
+                    {/* En-tête Carte */}
+                    <div className="mb-4">
+                        <h2 className="text-lg font-bold text-gray-800 dark:text-white truncate" title={citerneName}>
+                            {citerneName}
+                        </h2>
+                        <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            <FontAwesomeIcon icon={faWarehouse} className="mr-1.5 opacity-70" />
+                            {agencyName}
+                        </div>
+                    </div>
 
-                  <p className={`text-sm mt-3 ${discrepancyColorClass}`}>
-                    Écart: <span className="font-bold">{discrepancy} kg</span>
-                  </p>
+                    {/* --- VISUALISEUR HYBRIDE --- */}
+                    <div className="my-2">
+                        <TankLevelVisualizer 
+                            quantity={actualQuantity}
+                            maxCapacity={maxCapacity}
+                            label={stock.article?.name || 'Produit Vrac'}
+                        />
+                    </div>
 
-                  {/* Nouveaux Boutons par carte de citerne (si vous en avez besoin ici) */}
-                  <div className="mt-4 flex flex-col sm:flex-row gap-2 w-full justify-center">
+                    {/* --- Comparatif Théorique vs Réel --- */}
+                    <div className="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-3 mb-4 border border-gray-100 dark:border-gray-600">
+                        <div className="flex justify-between items-center text-xs mb-1">
+                            <span className="text-gray-500 dark:text-gray-400">Stock Théorique</span>
+                            <span className="font-mono font-semibold text-gray-700 dark:text-gray-200">
+                                {theoreticalQuantity.toLocaleString('fr-FR')}
+                            </span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5 mb-2">
+                            <div 
+                                className="bg-gray-400 h-1.5 rounded-full" 
+                                style={{ width: `${Math.min(100, (theoreticalQuantity/maxCapacity)*100)}%` }}
+                            ></div>
+                        </div>
+                        
+                        <div className="flex justify-between items-center text-xs pt-1 border-t border-gray-200 dark:border-gray-600">
+                            <span className="text-gray-500">Écart constatée</span>
+                            <span className={`font-bold font-mono ${isDiscrepancyNegative ? 'text-red-500' : 'text-green-500'}`}>
+                                {discrepancy > 0 ? '+' : ''}{discrepancy.toLocaleString('fr-FR')}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* --- Zone d'Actions (Relevé de stock) --- */}
+                    <div>
+                        {isIotConnected ? (
+                            // CAS 1: Connecté à une sonde -> Pas de saisie manuelle
+                            <div className="flex flex-col items-center justify-center p-3 text-center bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-800/30">
+                                <FontAwesomeIcon icon={faWifi} className="text-blue-500 text-lg mb-1" />
+                                <p className="text-xs font-semibold text-blue-700 dark:text-blue-300">
+                                    Niveau Automatisé
+                                </p>
+                            </div>
+                        ) : (
+                            // CAS 2: Manuel -> Bouton de relevé disponible
+                            <button
+                                onClick={() => openEditStockModal(stock, 'actual')}
+                                className="w-full flex items-center justify-center gap-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 font-semibold py-2.5 px-4 rounded-xl transition-all shadow-sm hover:shadow active:scale-[0.98] text-sm"
+                            >
+                                <FontAwesomeIcon icon={faClipboardCheck} className="text-blue-500" />
+                                Relever Stock Physique
+                            </button>
+                        )}
+                    </div>
+
                   </div>
                 </div>
               );
             })}
           </div>
         ) : (
-          <div className="text-center py-10 text-gray-600 dark:text-gray-400">
-            <p className="text-lg">Aucun stock de citerne n'est disponible pour le moment, monsieur. 😔</p>
+          /* État Vide */
+          <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
+            <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-full mb-4">
+                <FontAwesomeIcon icon={faIndustry} className="text-3xl text-gray-400" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">Aucune citerne de production</h3>
+            <p className="text-gray-500 text-sm mt-1">Aucun stock de matière première n'est disponible.</p>
           </div>
         )}
       </div>
 
-      {/* Les modals */}
+      {/* --- Modales --- */}
       <ReceptionFormModal
         isOpen={isReceptionModalOpen}
         onClose={closeReceptionModal}
@@ -188,19 +240,18 @@ const ProdCiterne = ({ stocks, articles,articlesProd, citernes, agencies, citern
         agencies={agencies}
       />
 
-      {/* La modal de modification de stock (utilisée pour les deux actions) */}
       <EditCiterneStockModal
         isOpen={isEditStockModalOpen}
         onClose={closeEditStockModal}
         stockToEdit={selectedStock}
       />
 
-      {/* La modal de Production de Bouteilles (NOUVELLE) */}
       <ProductionBottleModal
         isOpen={isProductionBottleModalOpen}
         onClose={closeProductionBottleModal}
         articles={articlesProd}
-        title="Enregistrer une Production de Bouteilles"
+        title="Lancer une Production"
+         mobileCisterns = {citernesMobiles}
         cisterns={citernesFixes}
       />
     </>

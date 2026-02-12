@@ -2,104 +2,89 @@
 
 namespace App\Exports;
 
-use App\Models\ProductionHistory; // N'oubliez pas d'importer votre modèle
-use Illuminate\Support\Carbon; // Pour formater les dates
-
-// Importations nécessaires de Maatwebsite\Excel
-use Maatwebsite\Excel\Concerns\FromCollection;
+use App\Models\ProductionHistory;
+use Illuminate\Support\Carbon;
+use Maatwebsite\Excel\Concerns\FromQuery; // <-- Changement pour la performance
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\Exportable; // Pour l'utilisation du trait Exportable
+use Maatwebsite\Excel\Concerns\Exportable;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize; // <-- Pour des colonnes jolies
 
-class ProductionHistoryExcelExport implements FromCollection, WithHeadings, WithMapping
+class ProductionHistoryExcelExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSize
 {
-    use Exportable; // Permet d'utiliser des méthodes comme Excel::download()
+    use Exportable;
 
-    // Propriétés pour stocker les filtres passés au constructeur
-    protected $agency_id;
-    protected $article_id;
-    protected $citerne_id;
-    protected $start_date;
-    protected $end_date;
+    protected $query;
 
     /**
-     * Le constructeur reçoit les IDs des filtres et les dates.
+     * On injecte directement le Query Builder préparé dans le contrôleur.
+     * C'est beaucoup plus léger et évite de dupliquer la logique de filtrage.
+     * * @param \Illuminate\Database\Eloquent\Builder $query
      */
-    public function __construct($agency_id, $article_id, $citerne_id, $start_date, $end_date)
+    public function __construct($query)
     {
-        $this->agency_id = $agency_id;
-        $this->article_id = $article_id;
-        $this->citerne_id = $citerne_id;
-        $this->start_date = $start_date;
-        $this->end_date = $end_date;
+        $this->query = $query;
     }
 
     /**
-     * La méthode 'collection' est responsable de la récupération des données.
-     * Elle applique les filtres pour récupérer l'historique de production.
-     *
-     * @return \Illuminate\Support\Collection
+     * Retourne la requête pour que Laravel Excel gère le "chunking" (traitement par lots).
      */
-    public function collection()
+    public function query()
     {
-        $query = ProductionHistory::query()
-            ->with(['agency', 'article', 'citerne', 'user']); // Charge les relations
-
-        // Applique les filtres si présents
-        if ($this->agency_id) {
-            $query->where('agency_id', $this->agency_id);
-        }
-        if ($this->article_id) {
-            $query->where('article_id', $this->article_id);
-        }
-        if ($this->citerne_id) {
-            $query->where('source_citerne_id', $this->citerne_id);
-        }
-        if ($this->start_date) {
-            $query->whereDate('created_at', '>=', $this->start_date);
-        }
-        if ($this->end_date) {
-            $query->whereDate('created_at', '<=', $this->end_date);
-        }
-
-        return $query->get(); // Retourne la collection de ProductionHistory
+        return $this->query;
     }
 
     /**
-     * La méthode 'headings' définit les en-têtes de colonnes pour le fichier Excel.
-     *
-     * @return array
+     * En-têtes du fichier Excel.
      */
     public function headings(): array
     {
         return [
             'ID',
-            'Date de Production',
-            'Citerne Source',
-            'Article Produit',
-            'Quantité Produite',
+            'Date & Heure',
+            'Source (Vrac)',      // Citerne ou Camion
+            'Produit Fini',       // Article
+            'Quantité (Unités)',
+            'Poids Total (Kg)',   // Ajouté car important pour la compta matière
             'Agence',
-            'Enregistré par',
+            'Opérateur',
+            'Statut'              // Pour voir si c'est supprimé (SoftDeleted)
         ];
     }
 
     /**
-     * La méthode 'map' définit comment chaque enregistrement de données est mappé à une ligne Excel.
-     * Cela vous permet de formater les données et d'inclure des relations.
-     *
-     * @param mixed $move L'enregistrement ProductionHistory actuel
-     * @return array
+     * Mappage des données pour chaque ligne.
+     * C'est ici qu'on gère la logique d'affichage (Fixe vs Mobile).
      */
     public function map($move): array
     {
+        // 1. Détermination de la Source (Citerne ou Véhicule)
+        $sourceName = 'N/A';
+        
+        if ($move->source_citerne_id && $move->citerne) {
+            $sourceName = "[Citerne] " . $move->citerne->name;
+        } elseif ($move->vehicle_id && $move->vehicle) {
+            $sourceName = "[Camion] " . $move->vehicle->licence_plate;
+        }
+
+        // 2. Nom de l'opérateur complet
+        $userName = $move->user 
+            ? $move->user->last_name . ' ' . $move->user->first_name 
+            : 'Inconnu';
+
+        // 3. Statut (Actif ou Supprimé)
+        $status = $move->deleted_at ? 'SUPPRIMÉ' : 'Valide';
+
         return [
             $move->id,
-            Carbon::parse($move->created_at)->format('d/m/Y H:i'), // Formatage de la date
-            $move->citerne->name ?? 'N/A', // Accède au nom de la citerne via la relation
-            $move->article->name ?? 'N/A', // Accède au nom de l'article via la relation
+            Carbon::parse($move->created_at)->format('d/m/Y H:i'),
+            $sourceName,
+            $move->article->name ?? 'Article supprimé',
             $move->quantity_produced,
-            $move->agency->name ?? 'N/A', // Accède au nom de l'agence via la relation
-            $move->user->first_name ?? 'N/A', // Accède au nom de l'utilisateur via la relation
+            $move->total_weight_produced, // Poids total consommé
+            $move->agency->name ?? 'N/A',
+            $userName,
+            $status
         ];
     }
 }

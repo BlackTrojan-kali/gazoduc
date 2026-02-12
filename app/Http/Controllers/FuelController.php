@@ -159,6 +159,7 @@ class FuelController extends Controller
             return back()->withErrors(['error' => "Erreur : " . $e->getMessage()]);
         }
     }
+    
     public function history(Request $request){
         $fuelSales = FuelSale::with("article","user","agency","pompe","client")->paginate(350);
   

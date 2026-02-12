@@ -13,12 +13,15 @@ return new class extends Migration
     {
         Schema::create('production_histories', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger("source_citerne_id");
+            $table->unsignedBigInteger("source_citerne_id")->nullable();
+            $table->unsignedBigInteger("vehicle_id")->nullable();
+            $table->foreign("vehicle_id")->on("vehicules")->references("id");
             $table->foreign("source_citerne_id")->on("citernes")->references("id");
             $table->unsignedBigInteger("article_id");
             $table->foreign("article_id")->on("articles")->references("id");
             $table->decimal("quantity_produced");
             $table->decimal("total_weight_produced")->nullable();
+            $table->decimal("stock_citern")->nullable();
             $table->unsignedBigInteger("production_movement_id")->nullable();
             $table->foreign("production_movement_id")->on("mouvements")->references("id");
             $table->unsignedBigInteger("agency_id");

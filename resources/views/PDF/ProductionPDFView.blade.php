@@ -2,236 +2,232 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Historique des Productions - Rapport</title>
+    <title>Rapport de Production</title>
     <style>
-        /* Styles CSS pour le PDF */
+        @page { margin: 100px 25px 60px 25px; } /* Marges : Haut Droite Bas Gauche */
         body {
-            font-family: 'DejaVu Sans', sans-serif; /* Utilisez 'DejaVu Sans' pour la compatibilité avec Dompdf et les caractères spéciaux */
-            font-size: 10px;
-            margin: 30px; /* Marges plus généreuses */
-            color: #333;
-        }
-        .header {
-            text-align: center;
-            margin-bottom: 25px;
-            border-bottom: 2px solid #eee; /* Ligne de séparation */
-            padding-bottom: 15px;
-            position: relative; /* Pour positionner le logo */
-        }
-        .header h1 {
-            font-size: 24px;
-            color: #2c3e50; /* Couleur plus foncée */
-            margin: 0;
-            padding: 0;
-            text-transform: uppercase;
-        }
-        .header p {
-            font-size: 11px;
-            color: #7f8c8d;
-            margin-top: 8px;
-        }
-        .logo {
-            position: absolute;
-            top: 0;
-            left: 0;
-            max-height: 60px; /* Taille du logo */
-            width: auto;
-        }
-        .filters {
-            margin-bottom: 25px;
-            border: 1px solid #e0e0e0;
-            padding: 15px;
-            background-color: #f9f9f9;
-            border-radius: 5px;
-        }
-        .filters h2 {
-            font-size: 14px;
-            color: #34495e;
-            margin-bottom: 10px;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 5px;
-        }
-        .filters ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            display: flex; /* Utilisation de flexbox pour les filtres */
-            flex-wrap: wrap; /* Permet aux filtres de passer à la ligne */
-            gap: 15px 30px; /* Espace entre les éléments */
-        }
-        .filters li {
-            font-size: 11px;
-            color: #555;
-            flex: 1 1 calc(33% - 20px); /* 3 colonnes, ajusté pour le gap */
-            min-width: 180px; /* Taille minimale pour éviter un chevauchement excessif */
-        }
-        .filters li strong {
-            color: #333;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.05); /* Ombre légère pour le tableau */
-        }
-        th, td {
-            border: 1px solid #e0e0e0; /* Bordure plus douce */
-            padding: 10px;
-            text-align: left;
-            vertical-align: top;
-        }
-        th {
-            background-color: #eceff1; /* Couleur d'en-tête */
-            font-weight: bold;
-            color: #2c3e50;
-            text-transform: uppercase;
-            font-size: 10px;
-        }
-        tbody tr:nth-child(even) {
-            background-color: #fcfcfc; /* Rayures pour la lisibilité */
-        }
-        tbody tr:hover {
-            background-color: #f5f5f5; /* Effet hover léger */
-        }
-        /* Nouvelle classe pour les lignes supprimées */
-        .deleted-row {
-            background-color: #fcebeb; /* Fond rouge très clair */
-            text-decoration: line-through; /* Optionnel : barrer le texte */
-            color: #a0a0a0; /* Optionnel : griser le texte */
-        }
-        .no-data {
-            text-align: center;
-            padding: 30px;
-            color: #999;
-            font-style: italic;
-        }
-        .table-footer {
-            background-color: #e0e7ee; /* Couleur de fond pour le total */
-            font-weight: bold;
-            text-align: right;
-            padding: 10px;
-            border-top: 2px solid #ccc; /* Ligne plus épaisse au-dessus du total */
-        }
-        .table-footer td {
-            border: none; /* Pas de bordure pour les cellules du pied de tableau */
-            padding: 10px;
-        }
-        .total-label {
-            text-align: right;
-            padding-right: 10px; /* Espace avant le libellé total */
-        }
-        .total-value {
-            text-align: left; /* Alignement de la valeur du total */
-            white-space: nowrap; /* Empêche le retour à la ligne du total */
-        }
-        .footer {
-            position: fixed; /* Fixe le pied de page */
-            bottom: 20px;
-            left: 0;
-            right: 0;
-            text-align: center;
+            font-family: 'DejaVu Sans', sans-serif;
             font-size: 9px;
-            color: #777;
-            border-top: 1px solid #eee; /* Ligne de séparation */
-            padding-top: 10px;
+            color: #1a202c;
         }
+        
+        /* --- HEADER FIXE --- */
+        header {
+            position: fixed;
+            top: -80px;
+            left: 0px;
+            right: 0px;
+            height: 80px;
+            border-bottom: 2px solid #3182ce;
+            padding-bottom: 10px;
+        }
+        .company-info { float: right; text-align: right; font-size: 8px; color: #718096; }
+        .title { text-align: center; position: absolute; width: 100%; top: 10px; }
+        .title h1 { margin: 0; font-size: 18px; text-transform: uppercase; color: #2d3748; }
+        .title p { margin: 2px 0 0; font-size: 10px; color: #718096; }
+
+        /* --- FOOTER FIXE --- */
+        footer {
+            position: fixed; 
+            bottom: -40px; 
+            left: 0px; 
+            right: 0px;
+            height: 30px;
+            border-top: 1px solid #e2e8f0;
+            text-align: center;
+            line-height: 25px;
+            font-size: 8px;
+            color: #a0aec0;
+        }
+
+        /* --- FILTRES --- */
+        .filters {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f7fafc;
+            border: 1px solid #edf2f7;
+            border-radius: 4px;
+        }
+        .filter-item { display: inline-block; margin-right: 20px; font-size: 9px; }
+        .filter-label { font-weight: bold; color: #4a5568; }
+
+        /* --- TABLEAU --- */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th {
+            background-color: #ebf8ff;
+            color: #2c5282;
+            font-weight: bold;
+            text-transform: uppercase;
+            padding: 6px;
+            border: 1px solid #cbd5e0;
+            font-size: 8px;
+            vertical-align: middle;
+        }
+        td {
+            padding: 6px;
+            border: 1px solid #e2e8f0;
+            vertical-align: middle;
+        }
+        /* Zébrure */
+        tr:nth-child(even) { background-color: #f8fafc; }
+        
+        /* Lignes supprimées */
+        .deleted { 
+            background-color: #fff5f5 !important; 
+            color: #c53030; 
+            text-decoration: line-through; 
+        }
+        
+        /* Totaux */
+        .total-row { background-color: #2d3748; color: white; font-weight: bold; }
+        .total-row td { border: 1px solid #2d3748; }
+        
+        /* Alignements */
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
     </style>
 </head>
 <body>
-    <div class="header">
-        @if(file_exists(public_path('images/your-company-logo.png'))) {{-- Mettez votre vrai chemin de logo --}}
-            <img src="{{ public_path('images/your-company-logo.png') }}" class="logo" alt="Logo Entreprise">
-        @endif
-        <h1>Rapport d'Historique des Productions</h1>
-        <p>Généré le : {{ \Carbon\Carbon::now()->locale('fr')->isoFormat('dddd D MMMM YYYY [à] HH:mm') }}</p>
-    </div>
+
+    <header>
+        {{-- Emplacement Logo (décommenter si besoin) --}}
+        {{-- <img src="{{ public_path('images/logo.png') }}" style="max-height: 50px; float: left;"> --}}
+        
+        <div class="title">
+            <h1>Historique de Production</h1>
+            <p>Généré le {{ now()->format('d/m/Y à H:i') }}</p>
+        </div>
+        
+        <div class="company-info">
+            <strong>IKAROOTECH ERP</strong><br>
+            Rapport Officiel<br>
+        </div>
+    </header>
+
+    <footer>
+        Document confidentiel généré automatiquement
+    </footer>
 
     <div class="filters">
-        <h2>Filtres Appliqués</h2>
-        <ul>
-            <li>
-                <strong>Agence :</strong>
-                {{ $filters['agency_id'] ? \App\Models\Agency::find($filters['agency_id'])->name : 'Toutes les agences' }}
-            </li>
-            <li>
-                <strong>Article :</strong>
-                {{ $filters['article_id'] ? \App\Models\Article::find($filters['article_id'])->name : 'Tous les articles' }}
-            </li>
-            <li>
-                <strong>Citerne :</strong>
-                {{ $filters['citerne_id'] ? \App\Models\Citerne::find($filters['citerne_id'])->name : 'Toutes les citernes' }}
-            </li>
-            <li>
-                <strong>Date de début :</strong>
-                {{ $filters['start_date'] ? \Carbon\Carbon::parse($filters['start_date'])->format('d/m/Y') : 'Non spécifiée' }}
-            </li>
-            <li>
-                <strong>Date de fin :</strong>
-                {{ $filters['end_date'] ? \Carbon\Carbon::parse($filters['end_date'])->format('d/m/Y') : 'Non spécifiée' }}
-            </li>
-        </ul>
+        {{-- CORRECTION ICI : On affiche directement les dates car elles sont déjà formatées en String par le contrôleur --}}
+        <span class="filter-item">
+            <span class="filter-label">Période :</span> 
+            {{ $filters['start_date'] }} au {{ $filters['end_date'] }}
+        </span>
+        
+        @if(!empty($filters['agency_id']))
+            <span class="filter-item">
+                <span class="filter-label">Agence :</span> 
+                {{ \App\Models\Agency::find($filters['agency_id'])->name ?? 'N/A' }}
+            </span>
+        @endif
+        
+        @if(!empty($filters['article_id']))
+            <span class="filter-item">
+                <span class="filter-label">Article :</span> 
+                {{ \App\Models\Article::find($filters['article_id'])->name ?? 'N/A' }}
+            </span>
+        @endif
+
+        @if(!empty($filters['citerne_id']))
+            <span class="filter-item">
+                <span class="filter-label">Citerne :</span> 
+                {{ \App\Models\Citerne::find($filters['citerne_id'])->name ?? 'N/A' }}
+            </span>
+        @endif
     </div>
 
     <table>
         <thead>
             <tr>
-                <th>ID</th>
-                <th>Date Production</th>
-                <th>Citerne Source</th>
-                <th>Article Produit</th>
-                <th>Quantité</th>
-                <th>Agence</th>
-                <th>Enregistré par</th>
-                <th>Statut</th>
+                <th width="12%">Date</th>
+                <th width="20%">Source (Vrac)</th>
+                <th width="20%">Produit Fini</th>
+                <th width="10%" class="text-center">Qté (U)</th>
+                <th width="12%" class="text-right">Poids (Kg)</th>
+                <th width="15%">Agence</th>
+                <th width="11%">Opérateur</th>
             </tr>
         </thead>
         <tbody>
+            @php 
+                $totalQty = 0; 
+                $totalWeight = 0; 
+            @endphp
+
             @forelse($prodMoves as $move)
-                <tr @if($move->deleted_at) class="deleted-row" @endif>
-                    <td>{{ $move->id }}</td>
-                    <td>{{ \Carbon\Carbon::parse($move->created_at)->format('d/m/Y H:i') }}</td>
-                    <td>{{ $move->citerne->name ?? 'N/A' }}</td>
-                    <td>{{ $move->article->name ?? 'N/A' }}</td>
-                    <td>{{ $move->quantity_produced }}</td>
-                    <td>{{ $move->agency->name ?? 'N/A' }}</td>
-                    {{-- Assurez-vous que la relation est bien 'user' et non 'recorded_by_user' si le modèle est ProductionHistory --}}
-                    <td>{{ $move->user->first_name ?? 'N/A' }}</td>
+                @php
+                    // 1. Détermination du nom de la source (Citerne ou Camion)
+                    $sourceName = 'Source Inconnue';
+                    if ($move->source_citerne_id && $move->citerne) {
+                        $sourceName = '[Citerne] ' . $move->citerne->name;
+                    } elseif ($move->vehicle_id && $move->vehicle) {
+                        $sourceName = '[Camion] ' . $move->vehicle->licence_plate;
+                    }
+
+                    // 2. Calcul des totaux (On exclut les éléments supprimés du total)
+                    if (!$move->deleted_at) {
+                        $totalQty += $move->quantity_produced;
+                        $totalWeight += $move->total_weight_produced;
+                    }
+                @endphp
+
+                <tr class="{{ $move->deleted_at ? 'deleted' : '' }}">
                     <td>
-                        @if($move->deleted_at)
-                            <span style="color: red; font-weight: bold;">Supprimé</span>
+                        {{-- Ici ->format() fonctionne car $move->created_at est un objet Carbon --}}
+                        {{ $move->created_at->format('d/m/Y') }}<br>
+                        <small style="color: #718096">{{ $move->created_at->format('H:i') }}</small>
+                    </td>
+                    <td>{{ $sourceName }}</td>
+                    <td>{{ $move->article->name ?? 'N/A' }}</td>
+                    <td class="text-center" style="font-weight: bold;">
+                        {{ number_format($move->quantity_produced, 0, ',', ' ') }}
+                    </td>
+                    <td class="text-right">
+                        {{ number_format($move->total_weight_produced, 2, ',', ' ') }}
+                    </td>
+                    <td>{{ $move->agency->name ?? 'N/A' }}</td>
+                    <td>
+                        @if($move->user)
+                            {{ Str::limit($move->user->last_name, 10) }} {{ substr($move->user->first_name, 0, 1) }}.
                         @else
-                            <span>Actif</span>
+                            N/A
                         @endif
                     </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="8" class="no-data">Aucune production trouvée pour les critères sélectionnés.</td>
+                    <td colspan="7" class="text-center" style="padding: 20px; color: #718096; font-style: italic;">
+                        Aucune production trouvée pour les critères sélectionnés.
+                    </td>
                 </tr>
             @endforelse
         </tbody>
-        <tfoot>
-            <tr>
-                <td colspan="4" class="table-footer total-label">Total des quantités produites :</td>
-                <td class="table-footer total-value">{{ $prodMoves->sum('quantity_produced') }}</td>
-                <td colspan="3" class="table-footer"></td> {{-- Colonnes vides pour alignement --}}
-            </tr>
-        </tfoot>
+        
+        {{-- Affichage du Total si des données existent --}}
+        @if($prodMoves->count() > 0)
+            <tfoot>
+                <tr class="total-row">
+                    <td colspan="3" class="text-right">TOTAUX PÉRIODE (Actifs) :</td>
+                    <td class="text-center">{{ number_format($totalQty, 0, ',', ' ') }}</td>
+                    <td class="text-right">{{ number_format($totalWeight, 2, ',', ' ') }} kg</td>
+                    <td colspan="2"></td>
+                </tr>
+            </tfoot>
+        @endif
     </table>
-
-    <div class="footer">
-        Rapport généré par Votre Application. Page <span class="page-number"></span> sur <span class="total-pages"></span>
-    </div>
 
     <script type="text/php">
         if (isset($pdf)) {
-            $font = $fontMetrics->getFont("DejaVu Sans"); /* Utilisez la même police que le body */
-            $size = 9;
-            $pageText = "Page {PAGE_NUM} sur {PAGE_COUNT}";
-            $y = $pdf->get_height() - 25;
-            $x = $pdf->get_width() - 150; /* Position à droite */
-            $pdf->page_text($x, $y, $pageText, $font, $size);
+            $text = "Page {PAGE_NUM} / {PAGE_COUNT}";
+            $size = 8;
+            $font = $fontMetrics->getFont("DejaVu Sans");
+            $width = $fontMetrics->get_text_width($text, $font, $size) / 2;
+            $x = ($pdf->get_width() - $width) / 2;
+            $y = $pdf->get_height() - 25; // Position en bas
+            $pdf->page_text($x, $y, $text, $font, $size, array(0.6, 0.6, 0.6));
         }
     </script>
+
 </body>
 </html>

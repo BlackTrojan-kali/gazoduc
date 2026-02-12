@@ -15,6 +15,13 @@ class Mouvement extends Model
         'entreprise_id',
         'recorded_by_user_id',
         'movement_type',
+        "stock",
+        "source_location",
+        "destination_location",
+        "description",
+        'related_document_type',
+        "related_document_id",
+        "qualification",
         'quantity', // Quantité négative pour la sortie
         'facture_id',
     ];

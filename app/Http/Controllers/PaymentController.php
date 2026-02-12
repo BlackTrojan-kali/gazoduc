@@ -35,77 +35,115 @@ class PaymentController extends Controller
         }
         return inertia("Commercial/ComPayment",compact("payments","banks","agencies","clients","sales"));
     }
-     public function store(Request $request)
-    {
-        // 1. Validation des données de la requête.
-        // On s'assure que le montant total du versement correspond bien à la somme des montants des factures sélectionnées.
+   public function store(Request $request)
+{
+    // 1. Validation
+    $validated = $request->validate([
+        'client_id'         => 'required|exists:clients,id',
+        'bank_id'           => 'required|exists:banks,id',
+        'amount'            => 'required|numeric|min:0', 
+        'type'              => 'required|string', 
+        'notes'             => 'nullable|string',
+        'amount_notes'      => 'nullable|numeric|min:0',
+        'isComplement'      => 'boolean', // Important pour la logique
+        'selected_sale_ids' => 'nullable|array',
+        'selected_sale_ids.*' => 'exists:factures,id',
+    ]);
 
-     $request->validate([
-            'amount' => ['required', 'numeric', 'min:0'],
-            'client_id' => 'required',
-            "bank_id"=>"required",
-            "amount"=>"required|numeric",
-            "notes"=>"required| string",
-            "amount_notes"=>"required |numeric",
-            'type' => ['required', 'string'], // <-- Nouveau champ de validation
+    try {
+        DB::beginTransaction();
+
+        // 2. Création du Versement (Table 'payments')
+        // Ce versement est créé dans tous les cas.
+        $payment = Payment::create([
+            "user_id"      => Auth::id(),
+            "agency_id"    => Auth::user()->agency_id,
+            "bank_id"      => $validated['bank_id'],
+            "client_id"    => $validated['client_id'],
+            "amout"        => $validated['amount'],
+            "type"         => $validated['type'],
+            "notes"        => $validated['notes'],
+            "amout_notes"  => $validated['amount_notes'],
+            "is_fuel"      => false,
+            // On pourrait stocker le fait que c'est un complément dans une colonne si nécessaire
+            // "is_deposit" => $request->boolean('isComplement'), 
         ]);
 
-        $sales = $request->input("sales");
-       
-        try {
-            // 2. Démarre une transaction de base de données pour garantir l'atomicité.
-            DB::beginTransaction();
+        // 3. LOGIQUE CONDITIONNELLE
+        // On ne fait le lettrage (association aux factures) QUE SI ce n'est PAS un complément
+        if (!$request->boolean('isComplement')) {
+            
+            // Calcul de la puissance de paiement (Cash + Justificatif)
+            $montantVerse = floatval($validated['amount']);
+            $montantJustifie = floatval($validated['amount_notes'] ?? 0);
+            $remainingPayment = $montantVerse + $montantJustifie;
 
-            // 3. Crée le nouveau versement dans la table 'payments'.
-            $payment = Payment::create([
-                "user_id"=>Auth::user()->id,
-                "agency_id"=>Auth::user()->agency_id,
-                "bank_id"=>$request->bank_id,
-                "client_id"=>$request->client_id,
-                "amout"=>$request->amount,
-                "type"=>$request->type,
-                "notes"=>$request->notes,
-                "amout_notes"=>$request->amount_notes,
-            
-            ]);
-            // 4. Parcourt chaque facture sélectionnée pour l'associer au versement et mettre à jour son statut.
-            
-            if($sales){
-         
-            foreach ($sales as $invoiceData) {
-            
-                $facture = Facture::find($invoiceData["id"]);
+            $selectedInvoiceIds = $validated['selected_sale_ids'] ?? [];
 
-                if ($facture) {
-                    // 4a. Crée l'entrée dans la table pivot `facture_payments`.
-                    // 'attach' est une méthode Eloquent pour les relations many-to-many.
+            if (!empty($selectedInvoiceIds)) {
+                $factures = Facture::whereIn('id', $selectedInvoiceIds)
+                                   ->orderBy('created_at', 'asc')
+                                   ->get();
+
+                foreach ($factures as $facture) {
+                    // Sécurité type
+                    if ($facture->invoice_type !== $validated['type']) continue;
+                    // Arrêt si fonds épuisés
+                    if ($remainingPayment <= 0) break;
+
+                    // A. Calcul du reste à payer sur la facture
+                    $alreadyPaid = DB::table('facture_payments')
+                                     ->where('facture_id', $facture->id)
+                                     ->sum('amount');
+
+                    $amountDue = $facture->total_amount - $alreadyPaid;
+
+                    // Si facture déjà soldée, on passe
+                    if ($amountDue <= 0.01) {
+                        if ($facture->status !== 'paid') $facture->update(['status' => 'paid']);
+                        continue;
+                    }
+
+                    // B. Distribution
+                    $amountAllocated = min($remainingPayment, $amountDue);
+
+                    // C. Association
                     $payment->factures()->attach($facture->id, [
-                        'amount' => $request->amount
+                        'amount' => $amountAllocated
                     ]);
 
-                    // 4b. Met à jour le statut de la facture à "paid".
-                    $facture->status = 'paid';
+                    // D. Mise à jour statut facture
+                    $newPaidTotal = $alreadyPaid + $amountAllocated;
+                    if ($newPaidTotal >= ($facture->total_amount - 0.05)) {
+                        $facture->status = 'paid';
+                    } else {
+                        $facture->status = 'partial';
+                    }
                     $facture->save();
+
+                    // E. Déduction
+                    $remainingPayment -= $amountAllocated;
                 }
             }
-        }
-            // 5. Valide la transaction si toutes les opérations ont réussi.
-            DB::commit();
+        } 
+        // SINON (Si isComplement est VRAI) : 
+        // On ne fait rien. Le paiement est enregistré "en l'air" (non lettré).
+        // Il apparaîtra dans le solde du client mais ne soldera aucune facture spécifique.
 
-            // 6. Redirige avec un message de succès (pour Inertia).
-            return back()->with('success', 'Versement enregistré et factures mises à jour avec succès, monsieur!');
+        DB::commit();
 
-        } catch (Exception $e) {
-            // 7. En cas d'erreur, annule toutes les opérations.
-            DB::rollBack();
+        $message = $request->boolean('isComplement') 
+            ? 'Versement complémentaire enregistré avec succès.' 
+            : 'Règlement enregistré et factures mises à jour.';
 
-            // Enregistre l'erreur pour le débogage.
-            Log::error('Erreur lors du traitement du versement : ' . $e->getMessage());
+        return back()->with('success', $message);
 
-            // 8. Retourne une erreur à l'utilisateur.
-            return back()->with('error','Une erreur est survenue lors de l\'enregistrement du versement. Veuillez réessayer.' . $e->getMessage());
-        }
-    } 
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Erreur paiement: ' . $e->getMessage());
+        return back()->with('error', 'Erreur système: ' . $e->getMessage());
+    }
+} 
     public function update(Request $request,$PID){
           $request->validate([
             'client_id' => 'required',

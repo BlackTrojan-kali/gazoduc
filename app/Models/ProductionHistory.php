@@ -9,7 +9,18 @@ class ProductionHistory extends Model
 {
     use SoftDeletes;
     //
-
+    protected $fillable =[
+ "source_citerne_id",
+   "vehicle_id",
+   "article_id",
+   "quantity_produced",
+   "total_weight_produced",
+   "production_movement_id",
+   "agency_id",
+    "recorded_by_user_id",
+    "stock_citern",
+           
+    ];
     public function agency(){
         return $this->belongsTo(Agency::class,"agency_id");
     }
@@ -26,5 +37,8 @@ class ProductionHistory extends Model
     }
     public function user(){
         return $this->belongsTo(User::class,"recorded_by_user_id");
+    }
+    public function vehicle(){
+        return $this->belongsTo(Vehicule::class,"vehicle_id");
     }
 }

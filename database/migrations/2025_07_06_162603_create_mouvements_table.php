@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger("article_id");
             $table->unsignedBigInteger("agency_id");
-            $table->unsignedBigInteger("entreprise_id");
+            $table->unsignedBigInteger("entreprise_id")->nullable();
             $table->unsignedBigInteger("recorded_by_user_id");
             $table->string("movement_type");
             $table->decimal("quantity");

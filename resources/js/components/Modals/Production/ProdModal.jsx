@@ -1,220 +1,249 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from '@inertiajs/react';
-import Modal from '../Modal'; // Votre composant de modale générique
-import InputField from "../../form/input/InputField"; // Votre composant InputField
-import Button from '../../ui/button/Button'; // Votre composant Button
-import Swal from 'sweetalert2'; // Pour les notifications
-import Select from 'react-select'; // Pour les sélecteurs améliorés
+import Modal from '../Modal';
+import InputField from "../../form/input/InputField";
+import Button from '../../ui/button/Button';
+import Swal from 'sweetalert2';
+import Select from 'react-select';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBottleWater, faSpinner } from '@fortawesome/free-solid-svg-icons'; // Icônes pertinentes
+import { 
+    faBottleWater, 
+    faSpinner, 
+    faIndustry, 
+    faTruckDroplet 
+} from '@fortawesome/free-solid-svg-icons';
 
-// Props attendues :
-// isOpen: boolean - pour contrôler l'ouverture/fermeture de la modal
-// onClose: function - callback pour fermer la modal
-// title: string - titre de la modal (ex: "Produire des Bouteilles Pleines")
-// cisterns: array - liste des citernes au format { id: number, name: string }
-// articles: array - NOUVEAU: liste des articles au format { id: number, name: string }
-// currentProduction: object - données de production actuelles pour pré-remplir le formulaire (optionnel)
-
-const ProductionBottleModal = ({ isOpen, onClose, title, cisterns, articles, currentProduction }) => { // AJOUT DE 'articles' ici
-    const { data, setData, post, processing, errors, reset } = useForm({
-        cistern_id: currentProduction?.cistern_id || '', // ID de la citerne sélectionnée
-        article_id: currentProduction?.article_id || '', // NOUVEAU: ID de l'article (bouteille pleine)
-        quantity_produced: currentProduction?.quantity_produced || '', // Nombre de bouteilles à produire
+const ProductionBottleModal = ({ 
+    isOpen, 
+    onClose, 
+    title, 
+    cisterns = [],        // Citernes Fixes
+    mobileCisterns = [],  // Camions / Véhicules (Nouveau prop)
+    articles = []         // Articles (Bouteilles)
+}) => {
+    
+    // --- 1. Initialisation du Formulaire ---
+    const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
+        source_type: 'fixed', // 'fixed' ou 'mobile'
+        source_citerne_id: '',
+        vehicle_id: '',
+        article_id: '',
+        quantity_produced: '',
     });
 
-    // Options pour react-select des citernes
-    const cisternOptions = Array.isArray(cisterns)
-        ? cisterns.map(cistern => ({ value: String(cistern.id), label: cistern.name }))
-        : [];
+    // --- 2. Préparation des Options pour les Selects ---
+    
+    // Options Citernes Fixes
+    const fixedOptions = cisterns.map(c => ({ 
+        value: String(c.id), 
+        label: `${c.name} (${c.article?.name || 'Vrac'})` 
+    }));
 
-    // NOUVEAU: Options pour react-select des articles
-    const articleOptions = Array.isArray(articles)
-        ? articles.map(article => ({ value: String(article.id), label: article.name }))
-        : [];
+    // Options Camions (Mobiles)
+    const mobileOptions = mobileCisterns.map(v => ({ 
+        value: String(v.id), 
+        label: `${v.brand} - ${v.licence_plate} (${v.capacity_liters}L)` 
+    }));
 
-    // Réinitialise le formulaire lors de l'ouverture de la modal
+    // Options Articles (Bouteilles)
+    const articleOptions = articles.map(a => ({ 
+        value: String(a.id), 
+        label: `${a.name} (${a.weight_per_unit || '?'} kg)` 
+    }));
+
+    // --- 3. Gestionnaires ---
+
     useEffect(() => {
         if (isOpen) {
-            reset({
-                cistern_id: currentProduction?.cistern_id || '',
-                article_id: currentProduction?.article_id || '', // NOUVEAU: réinitialiser aussi l'article
-                quantity_produced: currentProduction?.quantity_produced || '',
-            });
+            // Reset partiel ou total à l'ouverture si besoin
+        } else {
+            reset();
+            clearErrors();
         }
-    }, [isOpen, reset, currentProduction]);
+    }, [isOpen]);
 
-    // Gère les changements pour les champs InputField
-    const handleChange = (e) => {
-        const { id, value } = e.target;
-        setData(id, value);
+    // Changement du type de source (Fixe vs Mobile)
+    const handleSourceTypeChange = (type) => {
+        setData(d => ({
+            ...d,
+            source_type: type,
+            source_citerne_id: '', // On vide la sélection précédente
+            vehicle_id: ''
+        }));
     };
 
-    // Gère les changements pour les champs Select (react-select)
-    const handleSelectChange = (selectedOption, { name }) => {
-        setData(name, selectedOption ? selectedOption.value : '');
-    };
-
-    // Soumission du formulaire pour enregistrer la production
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        // Validation simple côté client
-        if (!data.cistern_id) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Citerne Requise',
-                text: 'Veuillez sélectionner la citerne source, monsieur.',
-            });
-            return;
+        // Validation Frontend
+        if (data.source_type === 'fixed' && !data.source_citerne_id) {
+            return Swal.fire('Erreur', 'Veuillez sélectionner une citerne fixe source.', 'warning');
         }
-        if (!data.article_id) { // NOUVELLE VALIDATION pour l'article
-            Swal.fire({
-                icon: 'warning',
-                title: 'Article Requis',
-                text: 'Veuillez sélectionner le type de bouteille produite, monsieur.',
-            });
-            return;
+        if (data.source_type === 'mobile' && !data.vehicle_id) {
+            return Swal.fire('Erreur', 'Veuillez sélectionner un camion source.', 'warning');
+        }
+        if (!data.article_id) {
+            return Swal.fire('Erreur', 'Veuillez sélectionner le type de bouteille.', 'warning');
         }
         if (!data.quantity_produced || data.quantity_produced <= 0) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Quantité Requise',
-                text: 'Veuillez entrer un nombre valide de bouteilles à produire (supérieur à zéro), monsieur.',
-            });
-            return;
+            return Swal.fire('Erreur', 'La quantité doit être supérieure à 0.', 'warning');
         }
 
-        // Envoi des données au backend
-        post(route('prod.produce'), {
+        post(route('prod.produce'), { // Assurez-vous que la route est correcte
             onSuccess: () => {
-             
+                Swal.fire('Succès', 'Production enregistrée avec succès.', 'success');
                 onClose();
             },
-            onError: (formErrors) => {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Erreur de Production',
-                    text: 'Une erreur est survenue lors de l\'enregistrement de la production. Veuillez vérifier les informations et réessayer.',
-                });
-                console.error("Erreurs de formulaire:", formErrors);
-            },
+            onError: (err) => {
+                console.error(err);
+                Swal.fire('Erreur', 'Vérifiez les données saisies.', 'error');
+            }
         });
     };
 
-    // Déterminer la valeur sélectionnée pour react-select
-    const selectedCisternOption = cisternOptions.find(option => option.value === data.cistern_id);
-    const selectedArticleOption = articleOptions.find(option => option.value === data.article_id); // NOUVEAU: pour l'article
-
-    // Définition des variables CSS pour les couleurs
-    const colors = {
-      '--text-color': 'rgb(31 41 55)', // Gris foncé pour le mode clair
-      '--placeholder-color': 'rgb(107 114 128)', // Gris moyen
-      '--border-color': 'rgb(209 213 219)',
-      '--bg-menu': 'rgb(255 255 255)',
-      '--bg-option-hover': 'rgb(243 244 246)',
-    };
-    if (document.documentElement.classList.contains('dark')) {
-      colors['--text-color'] = 'rgb(249 250 251 / 0.9)'; // Blanc cassé pour le mode sombre
-      colors['--placeholder-color'] = 'rgb(156 163 175)'; // Gris pour le placeholder
-      colors['--border-color'] = 'rgb(75 85 99)';
-      colors['--bg-menu'] = 'rgb(31 41 55)';
-      colors['--bg-option-hover'] = 'rgb(55 65 81)';
-    }
-
-    // Styles personnalisés pour react-select
-    const reactSelectStyles = {
-        control: (baseStyles, state) => ({
-            ...baseStyles,
-            height: '44px',
-            minHeight: '44px',
-            borderColor: errors.cistern_id || errors.article_id ? '#EF4444' : (state.isFocused ? '#3B82F6' : 'var(--border-color)'),
-            backgroundColor: 'transparent',
-            boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
-            '&:hover': { borderColor: state.isFocused ? '#3B82F6' : 'var(--border-color)' },
+    // --- 4. Styles ---
+    const isDark = document.documentElement.classList.contains('dark');
+    const customStyles = {
+        control: (base, state) => ({
+            ...base,
+            backgroundColor: isDark ? '#1F2937' : '#fff',
+            borderColor: state.isFocused ? '#9333EA' : (isDark ? '#374151' : '#D1D5DB'), // Violet pour prod
+            color: isDark ? '#fff' : '#000',
+            minHeight: '44px'
         }),
-        singleValue: (baseStyles) => ({ ...baseStyles, color: 'var(--text-color)' }),
-        placeholder: (baseStyles) => ({ ...baseStyles, color: 'var(--placeholder-color)' }),
-        input: (baseStyles) => ({ ...baseStyles, color: 'var(--text-color)' }),
-        menu: (baseStyles) => ({ ...baseStyles, backgroundColor: 'var(--bg-menu)', zIndex: 9999 }),
-        option: (baseStyles, state) => ({
-            ...baseStyles,
-            backgroundColor: state.isSelected ? '#2563EB' : state.isFocused ? 'var(--bg-option-hover)' : 'var(--bg-menu)',
-            color: state.isSelected ? 'white' : 'var(--text-color)',
-            '&:hover': { backgroundColor: 'var(--bg-option-hover)', color: 'var(--text-color)' },
+        menu: (base) => ({ ...base, backgroundColor: isDark ? '#1F2937' : '#fff', zIndex: 9999 }),
+        singleValue: (base) => ({ ...base, color: isDark ? '#fff' : '#000' }),
+        input: (base) => ({ ...base, color: isDark ? '#fff' : '#000' }),
+        placeholder: (base) => ({ ...base, color: isDark ? '#9CA3AF' : '#6B7280' }),
+        option: (base, state) => ({
+            ...base,
+            backgroundColor: state.isSelected ? '#9333EA' : state.isFocused ? (isDark ? '#374151' : '#F3F4F6') : 'transparent',
+            color: state.isSelected ? '#fff' : (isDark ? '#fff' : '#000'),
         }),
-        indicatorSeparator: (baseStyles) => ({ ...baseStyles, backgroundColor: 'var(--border-color)' }),
-        dropdownIndicator: (baseStyles) => ({ ...baseStyles, color: 'var(--placeholder-color)' }),
-        clearIndicator: (baseStyles) => ({ ...baseStyles, color: 'var(--placeholder-color)', '&:hover': { color: '#EF4444' } }),
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={title}>
-            <form onSubmit={handleSubmit} className="space-y-4" style={colors}>
-                {/* Sélecteur de Citerne avec react-select */}
-                <div className="mb-4">
-                    <label htmlFor="cistern_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Citerne Source
+        <Modal isOpen={isOpen} onClose={onClose} title={title || "Enregistrer une Production"} maxWidth="2xl">
+            <form onSubmit={handleSubmit} className="space-y-6">
+                
+                {/* --- 1. CHOIX DE LA SOURCE (Onglets) --- */}
+                <div>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        Source de Gaz Vrac
                     </label>
-                    <Select
-                        id="cistern_id"
-                        name="cistern_id"
-                        options={cisternOptions}
-                        value={selectedCisternOption || null}
-                        onChange={handleSelectChange}
-                        placeholder="Sélectionner une citerne"
-                        isClearable={true}
-                        isSearchable={true}
-                        classNamePrefix="react-select"
-                        styles={reactSelectStyles}
-                    />
-                    {errors.cistern_id && <p className="text-sm text-red-600 mt-1">{errors.cistern_id}</p>}
+                    <div className="grid grid-cols-2 gap-3 p-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                        <button
+                            type="button"
+                            onClick={() => handleSourceTypeChange('fixed')}
+                            className={`flex items-center justify-center gap-2 py-2.5 rounded-md text-sm font-bold transition-all ${
+                                data.source_type === 'fixed'
+                                    ? 'bg-white dark:bg-gray-600 text-purple-700 dark:text-white shadow-sm'
+                                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
+                            }`}
+                        >
+                            <FontAwesomeIcon icon={faIndustry} />
+                            Citerne Usine
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => handleSourceTypeChange('mobile')}
+                            className={`flex items-center justify-center gap-2 py-2.5 rounded-md text-sm font-bold transition-all ${
+                                data.source_type === 'mobile'
+                                    ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-white shadow-sm'
+                                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
+                            }`}
+                        >
+                            <FontAwesomeIcon icon={faTruckDroplet} />
+                            Camion / Mobile
+                        </button>
+                    </div>
                 </div>
 
-                {/* NOUVEAU: Sélecteur d'Article avec react-select */}
-                <div className="mb-4">
-                    <label htmlFor="article_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Type de Bouteille Produite
-                    </label>
-                    <Select
-                        id="article_id"
-                        name="article_id"
-                        options={articleOptions}
-                        value={selectedArticleOption || null}
-                        onChange={handleSelectChange}
-                        placeholder="Sélectionner un article"
-                        isClearable={true}
-                        isSearchable={true}
-                        classNamePrefix="react-select"
-                        styles={reactSelectStyles}
-                    />
-                    {errors.article_id && <p className="text-sm text-red-600 mt-1">{errors.article_id}</p>}
+                {/* --- 2. SELECTEUR DYNAMIQUE DE SOURCE --- */}
+                <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+                    {data.source_type === 'fixed' ? (
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
+                                Sélectionner la Citerne Fixe
+                            </label>
+                            <Select
+                                options={fixedOptions}
+                                value={fixedOptions.find(opt => opt.value === data.source_citerne_id)}
+                                onChange={opt => setData('source_citerne_id', opt?.value || '')}
+                                placeholder="Choisir une citerne..."
+                                styles={customStyles}
+                                isClearable
+                            />
+                            {errors.source_citerne_id && <p className="text-red-500 text-xs mt-1">{errors.source_citerne_id}</p>}
+                        </div>
+                    ) : (
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
+                                Sélectionner le Camion
+                            </label>
+                            <Select
+                                options={mobileOptions}
+                                value={mobileOptions.find(opt => opt.value === data.vehicle_id)}
+                                onChange={opt => setData('vehicle_id', opt?.value || '')}
+                                placeholder="Choisir un véhicule..."
+                                styles={customStyles}
+                                isClearable
+                            />
+                            {errors.vehicle_id && <p className="text-red-500 text-xs mt-1">{errors.vehicle_id}</p>}
+                            <p className="text-[10px] text-orange-500 mt-1">
+                                * Aucun mouvement de stock ne sera effectué sur les citernes usine.
+                            </p>
+                        </div>
+                    )}
                 </div>
 
-                {/* Champ pour le nombre de bouteilles à produire */}
-                <InputField
-                    id="quantity_produced"
-                    type="number"
-                    label="Nombre de Bouteilles Produites"
-                    value={data.quantity_produced}
-                    onChange={handleChange}
-                    error={errors.quantity_produced}
-                    required
-                    min="1"
-                />
+                {/* --- 3. DETAILS DE PRODUCTION --- */}
+                <div className="space-y-4">
+                    {/* Article */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                            Type de Bouteille Produite <span className="text-red-500">*</span>
+                        </label>
+                        <Select
+                            options={articleOptions}
+                            value={articleOptions.find(opt => opt.value === data.article_id)}
+                            onChange={opt => setData('article_id', opt?.value || '')}
+                            placeholder="Sélectionner l'article..."
+                            styles={customStyles}
+                        />
+                        {errors.article_id && <p className="text-red-500 text-xs mt-1">{errors.article_id}</p>}
+                    </div>
 
-                <div className="flex justify-between mt-6">
+                    {/* Quantité */}
+                    <div>
+                        <InputField
+                            id="quantity_produced"
+                            type="number"
+                            label="Nombre de Bouteilles Produites"
+                            value={data.quantity_produced}
+                            onChange={(e) => setData('quantity_produced', e.target.value)}
+                            error={errors.quantity_produced}
+                            required
+                            min="1"
+                            placeholder="Ex: 50"
+                        />
+                    </div>
+                </div>
+
+                {/* --- 4. ACTIONS --- */}
+                <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
                     <button
                         type="button"
-                        variant="destructive"
-                        className="mr-2 font-bold text-red-600"
+                        onClick={onClose}
+                        className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 dark:bg-gray-800 dark:text-white dark:border-gray-600"
                         disabled={processing}
                     >
                         Annuler
                     </button>
                     <Button
                         type="submit"
-                        variant="primary"
+                        variant="primary" // Assurez-vous que votre composant Button gère cette variante, sinon utilisez className
+                        className="bg-purple-600 hover:bg-purple-700 text-white"
                         disabled={processing}
                     >
                         {processing ? (
@@ -230,6 +259,7 @@ const ProductionBottleModal = ({ isOpen, onClose, title, cisterns, articles, cur
                         )}
                     </Button>
                 </div>
+
             </form>
         </Modal>
     );
