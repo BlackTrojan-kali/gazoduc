@@ -32,14 +32,7 @@ const navItems = [
     ],
   },
   
-    {
-      icon:  <FontAwesomeIcon icon={faDriversLicense} />,
-      name: "Route",
-      subItems: [
-        { name: "chauffeurs", path: "/drivers-index", pro: false },
-        { name: "vehicules", path: "/vehicules-index", pro: false },
-      ],
-    },
+   
     {
        icon:  <FontAwesomeIcon icon={faDollar} />,
        name: "Ventes Produits",

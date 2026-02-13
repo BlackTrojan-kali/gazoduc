@@ -12,7 +12,7 @@ const LayoutContent = ({children}) => {
       <div>
         <DirBoutiqueSidebar />
         <DirBoutiqueBackdrop />
-      </div>
+      </div> 
       <div
         className={`flex-1 transition-all duration-300 ease-in-out ${
           isExpanded || isHovered ? "lg:ml-[290px]" : "lg:ml-[90px]"

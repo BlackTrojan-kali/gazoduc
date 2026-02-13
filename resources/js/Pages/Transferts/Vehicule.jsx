@@ -241,6 +241,7 @@ const PageContent = ({ vehicles }) => {
 
 const Vehicle = ({ vehicles }) =>{ 
     const {auth} = usePage().props
+    
     const {DirLicence} = useLicenceChoice();
     if(auth.user.role == "controleur"){
       return(

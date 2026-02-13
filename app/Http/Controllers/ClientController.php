@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\ClientsExport;
 use App\Models\Agency;
 use App\Models\Client;
 use App\Models\ClientCategory;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ClientController extends Controller
 {
@@ -77,161 +80,157 @@ class ClientController extends Controller
         $client->delete();
         return back()->with("warning","client deleted successfully");
     }
-  public function import(Request $request)
+public function import(Request $request)
     {
-        // 1. Validation de la requête pour s'assurer qu'un fichier est présent et valide.
         $request->validate([
-            'import_file' => 'required|mimes:csv,txt|max:2048', // Accepte les fichiers .csv et .txt jusqu'à 2 Mo
+            'import_file' => 'required|mimes:xlsx,xls,csv|max:5120',
         ]);
 
-        $file = $request->file('import_file');
-        $filePath = $file->getRealPath();
-
-        // 2. Initialisation des compteurs et du gestionnaire de fichier.
         $importedCount = 0;
-        $restoredCount = 0; // Nouveau compteur pour les clients restaurés
+        $skippedCount = 0;
         $failedCount = 0;
         $errors = [];
 
-        // 3. Définition de la transaction pour garantir l'atomicité de l'opération.
         DB::beginTransaction();
 
         try {
-            if (($handle = fopen($filePath, 'r')) !== false) {
-                // Lecture des en-têtes (première ligne)
-                $headers = fgetcsv($handle, 1000, ',');
+            // 1. Lecture du fichier
+            $array = Excel::toArray(new \stdClass(), $request->file('import_file'));
 
-                // Nettoyage des en-têtes (supprime les espaces superflus et les caractères invisibles)
-                $headers = array_map('trim', $headers);
-
-                // Vérification des en-têtes attendus
-                $expectedHeaders = ["Nom", "Type de Client", "Catégorie", "Agence","Téléphone", "Email", "Adresse", "NUI"];
-                if (array_diff($expectedHeaders, $headers) || array_diff($headers, $expectedHeaders)) {
-                    throw new \Exception("Les en-têtes du fichier CSV ne correspondent pas au format attendu. En-têtes attendus : " . implode(", ", $expectedHeaders) . ". En-têtes trouvés : " . implode(", ", $headers));
-                }
-
-                // Variable pour suivre le numéro de ligne pour les messages d'erreur
-                $lineNumber = 1; // Commence à 1 pour les en-têtes
-
-                // Boucle sur chaque ligne du fichier CSV
-                while (($data = fgetcsv($handle, 1000, ',')) !== false) {
-                    $lineNumber++; // Incrémente le numéro de ligne pour la ligne de données actuelle
-                    
-                    // Assurez-vous que le nombre de colonnes correspond aux en-têtes
-                    if (count($headers) !== count($data)) {
-                        $errors[] = "Erreur à la ligne {$lineNumber}: Le nombre de colonnes ne correspond pas aux en-têtes. Ligne ignorée.";
-                        $failedCount++;
-                        continue;
-                    }
-
-                    $row = array_combine($headers, $data);
-
-                    try {
-                        // Nettoyage des données de la ligne
-                        foreach ($row as $key => $value) {
-                            $row[$key] = trim($value);
-                        }
-
-                        // Validation minimale des champs clés pour l'identification
-                        if (empty($row['Email']) && empty($row['NUI'])) {
-                            throw new \Exception("L'adresse e-mail ou le NUI est requis pour identifier ou créer un client.");
-                        }
-
-                        // 4. Trouver ou créer la catégorie de client
-                        $categoryName = $row['Catégorie'];
-                        $agencyName = $row["Agence"];
-                        if (empty($categoryName)) {
-                            // Si la catégorie est vide, vous pouvez choisir de la définir à 'Général' ou ignorer/échouer la ligne
-                            $categoryName = 'Général'; // Exemple : assigner une catégorie par défaut
-                            // Ou lancer une exception si une catégorie est obligatoire:
-                            // throw new \Exception("Le nom de la catégorie ne peut pas être vide.");
-                        }
-                        $clientCategory = ClientCategory::firstOrCreate(['name' => $categoryName]);
-                        $agency = Agency::where("name",$agencyName)->first();
-                        // 5. Rechercher le client (actif ou soft-deleted) par Email ou NUI
-                        $client = Client::withTrashed() // Inclut les clients soft-deleted
-                                        ->where(function($query) use ($row) {
-                                            if (!empty($row['Email'])) {
-                                                $query->orWhere('email_address', $row['Email']);
-                                            }
-                                            if (!empty($row['NUI'])) {
-                                                $query->orWhere('NUI', $row['NUI']);
-                                            }
-                                        })
-                                        ->first();
-
-                        if ($client) {
-                            // Si le client existe et est soft-deleted, le restaurer
-                            if ($client->trashed()) {
-                                $client->restore();
-                                $restoredCount++;
-                                $statusMessage = "restauré et mis à jour";
-                            } else {
-                                $statusMessage = "mis à jour";
-                            }
-                            // Mettre à jour les informations du client existant
-                            $client->client_category_id = $clientCategory->id;
-                            $client->agency_id = $agency->id;
-                            $client->client_type = $row['Type de Client'];
-                            $client->name = $row['Nom'];
-                            $client->phone_number = $row['Téléphone'];
-                            $client->email_address = $row['Email'];
-                            $client->address= $row['Adresse'];
-                            $client->NUI = $row['NUI'];
-                            $client->save();
-                        } else {
-                            // Si le client n'existe pas, en créer un nouveau
-                            $client = new Client();
-                            $client->client_category_id = $clientCategory->id;
-                            $client->agency_id = $agency->id;
-                            $client->client_type = $row['Type de Client'];
-                            $client->name = $row['Nom'];
-                            $client->phone_number = $row['Téléphone'];
-                            $client->email_address = $row['Email'];
-                            $client->address= $row['Adresse'];
-                            $client->NUI = $row['NUI'];
-                            $client->save();
-                            $importedCount++;
-                            $statusMessage = "importé";
-                        }
-
-                    } catch (\Exception $e) {
-                        // En cas d'erreur sur une ligne, on la logue et on continue
-                        $failedCount++;
-                        $errors[] = "Erreur à la ligne {$lineNumber}: " . $e->getMessage();
-                        continue;
-                    }
-                }
-                fclose($handle);
+            if (empty($array) || empty($array[0])) {
+                throw new \Exception("Le fichier est vide ou illisible.");
             }
 
-            // Si aucune erreur majeure, on valide la transaction
+            // On récupère la première feuille
+            $sheet = $array[0];
+            
+            // On vérifie qu'il y a des données (plus que juste l'entête)
+            if (count($sheet) < 2) {
+                throw new \Exception("Le fichier ne contient aucune donnée client.");
+            }
+
+            // On boucle sur les lignes
+            foreach ($sheet as $index => $row) {
+                // 2. IGNORER LA LIGNE D'ENTÊTE (Ligne 0)
+                // Votre dump montre que l'index 0 contient "Nom", "Type de Client", etc.
+                if ($index === 0) {
+                    continue; 
+                }
+
+                // Numéro de ligne Excel (Index + 1 car l'index commence à 0)
+                $excelLine = $index + 1;
+
+                try {
+                    // 3. MAPPING DES COLONNES (Basé sur votre dump)
+                    // 0 => Nom
+                    // 1 => Type de Client
+                    // 2 => Catégorie
+                    // 3 => Agence
+                    // 4 => Téléphone
+                    // 5 => Email
+                    // 6 => Adresse
+                    // 7 => NUI
+                    
+                    $nomRaw      = $row[0] ?? null;
+                    $typeRaw     = $row[1] ?? null;
+                    $catRaw      = $row[2] ?? null;
+                    $agenceRaw   = $row[3] ?? null;
+                    $telRaw      = $row[4] ?? null;
+                    $emailRaw    = $row[5] ?? null; // Peut être null
+                    $adresseRaw  = $row[6] ?? null;
+                    $nuiRaw      = $row[7] ?? null; // Peut être null
+
+                    // Nettoyage basique
+                    $nom = trim($nomRaw);
+                    $agenceName = trim($agenceRaw);
+                    
+                    // Si la ligne est vide (cas fréquent en fin de fichier Excel), on saute
+                    if (empty($nom) && empty($agenceName)) {
+                        continue;
+                    }
+
+                    // --- VÉRIFICATION AGENCE (OBLIGATOIRE) ---
+                    if (empty($agenceName)) {
+                        throw new \Exception("Le nom de l'agence est manquant.");
+                    }
+                    
+                    $agency = Agency::where("name", $agenceName)->first();
+                    if (!$agency) {
+                        throw new \Exception("L'agence '$agenceName' n'existe pas dans la base.");
+                    }
+
+                    // --- VÉRIFICATION DUBLON (Nom + Agence) ---
+                    $exists = Client::withTrashed()
+                        ->where('name', $nom)
+                        ->where('agency_id', $agency->id)
+                        ->exists();
+
+                    if ($exists) {
+                        $skippedCount++;
+                        continue;
+                    }
+
+                    // --- GESTION CATÉGORIE ---
+                    $catName = !empty($catRaw) ? trim($catRaw) : 'client comptoir';
+                    $category = ClientCategory::firstOrCreate(['name' => $catName]);
+
+                    // --- GESTION DES VALEURS NULLES (Email / NUI) ---
+                    // Important pour éviter l'erreur "Duplicate entry for key NUI" si on insère ""
+                    $finalNui = !empty($nuiRaw) ? trim($nuiRaw) : null;
+                    $finalEmail = !empty($emailRaw) ? trim($emailRaw) : null;
+                    $finalPhone = !empty($telRaw) ? trim($telRaw) : null;
+
+                    // --- CRÉATION DU CLIENT ---
+                    Client::create([
+                        'client_category_id' => $category->id,
+                        'agency_id'          => $agency->id,
+                        'name'               => $nom,
+                        'client_type'        => $typeRaw,
+                        'phone_number'       => $finalPhone,
+                        'email_address'      => $finalEmail,
+                        'address'            => $adresseRaw,
+                        'NUI'                => $finalNui,
+                        'archived'           => 0
+                    ]);
+
+                    $importedCount++;
+
+                } catch (\Exception $e) {
+                    $failedCount++;
+                    $errors[] = "Ligne Excel $excelLine : " . $e->getMessage();
+                }
+            }
+
             DB::commit();
 
-            // 6. Envoi de la réponse de succès ou de succès partiel
-            $messageParts = [];
-            if ($importedCount > 0) {
-                $messageParts[] = "$importedCount clients créés";
-            }
-            if ($restoredCount > 0) {
-                $messageParts[] = "$restoredCount clients restaurés";
-            }
-            if ($failedCount > 0) {
-                $messageParts[] = "$failedCount échecs";
-            }
-
-            $finalMessage = implode(', ', $messageParts) ?: "Aucune opération d'importation ou de restauration effectuée.";
+            // --- RETOUR ---
+            $msg = [];
+            if ($importedCount > 0) $msg[] = "$importedCount importés";
+            if ($skippedCount > 0) $msg[] = "$skippedCount doublons ignorés";
+            
+            $finalMessage = implode(', ', $msg);
 
             if ($failedCount > 0) {
-                return back()->with('error', $finalMessage . " Détails: " . implode(" | ", $errors));
+                return back()->with('warning', $finalMessage . ". $failedCount échecs.")->with('errors_details', $errors);
             }
 
-            return back()->with('success', $finalMessage);
+            return back()->with('success', $finalMessage ?: "Aucun client importé.");
 
         } catch (\Exception $e) {
-            // En cas d'erreur fatale, on annule la transaction
             DB::rollBack();
-            return back()->with('error', "Une erreur fatale est survenue lors de l'importation: " . $e->getMessage());
+            return back()->with('error', "Erreur : " . $e->getMessage());
         }
     }
-}
+    /**
+     * Fonction pour exporter les clients en Excel
+**/
+    public function export()
+    {
+        // Bonne pratique : Ajouter la date et l'heure au nom du fichier
+        $fileName = 'clients_ikarootech_' . Carbon::now()->format('d-m-Y_His') . '.xlsx';
+
+        return Excel::download(new ClientsExport, $fileName);
+    }
+    
+    
+    }

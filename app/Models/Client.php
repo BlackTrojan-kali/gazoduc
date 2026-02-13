@@ -9,7 +9,7 @@ class Client extends Model
 {
     use SoftDeletes;
     //
-    protected $fillable =[
+    protected $fillable =[ 
         "client_category_id",
         "client_type",
         "agency_id",

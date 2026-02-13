@@ -296,6 +296,7 @@ Route::get('/fuel-citernes', [CiterneController::class, 'fuel_index'])->name('fu
     Route::put("/client-update/{idCli}",[ClientController::class,"update"])->name("client.update");
     Route::delete("/client-delete/{idCli}",[ClientController::class,"destroy"])->name("client.destroy");
     Route::post("/client-import/",[ClientController::class,"import"])->name("client.import");
+    Route::get("/client-export/",[ClientController::class,"export"])->name("client.export");
     //clients cats
     Route::get("/client-cat",[CategoryController::class,"index"])->name("cat.index");
     Route::post("/client-cat-store",[CategoryController::class,"store"])->name("cat.store");
