@@ -4,24 +4,29 @@ namespace App\Http\Controllers;
 
 use App\Models\Article;
 use App\Models\Client;
-use App\Models\Subscription;
-use App\Models\Facture; // NOUVEL IMPORT pour les calculs de CA
+use App\Models\Facture;
 use App\Models\Payment;
 use App\Models\Stock;
+use App\Models\Subscription;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
-use Illuminate\Support\Facades\DB; // Ajouté pour les requêtes Raw/Agrégation
 
 class CEOController extends Controller
 {
     /**
-     * Affiche le tableau de bord du Boss/CEO avec un résumé de l'inventaire global et les statistiques financières consolidées.
+     * TABLEAU DE BORD GLOBAL (Focus Principal + Résumé)
      */
     public function index()
     {
-        // 1. Inventaire global
+        $currentYear = Carbon::now()->year;
+        $currentMonth = Carbon::now()->month;
+        $lastMonth = Carbon::now()->subMonth();
+
+        // --- 1. Inventaire Global ---
+        // Relation 'stock' (hasMany) -> agrégat 'stock_sum_quantity'
         $articlesWithTotalStock = Article::query()
             ->select(['id', 'code', 'name', 'unit'])
             ->withSum('stock', 'quantity')
@@ -29,345 +34,317 @@ class CEOController extends Controller
             ->orderBy('name')
             ->get();
 
-        // --- 2. Calcul du statut de la licence (Jours Restants) ---
+        // --- 2. Statut Licence ---
         $licenseDaysRemaining = 0;
-        
         $activeSubscription = Subscription::where('is_active', true)
+            ->whereDate('date_expiration', '>', now())
             ->orderBy('date_expiration', 'desc')
             ->first();
 
         if ($activeSubscription) {
-            $expirationDate = Carbon::parse($activeSubscription->date_expiration);
-            // 'false' assure que la différence est négative si la date d'expiration est passée.
-            $diffInDays = Carbon::now()->diffInDays($expirationDate, false); 
-            $licenseDaysRemaining = max(0, $diffInDays);
+            $licenseDaysRemaining = Carbon::now()->diffInDays($activeSubscription->date_expiration, false);
+            $licenseDaysRemaining = max(0, (int)$licenseDaysRemaining);
         }
 
-        // --- 3. Nombre total de clients ---
+        // --- 3. Métriques Clients & Utilisateurs ---
         $totalClients = Client::count();
+        // On compte les utilisateurs actifs (hors SuperAdmin)
+        $activeUsers = User::where('role_id', '!=', 1)->count(); 
 
-        // --- 4. Calcul du Chiffre d'Affaires (CA) consolidé (Logique intégrée) ---
-        $currency = 'F';
+        // --- 4. KPIs Financiers (Factures uniquement) ---
+        $ca_current_year = Facture::whereYear('created_at', $currentYear)->sum('total_amount');
         
-        // CA de l'année en cours (toutes agences confondues)
-        $ca_current_year = Facture::query()
-            ->whereYear('created_at', Carbon::now()->year)
+        $ca_current_month = Facture::whereYear('created_at', $currentYear)
+            ->whereMonth('created_at', $currentMonth)
             ->sum('total_amount');
 
-        // CA du mois en cours (toutes agences confondues)
-        $ca_current_month = Facture::query()
-            ->whereYear('created_at', Carbon::now()->year)
-            ->whereMonth('created_at', Carbon::now()->month)
-            ->sum('total_amount');
-            
-        // CA du mois dernier pour le calcul de la croissance MoM
-        $last_month_revenue = Facture::query()
-            ->whereYear('created_at', Carbon::now()->subMonth()->year)
-            ->whereMonth('created_at', Carbon::now()->subMonth()->month)
+        $ca_last_month = Facture::whereYear('created_at', $lastMonth->year)
+            ->whereMonth('created_at', $lastMonth->month)
             ->sum('total_amount');
 
-        // Calcul du taux de croissance MoM
-        $growthRate = 'N/A';
-        if ($last_month_revenue == 0) {
-            $growthRate = $ca_current_month > 0 ? '+100%' : 'N/A';
+        // Calcul Croissance MoM
+        if ($ca_last_month == 0) {
+            $growthRate = $ca_current_month > 0 ? '+100%' : '0%';
         } else {
-            $growth = (($ca_current_month - $last_month_revenue) / $last_month_revenue) * 100;
-            $growthRate = number_format($growth, 1) . '%';
+            $growth = (($ca_current_month - $ca_last_month) / $ca_last_month) * 100;
+            $growthRate = ($growth > 0 ? '+' : '') . number_format($growth, 1) . '%';
         }
-        
-        // Formatage pour l'affichage dans la vue React
-        $monthlyRevenueFormatted =  number_format($ca_current_month, 0, ',', ' ') . ' ' . $currency;
-        $yearlyRevenueFormatted = number_format($ca_current_year, 0, ',', ' ') . ' ' . $currency;
-        $activeUser = User::where("role_id","!=",1)->count();
 
-        // Les données passées à la vue 'BossIndex'
-        $dashboardData = [
+        return Inertia::render('Boss/BossIndex', [
             'stats' => [
-                // Stats Financières (CA Annuel et Mensuel)
-                'monthlyRevenue' => $monthlyRevenueFormatted, 
-                'yearlyRevenue' => $yearlyRevenueFormatted, // Le CA annuel consolidé
+                'monthlyRevenue' => number_format($ca_current_month, 0, ',', ' ') . ' F',
+                'yearlyRevenue' => number_format($ca_current_year, 0, ',', ' ') . ' F',
                 'growthRate' => $growthRate,
-                
-                // Stats Opérationnelles
-                'licenseDaysRemaining' => $licenseDaysRemaining, 
-                'totalClients' => $totalClients, 
-
-                // Stats Dummy (à remplacer par votre logique métier réelle)
-                'activeUsers' =>$activeUser, 
-                'completedProjects' => 85,
-                'weeklyAppointments' => 12,
+                'licenseDaysRemaining' => $licenseDaysRemaining,
+                'totalClients' => $totalClients,
+                'activeUsers' => $activeUsers,
+                // Correction : On compte toutes les factures car 'payment_status' n'existe pas
+                'completedProjects' => Facture::count(), 
+                'weeklyAppointments' => 0, 
             ],
             'inventorySummary' => $articlesWithTotalStock,
-        ];
-
-        return Inertia::render('Boss/BossIndex', $dashboardData);
+        ]);
     }
-    
+
     /**
-     * Nouvelle fonction pour afficher les chiffres d'affaires consolidés (Mensuel, Agence, Type).
+     * ANALYSE DÉTAILLÉE DU CHIFFRE D'AFFAIRES (Ventes vs Consignes)
      */
     public function sales()
     {
         $currentYear = Carbon::now()->year;
 
-        // --- 1️⃣ Graphiques mensuels : CA ventes et consignes par mois ---
-        $monthlyData = Facture::select(
-                DB::raw('MONTH(created_at) as month'),
-                'invoice_type',
-                DB::raw('SUM(total_amount) as total')
-            )
+        // --- 1. Graphique Mensuel ---
+        $monthlyRaw = Facture::selectRaw('
+                MONTH(created_at) as month,
+                invoice_type,
+                SUM(total_amount) as total
+            ')
             ->whereYear('created_at', $currentYear)
             ->groupBy('month', 'invoice_type')
-            ->orderBy('month')
-            ->get()
-            ->groupBy('invoice_type');
+            ->get();
 
-        // Organisation des données pour le graphique
-        $months = collect(range(1, 12))->map(fn($m) => Carbon::create()->month($m)->format('M'));
-
-        $monthlySalesChart = $months->map(function ($monthName, $index) use ($monthlyData) {
-            $monthNumber = $index + 1;
+        $monthlySalesChart = collect(range(1, 12))->map(function ($m) use ($monthlyRaw) {
             return [
-                'month' => $monthName,
-                'vente' => $monthlyData->get(Facture::TYPE_VENTE)?->firstWhere('month', $monthNumber)->total ?? 0,
-                'consigne' => $monthlyData->get(Facture::TYPE_CONSIGNE)?->firstWhere('month', $monthNumber)->total ?? 0,
+                'month' => Carbon::create()->month($m)->locale('fr')->shortMonthName,
+                'vente' => $monthlyRaw->where('month', $m)->where('invoice_type', 'vente')->sum('total'),
+                'consigne' => $monthlyRaw->where('month', $m)->where('invoice_type', 'consigne')->sum('total'),
             ];
         });
 
-        // --- 2️⃣ Tableaux : CA ventes et consignes par agence et par mois ---
-        $byAgencyAndMonth = Facture::select(
-                'agency_id',
-                DB::raw('MONTH(created_at) as month'),
-                'invoice_type',
-                DB::raw('SUM(total_amount) as total')
-            )
+        // --- 2. Tableaux par Agence ---
+        $agencyRaw = Facture::selectRaw('
+                agency_id,
+                MONTH(created_at) as month,
+                invoice_type,
+                SUM(total_amount) as total
+            ')
             ->whereYear('created_at', $currentYear)
-            ->groupBy('agency_id', 'month', 'invoice_type')
             ->with('agency:id,name')
+            ->groupBy('agency_id', 'month', 'invoice_type')
             ->get();
 
-        // Séparer ventes et consignes
-        $ventesByAgency = $byAgencyAndMonth->where('invoice_type', Facture::TYPE_VENTE);
-        $consignesByAgency = $byAgencyAndMonth->where('invoice_type', Facture::TYPE_CONSIGNE);
+        $formatByAgency = function ($type) use ($agencyRaw) {
+            return $agencyRaw->where('invoice_type', $type)
+                ->groupBy('agency_id')
+                ->map(function ($rows) {
+                    $agencyName = $rows->first()->agency->name ?? 'Inconnu';
+                    $totals = collect(range(1, 12))->map(fn($m) => $rows->where('month', $m)->sum('total'));
+                    return [
+                        'agency' => $agencyName,
+                        'monthlyTotals' => $totals,
+                        'totalYear' => $totals->sum()
+                    ];
+                })->values();
+        };
 
-        // Format simplifié pour la vue
-        $ventesTable = $ventesByAgency->groupBy('agency_id')->map(function ($records) {
-            $agencyName = optional($records->first()->agency)->name ?? 'Non défini';
-            $monthlyTotals = collect(range(1, 12))->map(function ($m) use ($records) {
-                return $records->firstWhere('month', $m)->total ?? 0;
-            });
-            return [
-                'agency' => $agencyName,
-                'monthlyTotals' => $monthlyTotals,
-            ];
-        })->values();
-
-        $consignesTable = $consignesByAgency->groupBy('agency_id')->map(function ($records) {
-            $agencyName = optional($records->first()->agency)->name ?? 'Non défini';
-            $monthlyTotals = collect(range(1, 12))->map(function ($m) use ($records) {
-                return $records->firstWhere('month', $m)->total ?? 0;
-            });
-            return [
-                'agency' => $agencyName,
-                'monthlyTotals' => $monthlyTotals,
-            ];
-        })->values();
-
-        // Envoi des données à React
         return Inertia::render('Boss/CA', [
             'charts' => [
                 'monthlySales' => $monthlySalesChart,
             ],
             'tables' => [
-                'ventes' => $ventesTable,
-                'consignes' => $consignesTable,
+                'ventes' => $formatByAgency('vente'), 
+                'consignes' => $formatByAgency('consigne'), // Assurez-vous que 'consigne' correspond à votre valeur en BDD
             ],
             'year' => $currentYear,
         ]);
     }
-public function paymentReport()
-{
-    $year = now()->year;
 
-    $report = DB::table('payments')
-        ->join('banks', 'banks.id', '=', 'payments.bank_id')
-        ->join('agencies', 'agencies.id', '=', 'payments.agency_id')
-        ->leftJoin('facture_payments', 'facture_payments.payment_id', '=', 'payments.id')
-        ->leftJoin('factures', 'factures.id', '=', 'facture_payments.facture_id')
-        ->selectRaw('
-            YEAR(payments.created_at) as year,
-            MONTH(payments.created_at) as month,
-            payments.type,
-            banks.name as bank_name,
-            agencies.name as agency_name,
-            SUM(payments.amout) as total_versement,
-            SUM(payments.amout_notes) as total_notes,
-            SUM(factures.total_amount) as total_facture,
-            (SUM(payments.amout) + SUM(payments.amout_notes) - SUM(factures.total_amount)) as ecart
-        ')->where("payments.is_fuel","!=",1)
-        ->whereYear('payments.created_at', $year)
-        ->groupBy('year', 'month', 'payments.type', 'bank_name', 'agency_name')
-        ->orderBy('month')
-        ->get();
+    /**
+     * RAPPORT DE TRÉSORERIE (Versements vs Factures liées)
+     */
+    public function paymentReport()
+    {
+        $year = now()->year;
 
-    // Regrouper les résultats par mois pour affichage graphique ou tableau
-    $grouped = $report->groupBy('month')->map(function ($items) {
-        return [
-            'details' => $items,
-            'totals' => [
-                'versements' => $items->sum('total_versement'),
-                'notes' => $items->sum('total_notes'),
-                'factures' => $items->sum('total_facture'),
-                'ecart' => $items->sum('ecart'),
-            ]
-        ];
-    });
+        // Utilisation stricte des champs 'amout' et 'amout_notes' du modèle Payment
+        $report = DB::table('payments')
+            ->join('banks', 'banks.id', '=', 'payments.bank_id')
+            ->join('agencies', 'agencies.id', '=', 'payments.agency_id')
+            ->leftJoin('facture_payments', 'facture_payments.payment_id', '=', 'payments.id')
+            ->leftJoin('factures', 'factures.id', '=', 'facture_payments.facture_id')
+            ->selectRaw('
+                YEAR(payments.created_at) as year,
+                MONTH(payments.created_at) as month,
+                payments.type,
+                banks.name as bank_name,
+                agencies.name as agency_name,
+                SUM(COALESCE(payments.amout, 0)) as total_versement,
+                SUM(COALESCE(payments.amout_notes, 0)) as total_notes,
+                SUM(COALESCE(factures.total_amount, 0)) as total_facture,
+                (SUM(COALESCE(payments.amout, 0)) + SUM(COALESCE(payments.amout_notes, 0)) - SUM(COALESCE(factures.total_amount, 0))) as ecart
+            ')
+            ->where('payments.is_fuel', '!=', 1) // On exclut le carburant
+            ->whereYear('payments.created_at', $year)
+            ->groupByRaw('year, month, payments.type, bank_name, agency_name')
+            ->orderBy('month')
+            ->get();
 
-    return inertia('Boss/PaymentReport', [
-        'year' => $year,
-        'report' => $report,
-        'grouped' => $grouped,
-    ]);
-}
-public function articlesConsolidated()
-{
-    $year = Carbon::now()->year;
+        $grouped = $report->groupBy('month')->map(function ($items) {
+            return [
+                'month_label' => Carbon::create()->month($items->first()->month)->locale('fr')->monthName,
+                'details' => $items,
+                'totals' => [
+                    'versements' => $items->sum('total_versement'),
+                    'notes' => $items->sum('total_notes'),
+                    'factures' => $items->sum('total_facture'),
+                    'ecart' => $items->sum('ecart'),
+                ]
+            ];
+        });
 
-    $data = DB::table('facture_items')
-        ->join('factures', 'facture_items.facture_id', '=', 'factures.id')
-        ->join('agencies', 'factures.agency_id', '=', 'agencies.id')
-        ->join('articles', 'facture_items.article_id', '=', 'articles.id') // 🔹 Nouvelle jointure
-        ->selectRaw('
-            YEAR(factures.created_at) as year,
-            MONTH(factures.created_at) as month,
-            agencies.name as agency_name,
-            factures.invoice_type,
-            articles.name as article_name, -- 🔹 Récupération du nom de l’article
-            COUNT(DISTINCT facture_items.article_id) as articles_count,
-            SUM(facture_items.quantity) as total_quantity
-        ')
-        ->whereYear('factures.created_at', $year)
-        ->groupBy('year', 'month', 'agency_name', 'factures.invoice_type', 'articles.name') // 🔹 Ajout de articles.name au groupBy
-        ->orderBy('month')
-        ->get();
+        return Inertia::render('Boss/PaymentReport', [
+            'year' => $year,
+            'grouped' => $grouped,
+        ]);
+    }
 
-    // 🔹 Regrouper par mois avec totaux globaux
-    $grouped = $data->groupBy('month')->map(function ($items) {
-        return [
-            'details' => $items,
-            'totals' => [
-                'quantity' => $items->sum('total_quantity'),
-                'articles' => $items->sum('articles_count'),
-            ],
-        ];
-    });
+    /**
+     * RAPPORT CONSOLIDÉ DES VENTES ARTICLES
+     */
+    public function articlesConsolidated()
+    {
+        $year = Carbon::now()->year;
 
-    return inertia('Boss/ArticleConsolidated', [
-        'year' => $year,
-        'report' => $data,
-        'grouped' => $grouped,
-    ]);
-}    
-/******************************************************************************************** */
-/*|                           FUEL PART FUEL PART FUEL PART FUEL PART                        |*/
-/******************************************************************************************** */
-public function choose_fuel(){
-    return Inertia("SelectCeoLicence");
-}
+        $data = DB::table('facture_items')
+            ->join('factures', 'facture_items.facture_id', '=', 'factures.id')
+            ->join('agencies', 'factures.agency_id', '=', 'agencies.id')
+            ->join('articles', 'facture_items.article_id', '=', 'articles.id')
+            ->selectRaw('
+                YEAR(factures.created_at) as year,
+                MONTH(factures.created_at) as month,
+                agencies.name as agency_name,
+                factures.invoice_type,
+                articles.name as article_name,
+                articles.code as article_code,
+                COUNT(DISTINCT facture_items.article_id) as articles_count_distinct,
+                SUM(facture_items.quantity) as total_quantity
+            ')
+            ->whereYear('factures.created_at', $year)
+            ->groupByRaw('year, month, agency_name, factures.invoice_type, articles.name, articles.code')
+            ->orderBy('month')
+            ->get();
 
-public function fuel_index()
-{
-    $year = Carbon::now()->year;
+        $grouped = $data->groupBy('month')->map(function ($items) {
+            return [
+                'month_name' => Carbon::create()->month($items->first()->month)->locale('fr')->monthName,
+                'details' => $items,
+                'totals' => [
+                    'quantity' => $items->sum('total_quantity'),
+                    'lines_count' => $items->count(), 
+                ],
+            ];
+        });
 
-    // 🔹 Récupération des ventes consolidées
-    $data = DB::table('fuel_sales')
-        ->join('articles', 'fuel_sales.article_id', '=', 'articles.id')
-        ->join('agencies', 'fuel_sales.agency_id', '=', 'agencies.id')
-        ->selectRaw('
-            YEAR(fuel_sales.created_at) as year,
-            MONTH(fuel_sales.created_at) as month,
-            agencies.name as agency_name,
-            articles.name as article_name,
-            SUM(fuel_sales.quantity) as total_quantity,
-            SUM(fuel_sales.total_price) as total_revenue
-        ')
-        ->whereYear('fuel_sales.created_at', $year)
-        ->groupBy('year', 'month', 'agency_name', 'articles.name')
-        ->orderBy('month')
-        ->get();
+        return Inertia::render('Boss/ArticleConsolidated', [
+            'year' => $year,
+            'grouped' => $grouped,
+        ]);
+    }
 
-    // 🔹 Regrouper par mois pour l'affichage
-    $grouped = $data->groupBy('month')->map(function ($items) {
-        return [
-            'details' => $items,
-            'totals' => [
-                'quantity' => $items->sum('total_quantity'),
-                'revenue' => $items->sum('total_revenue'),
-            ],
-        ];
-    });
+    /* -------------------------------------------------------------------------- */
+    /* MODULE CARBURANT                                                           */
+    /* -------------------------------------------------------------------------- */
 
-    // 🔹 Retour vers la vue Inertia
-    return Inertia::render('BossFuel/FuelConsolidated', [
-        'year' => $year,
-        'report' => $data,
-        'grouped' => $grouped,
-    ]);
-}
+    public function choose_fuel()
+    {
+        return Inertia::render("SelectCeoLicence");
+    }
 
-public function fuel_stock_consolidated()
-{
-    $data = Stock::query()
-        ->join('articles', 'stocks.article_id', '=', 'articles.id')
-        ->selectRaw('
-            articles.name as article_name,
-            SUM(stocks.quantity) as total_quantity,
-            SUM(stocks.theorical_quantity) as total_theorical_quantity
-        ')
-        ->where('stocks.storage_type', 'carburant')
-        ->groupBy('articles.name')
-        ->orderBy('articles.name')
-        ->get();
+    public function fuel_index()
+    {
+        $year = Carbon::now()->year;
 
-    return Inertia::render('BossFuel/FuelStockConsolidated', [
-        'report' => $data,
-    ]);
-}
+        $data = DB::table('fuel_sales')
+            ->join('articles', 'fuel_sales.article_id', '=', 'articles.id')
+            ->join('agencies', 'fuel_sales.agency_id', '=', 'agencies.id')
+            ->selectRaw('
+                YEAR(fuel_sales.created_at) as year,
+                MONTH(fuel_sales.created_at) as month,
+                agencies.name as agency_name,
+                articles.name as article_name,
+                SUM(fuel_sales.quantity) as total_quantity,
+                SUM(fuel_sales.total_price) as total_revenue
+            ')
+            ->whereYear('fuel_sales.created_at', $year)
+            ->groupByRaw('year, month, agency_name, articles.name')
+            ->orderBy('month')
+            ->orderBy('agency_name')
+            ->get();
 
-public function fuel_payments_consolidated()
-{
-    $year = Carbon::now()->year;
+        $grouped = $data->groupBy('month')->map(function ($items) {
+            return [
+                'month_name' => Carbon::create()->month($items->first()->month)->locale('fr')->monthName,
+                'details' => $items,
+                'totals' => [
+                    'quantity' => $items->sum('total_quantity'),
+                    'revenue' => $items->sum('total_revenue'),
+                ],
+            ];
+        });
 
-    // 🔹 Récupère uniquement les versements de carburant non liés à des factures
-    $data = Payment::query()
-        ->join('agencies', 'payments.agency_id', '=', 'agencies.id')
-        ->leftJoin('facture_payments', 'payments.id', '=', 'facture_payments.payment_id')
-        ->selectRaw('
-            YEAR(payments.created_at) as year,
-            MONTH(payments.created_at) as month,
-            SUM(payments.amout) as total_amount,
-            COUNT(payments.id) as total_payments
-        ')
-        ->whereYear('payments.created_at', $year)
-        ->where('payments.is_fuel', 1)
-        ->whereNull('facture_payments.payment_id') // Exclure les versements associés à une facture
-        ->groupBy('year', 'month')
-        ->orderBy('month')
-        ->get();
+        return Inertia::render('BossFuel/FuelConsolidated', [
+            'year' => $year,
+            'grouped' => $grouped,
+        ]);
+    }
 
-    // 🔹 Regroupe et formate pour l’affichage React
-    $formatted = $data->map(function ($item) {
-        return [
-            'month' => $item->month,
-            'month_name' => ucfirst(Carbon::create()->month($item->month)->locale('fr')->monthName),
-            'total_amount' => (float) $item->total_amount,
-            'total_payments' => (int) $item->total_payments,
-        ];
-    });
+    public function fuel_stock_consolidated()
+    {
+        $data = Stock::query()
+            ->join('articles', 'stocks.article_id', '=', 'articles.id')
+            ->join('agencies', 'stocks.agency_id', '=', 'agencies.id')
+            ->selectRaw('
+                agencies.name as agency_name,
+                articles.name as article_name,
+                SUM(stocks.quantity) as total_quantity,
+                SUM(stocks.theorical_quantity) as total_theorical_quantity,
+                (SUM(stocks.quantity) - SUM(stocks.theorical_quantity)) as gap
+            ')
+            ->where('stocks.storage_type', 'carburant') 
+            ->groupBy('agencies.name', 'articles.name')
+            ->orderBy('agencies.name')
+            ->get();
 
-    return Inertia::render('BossFuel/FuelPaymentConsolidated', [
-        'year' => $year,
-        'report' => $formatted,
-    ]);
-}
+        return Inertia::render('BossFuel/FuelStockConsolidated', [
+            'report' => $data,
+        ]);
+    }
+
+    public function fuel_payments_consolidated()
+    {
+        $year = Carbon::now()->year;
+
+        // Utilisation du champ 'amout'
+        $data = Payment::query()
+            ->join('agencies', 'payments.agency_id', '=', 'agencies.id')
+            ->leftJoin('facture_payments', 'payments.id', '=', 'facture_payments.payment_id')
+            ->selectRaw('
+                YEAR(payments.created_at) as year,
+                MONTH(payments.created_at) as month,
+                agencies.name as agency_name,
+                SUM(payments.amout) as total_amount,
+                COUNT(payments.id) as count_payments
+            ')
+            ->whereYear('payments.created_at', $year)
+            ->where('payments.is_fuel', 1)
+            ->whereNull('facture_payments.payment_id') 
+            ->groupByRaw('year, month, agency_name')
+            ->orderBy('month')
+            ->get();
+
+        $grouped = $data->groupBy('month')->map(function ($items) {
+            return [
+                'month' => $items->first()->month,
+                'month_name' => Carbon::create()->month($items->first()->month)->locale('fr')->monthName,
+                'agencies_details' => $items,
+                'total_amount' => $items->sum('total_amount'),
+                'total_payments' => $items->sum('count_payments'),
+            ];
+        });
+
+        return Inertia::render('BossFuel/FuelPaymentConsolidated', [
+            'year' => $year,
+            'report' => $grouped,
+        ]);
+    }
 }
