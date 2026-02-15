@@ -594,6 +594,7 @@ span.flatpickr-weekday,
 .fc-toolbar-title {
   @apply !text-lg !font-medium text-gray-800 dark:text-white/90;
 }
+
 .fc-header-toolbar.fc-toolbar .fc-toolbar-chunk:last-child {
   @apply rounded-lg bg-gray-100 p-0.5 dark:bg-gray-900;
 }
@@ -782,4 +783,9 @@ span.flatpickr-weekday,
 
 .simplebar-scrollbar.simplebar-visible:before {
   @apply opacity-100;
+}
+/* Supprime le fond blanc des icônes personnalisées Leaflet */
+.leaflet-div-icon.custom-icon {
+    background: transparent;
+    border: none;
 }
