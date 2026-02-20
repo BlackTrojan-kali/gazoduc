@@ -3,7 +3,7 @@ import { Link, usePage } from "@inertiajs/react"; // <--- IMPORT usePage HERE
 
 import { useSidebar } from "../../context/SidebarContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronDown, faCoins, faDashboard, faDotCircle, faDriversLicense, faGlobe,  faIndustry,  faMoneyBill,  faSave,  faTimeline,  faUser, faUserAlt, faUserFriends,  } from "@fortawesome/free-solid-svg-icons";
+import { faChevronDown, faCoins, faDashboard, faDotCircle, faDriversLicense, faGlobe,  faIndustry,  faMapLocationDot,  faMoneyBill,  faSave,  faTimeline,  faUser, faUserAlt, faUserFriends,  } from "@fortawesome/free-solid-svg-icons";
 
 
 const navItems = [
@@ -64,6 +64,16 @@ const navItems = [
         { name: "Factures", path: "/controlleur-factures", pro: false },
       ],
     },
+    
+    {
+      icon:  <FontAwesomeIcon icon={faMapLocationDot} />,
+      name: "GPS",
+      subItems: [
+        { name: "GPS Tracking", path: "/tracking", pro: false },
+        { name: "GPS Devices", path: "/gps-devices", pro: false },
+      ],
+    },
+    
   
  
 ];

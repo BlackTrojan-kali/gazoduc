@@ -3,7 +3,7 @@ import { SidebarProvider, useSidebar } from "../../context/SidebarContext";
 import DirBackdrop from "./DirBackdrop";
 import ToastProvider from "../../components/ui/alert/ToastProvider";
 import DirHeader from "./DirHeader";
-import DirSidebar from "./DirSidebar";
+import DirSidebar from "./DirSidebar"; 
 const LayoutContent = ({children}) => {
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
 

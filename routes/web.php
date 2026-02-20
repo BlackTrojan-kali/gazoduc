@@ -64,6 +64,8 @@ use App\Http\Controllers\MagBoutiqueController;
 use App\Http\Controllers\ProductTransfertController;
 
 use App\Http\Controllers\ComBoutiqueController;
+use App\Http\Controllers\GPSController;
+use App\Http\Controllers\GpsDeviceController;
 use App\Http\Controllers\ProductSalesController;
 use App\Http\Controllers\ProductPaymentController;
 //auth routes
@@ -112,6 +114,7 @@ Route::get('/subscriptions/{subscription}/invoice', [SubController::class, 'down
 });
 
 Route::middleware([DirectionMiddleware::class,isArchivedMiddleWare::class])->group(function(){
+Route::resource('gps-devices', GpsDeviceController::class)->except(['create', 'edit']);
 //Mouvements direction
 Route::get('/direction/historique-global', [DirBoutiqueController::class, 'history'])
          ->name('direction.history');
@@ -341,7 +344,15 @@ Route::get('/fuel-citernes', [CiterneController::class, 'fuel_index'])->name('fu
     Route::get("/controlleur-payment",[RegionalController::class,"payments"])->name("controlleur.payments");
     Route::get("/controlleur-factures",[RegionalController::class,"factures"])->name("controlleur.factures");
     //notifications
+    //gps tracking 
+    // 1. Le Tableau de Bord Global (La page précédente)
+    Route::get('/tracking', [GPSController::class, 'index'])
+        ->name('tracking.dashboard');
 
+    // 2. Le Détail d'un véhicule (La page actuelle)
+    // On utilise le "Model Binding" {vehicule} pour charger automatiquement l'ID
+    Route::get('/tracking/{vehicule}', [GPSController::class, 'show'])
+        ->name('tracking.detail');
 Route::post('/notifications/{notification}/mark-as-read', [NotificationController::class, 'markAsRead'])->name('notifications.markAsRead');
 Route::post('/notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.markAllAsRead');
 

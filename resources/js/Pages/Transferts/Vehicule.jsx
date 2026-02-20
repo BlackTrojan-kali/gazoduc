@@ -17,7 +17,7 @@ import DirFuelLayout from '../../layout/DirFuelLayout/DirFuelLayout';
 import useLicenceChoice from '../../hooks/useLicenceChoice';
 
 
-const PageContent = ({ vehicles }) => {
+const PageContent = ({ vehicles,gpsdevices }) => {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
 
@@ -232,6 +232,7 @@ const PageContent = ({ vehicles }) => {
         isOpen={isFormModalOpen}
         onClose={closeFormModal}
         vehicle={selectedVehicle}
+        gpsDevices={gpsdevices}
         routeName={selectedVehicle ? "vehicle.update" : "vehicle.store"}
       />
       {/* --------------- */}
@@ -239,14 +240,14 @@ const PageContent = ({ vehicles }) => {
   );
 };
 
-const Vehicle = ({ vehicles }) =>{ 
+const Vehicle = ({ vehicles,gpsdevices }) =>{ 
     const {auth} = usePage().props
     
     const {DirLicence} = useLicenceChoice();
     if(auth.user.role == "controleur"){
       return(
         <RegLayout>
-          <PageContent vehicles={vehicles}/>
+          <PageContent vehicles={vehicles} gpsdevices={gpsdevices}/>
         </RegLayout>
   )
 }
@@ -254,13 +255,13 @@ const Vehicle = ({ vehicles }) =>{
       if(DirLicence == "gaz"){
     return(
       <DirLayout>
-          <PageContent vehicles={vehicles}/>
+          <PageContent vehicles={vehicles} gpsdevices={gpsdevices}/>
       </DirLayout>
     )
   }else{
     return(
       <DirFuelLayout>
-          <PageContent vehicles={vehicles}/>
+          <PageContent vehicles={vehicles} gpsdevices={gpsdevices}/>
       </DirFuelLayout>
     )
   }

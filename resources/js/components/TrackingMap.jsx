@@ -4,7 +4,6 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
 // 1. Configuration des icônes dynamiques (SVG)
-// C'est plus léger que des images PNG et on peut changer la couleur facilement
 const getIcon = (status, hasAlert) => {
     let color = '#3B82F6'; // Bleu (Défaut)
     
@@ -13,7 +12,6 @@ const getIcon = (status, hasAlert) => {
     else if (status === 'OFFLINE') color = '#6B7280'; // Gris (Hors ligne)
     else if (status === 'IDLE') color = '#F59E0B'; // Orange (Arrêt)
 
-    // SVG d'un camion
     const svgIcon = `
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${color}" stroke="white" stroke-width="1.5" class="w-8 h-8 drop-shadow-lg">
         <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.8 0-1.6.8-1.6 1.6V16c0 .6.4 1 1 1h1" />
@@ -24,23 +22,33 @@ const getIcon = (status, hasAlert) => {
     `;
 
     return L.divIcon({
-        className: 'custom-icon', // On utilisera ce nom pour supprimer le carré blanc par défaut de Leaflet
+        className: 'custom-icon',
         html: svgIcon,
         iconSize: [40, 40],
-        iconAnchor: [20, 20], // Point d'ancrage au centre
+        iconAnchor: [20, 20],
         popupAnchor: [0, -20],
     });
 };
 
-// 2. Petit composant pour recentrer la carte automatiquement si la flotte bouge
+// 2. CORRECTION ICI : Sécurisation du recentrage de la carte
 const RecenterMap = ({ vehicles }) => {
     const map = useMap();
+
     useEffect(() => {
-        if (vehicles.length > 0) {
-            const bounds = L.latLngBounds(vehicles.map(v => [v.position.lat, v.position.lng]));
-            map.fitBounds(bounds, { padding: [50, 50] });
+        // On ne garde que les véhicules qui ont une position valide !
+        // Cela empêche l'erreur "v.position is null"
+        const vehiclesWithPosition = vehicles.filter(v => v.position && v.position.lat && v.position.lng);
+
+        if (vehiclesWithPosition.length > 0) {
+            const bounds = L.latLngBounds(vehiclesWithPosition.map(v => [v.position.lat, v.position.lng]));
+            
+            // Vérification supplémentaire que les bounds sont valides avant d'appliquer
+            if (bounds.isValid()) {
+                map.fitBounds(bounds, { padding: [50, 50] });
+            }
         }
     }, [vehicles, map]);
+
     return null;
 };
 
@@ -50,21 +58,21 @@ export default function TrackingMap({ vehicles }) {
 
     return (
         <div className="h-full w-full relative z-0">
-             {/* MapContainer doit avoir une hauteur définie par le parent */}
+             {/* MapContainer */}
             <MapContainer 
                 center={defaultCenter} 
                 zoom={7} 
                 scrollWheelZoom={true} 
-                className="h-full w-full rounded-lg shadow-inner"
+                className="h-full w-full rounded-lg shadow-inner z-0"
             >
-                {/* Fond de carte OpenStreetMap (Gratuit) */}
                 <TileLayer
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
 
                 {vehicles.map((vehicle) => (
-                    vehicle.position && (
+                    // On vérifie ici aussi que la position existe avant d'afficher le Marker
+                    vehicle.position && vehicle.position.lat && vehicle.position.lng && (
                         <Marker 
                             key={vehicle.id} 
                             position={[vehicle.position.lat, vehicle.position.lng]}
@@ -81,7 +89,6 @@ export default function TrackingMap({ vehicles }) {
                                         </p>
                                     </div>
                                     
-                                    {/* Bouton d'action */}
                                     <a href={`/tracking/${vehicle.id}`} className="block mt-2 text-center bg-blue-600 text-white text-xs py-1 px-2 rounded hover:bg-blue-700">
                                         Voir historique
                                     </a>
@@ -98,6 +105,7 @@ export default function TrackingMap({ vehicles }) {
             <div className="absolute bottom-5 right-5 bg-white p-3 rounded shadow-lg z-[1000] text-xs">
                 <div className="flex items-center mb-1"><span className="w-3 h-3 bg-green-500 rounded-full mr-2"></span> En route</div>
                 <div className="flex items-center mb-1"><span className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></span> À l'arrêt</div>
+                <div className="flex items-center mb-1"><span className="w-3 h-3 bg-gray-500 rounded-full mr-2"></span> Hors ligne</div>
                 <div className="flex items-center"><span className="w-3 h-3 bg-red-500 rounded-full mr-2"></span> Alerte !</div>
             </div>
         </div>
