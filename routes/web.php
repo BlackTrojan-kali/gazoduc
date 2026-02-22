@@ -205,7 +205,6 @@ Route::middleware([MagasinMiddleware::class,isArchivedMiddleWare::class,ClosureM
     Route::get("/magasin-index",[MagasinController::class,"index"])->name("magasin.index"); 
    Route::get("/magasin-citernes",[MagasinController::class,"citerne_index"])->name("magasin.citerne_index"); 
    Route::post("/magasin-citernes-depotage",[CiterneController::class,"depotage"])->name("magasin.depotage");
-   Route::post("/magasin-citerne-releve/{stock}",[CiterneController::class,"releve"])->name("magasin.releve");
    //mouvement
     Route::get('/magasin-medical-inventory', [MagMedController::class, 'inventory'])->name('mag_medical.inventory');
    //sale fuel
@@ -239,6 +238,12 @@ Route::delete('/transfers/{id}', [ProductTransfertController::class, 'destroy'])
 
 //common routes to all users
 Route::middleware([isAuthenticatedMiddleware::class,ClosureMiddleware::class])->group(function(){
+
+// Route pour valider une nouvelle production (remplissage de bouteilles)
+Route::post('/gas-medical/production', [ProdMedController::class, 'storeProduction'])->name('gas_medical.production.store');
+
+Route::post("/magasin-citerne-releve/{stock}",[CiterneController::class,"releve"])->name("magasin.releve");
+   
 // Route pour le transfert multiple de bouteilles
 Route::post('/mouvements/transfer-multiple', [MagMedController::class, 'transferMultiple'])->name('mouvements.transfer_multiple');
 // Route pour la réception multiple de bouteilles (depuis Prod ou Client)

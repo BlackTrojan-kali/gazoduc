@@ -312,7 +312,7 @@ public function releve(Request $request, Stock $stock)
 {
 
     $validatedData = $request->validate([
-        'theorical_quantity' => ['required', 'numeric', 'min:0'], // Assurez-vous que ce champ peut être envoyé
+        'theorical_quantity' => ['required', 'numeric', 'min:0','nullable'], // Assurez-vous que ce champ peut être envoyé
         'quantity' => ['required', 'numeric', 'min:0'],           // Assurez-vous que ce champ peut être envoyé
     
            "licence"=>['string','nullable'],

@@ -34,56 +34,68 @@ class ProductionController extends Controller
         return Inertia("Production/Prodindex",compact("stocks","articles","agencies"));
     }
        //
-     public function citerne_index()
-{
-    $user = Auth::user();
+public function citerne_index()
+    {
+        $user = Auth::user();
 
-    // 1. Récupération sécurisée des stocks (Gaz/Liquide) de l'agence
-    // On utilise une sous-requête pour que l'agence soit toujours respectée
-    $stocks = Stock::where("agency_id", $user->agency_id)
-        ->where(function($query) {
-            $query->where("storage_type", "gaz")
-                  ->orWhere("storage_type", "liquide");
-        })
-        ->with(["article", "citerne.agency"])
-        ->get();
+        // 1. Récupération sécurisée des stocks (Gaz/Liquide) de l'agence
+        $stocks = Stock::where("agency_id", $user->agency_id)
+            ->whereIn("storage_type", ["gaz", "liquide"]) // Plus propre qu'une sous-requête orWhere
+            ->with(["article", "citerne.agency"])
+            ->get();
 
-    // 2. Agences rattachées
-    $agencies = Agency::where("id", $user->agency_id)
-        ->where("entreprise_id", $user->entreprise_id)
-        ->get(['id', 'name']);
+        // 2. Agences rattachées
+        $agencies = Agency::where("id", $user->agency_id)
+            ->where("entreprise_id", $user->entreprise_id)
+            ->get(['id', 'name']);
 
-    // 3. Récupération des Articles selon votre nouvelle migration
-    // Matières premières (Gaz Vrac)
-    $articles = Article::where("entreprise_id", $user->entreprise_id)
-        ->where("type", "matiere_premiere")
-        ->get(['id', 'name', 'unit', 'weight_per_unit']);
+        // 3. Récupération des Articles
+        $articles = Article::where("entreprise_id", $user->entreprise_id)
+            ->where("type", "matiere_premiere")
+            ->get(['id', 'name', 'unit', 'weight_per_unit']);
 
-    // Produits finis (Bouteilles prêtes à être produites)
-    $articlesProd = Article::where("entreprise_id", $user->entreprise_id)
-        ->where("type", "produit_fini")
-        ->get(['id', 'name', 'unit', 'weight_per_unit']);
+        $articlesProd = Article::where("entreprise_id", $user->entreprise_id)
+            ->where("type", "produit_fini")
+            ->get(['id', 'name', 'unit', 'weight_per_unit']);
 
-    // 4. Sources de Production : Citernes Fixes
-    $citernesFixes = Citerne::where("entreprise_id", $user->entreprise_id)
-        ->where("agency_id", $user->agency_id)
-        ->where("type", "fixed")
-        ->with("article")
-        ->get();
+        // 4. Sources de Production : Citernes Fixes (MISE À JOUR POUR LA MODALE)
+        $citernesFixes = Citerne::where("entreprise_id", $user->entreprise_id)
+            ->where("agency_id", $user->agency_id)
+            ->where("type", "fixed")
+            ->with(['article', 'stock']) // On charge le stock de la citerne
+            ->get()
+            ->map(function ($citerne) {
+                // On crée dynamiquement 'stock_current' pour correspondre à l'attente de React
+                $citerne->stock_current = $citerne->stock ? $citerne->stock->quantity : 0;
+                return $citerne;
+            });
 
-    // 5. Sources de Production : Citernes Mobiles (Table Véhicules)
-    // On récupère les camions-citernes non archivés
-    $citernesMobiles = Vehicule::where("archived",0)->get();
-    // 6. Envoi des données vers Inertia
-    return Inertia::render("Production/ProdCiterne", [
-        "stocks"          => $stocks,
-        "agencies"        => $agencies,
-        "articles"        => $articles,     // Matière première (Vrac)
-        "articlesProd"    => $articlesProd, // Produit à générer (Bouteilles)
-        "citernesFixes"   => $citernesFixes,
-        "citernesMobiles" => $citernesMobiles,
-    ]);
-}
+        // 5. Sources de Production : Citernes Mobiles
+        $citernesMobiles = Vehicule::where("archived", 0)
+            ->get();
+
+        // 6. NOUVEAU : Bouteilles vides disponibles en production pour le remplissage
+        $availableBottles = Article::where('entreprise_id', $user->entreprise_id)
+            ->where('type', 'gaz_medical')
+            ->where('state', 'vide') // Uniquement les bouteilles VIDES
+            ->whereHas('stock', function ($query) use ($user) {
+                $query->where('agency_id', $user->agency_id)
+                      ->where('storage_type', 'production')
+                      ->where('quantity', 1); // Exactement 1 pour assurer le tracking unitaire
+            })
+            ->get(['id', 'code', 'name', 'weight_per_unit']);
+
+        // 7. Envoi des données vers Inertia
+        return Inertia::render("Production/ProdCiterne", [
+            "stocks"           => $stocks,
+            "agencies"         => $agencies,
+            "articles"         => $articles,
+            "articlesProd"     => $articlesProd,
+            "citernesFixes"    => $citernesFixes,
+            "citernesMobiles"  => $citernesMobiles,
+            "availableBottles" => $availableBottles, // <- Ajouté pour la modale
+        ]);
+    }
   public function produce(Request $request)
     {
         // 1. Validation des données

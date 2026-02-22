@@ -11,16 +11,19 @@ import {
     faIndustry, 
     faWifi, 
     faWarehouse,
-    faTriangleExclamation
+    faTriangleExclamation,
+    faStethoscope // Icône pour le gaz médical
 } from '@fortawesome/free-solid-svg-icons';
 
 import ReceptionFormModal from '../../components/Modals/Magasin/ReceptionModal';
 import DepotageFormModal from '../../components/Modals/Magasin/DepotageModal';
 import EditCiterneStockModal from '../../components/Modals/Magasin/ReleveModal';
 import ProductionBottleModal from '../../components/Modals/Production/ProdModal';
+import CreateProductionModal from '../../components/Modals/MedGas/CreateProductionModal'; // NOUVELLE MODALE
 import ProdLayout from '../../layout/ProdLayout/ProdLayout';
 
-const ProdCiterne = ({ stocks, articles, articlesProd, citernes, agencies, citernesFixes, citernesMobiles }) => {
+// NOUVEAU: Ajout de availableBottles dans les props
+const ProdCiterne = ({ stocks, articles, articlesProd, citernes, agencies, citernesFixes, citernesMobiles, availableBottles }) => {
   const { auth } = usePage().props;
   const userRole = auth.user?.role?.name;
 
@@ -29,6 +32,10 @@ const ProdCiterne = ({ stocks, articles, articlesProd, citernes, agencies, citer
   const [isDepotageModalOpen, setIsDepotageModalOpen] = useState(false);
   const [isEditStockModalOpen, setIsEditStockModalOpen] = useState(false);
   const [isProductionBottleModalOpen, setIsProductionBottleModalOpen] = useState(false);
+  
+  // NOUVEAU: État pour la modale Gaz Médical
+  const [isMedGasProductionModalOpen, setIsMedGasProductionModalOpen] = useState(false);
+  
   const [selectedStock, setSelectedStock] = useState(null);
 
   // --- Gestionnaires ---
@@ -48,6 +55,10 @@ const ProdCiterne = ({ stocks, articles, articlesProd, citernes, agencies, citer
 
   const openProductionBottleModal = () => setIsProductionBottleModalOpen(true);
   const closeProductionBottleModal = () => setIsProductionBottleModalOpen(false);
+
+  // NOUVEAU: Gestionnaire Gaz Médical
+  const openMedGasProductionModal = () => setIsMedGasProductionModalOpen(true);
+  const closeMedGasProductionModal = () => setIsMedGasProductionModalOpen(false);
 
   const isProductionUser = userRole === 'Production';
 
@@ -79,19 +90,28 @@ const ProdCiterne = ({ stocks, articles, articlesProd, citernes, agencies, citer
                     Réception Vrac
                 </button>
 
-                {/* 2. Bouton Principal Produire */}
+                {/* 2. Bouton Principal Produire (Standard) */}
                 <button
                     onClick={openProductionBottleModal}
                     className="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-purple-500/20 hover:bg-purple-700 transition-colors"
                 >
                     <FontAwesomeIcon icon={faBottleWater} />
-                    Lancer Production
+                    Production Standard
                 </button>
 
-                {/* 3. Bouton Spécifique (Optionnel selon rôle) */}
+                {/* 3. NOUVEAU : Bouton Production Gaz Médical */}
+                <button
+                    onClick={openMedGasProductionModal}
+                    className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-colors"
+                >
+                    <FontAwesomeIcon icon={faStethoscope} />
+                    Produire Gaz Médical
+                </button>
+
+                {/* Bouton Spécifique (Optionnel selon rôle) */}
                 {isProductionUser && (
                     <button
-                        onClick={openProductionBottleModal} // Ou une autre modal spécifique
+                        onClick={openProductionBottleModal} 
                         className="inline-flex items-center gap-2 rounded-xl border border-purple-200 bg-purple-50 px-4 py-2.5 text-sm font-semibold text-purple-700 hover:bg-purple-100 dark:border-purple-800 dark:bg-purple-900/20 dark:text-purple-300 dark:hover:bg-purple-900/40"
                     >
                         <FontAwesomeIcon icon={faPlus} />
@@ -246,13 +266,22 @@ const ProdCiterne = ({ stocks, articles, articlesProd, citernes, agencies, citer
         stockToEdit={selectedStock}
       />
 
+      {/* Modale de Production Standard */}
       <ProductionBottleModal
         isOpen={isProductionBottleModalOpen}
         onClose={closeProductionBottleModal}
         articles={articlesProd}
         title="Lancer une Production"
-         mobileCisterns = {citernesMobiles}
+        mobileCisterns={citernesMobiles}
         cisterns={citernesFixes}
+      />
+
+      {/* NOUVEAU: Modale de Production Gaz Médical (Par Scan) */}
+      <CreateProductionModal
+        isOpen={isMedGasProductionModalOpen}
+        onClose={closeMedGasProductionModal}
+        availableBottles={availableBottles}
+        citernes={citernesFixes}
       />
     </>
   );

@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Article;
 use App\Models\ArticleMaintenance;
+use App\Models\Citerne;
 use App\Models\Stock;
 use App\Models\Mouvement;
+use App\Models\ProductionHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -283,6 +285,116 @@ class ProdMedController extends Controller
             DB::rollBack();
             throw ValidationException::withMessages([
                 'error' => "Une erreur système inattendue est survenue : " . $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Enregistre une nouvelle production (remplissage de bouteilles)
+     */
+   public function storeProduction(Request $request)
+    {
+        // 1. Validation des données envoyées par la modale
+        $request->validate([
+            'source_citerne_id' => 'required|exists:citernes,id',
+            'batch_number'      => 'required|string|max:255',
+            'items'             => 'required|array|min:1',
+            'items.*'           => 'exists:articles,id',
+        ]);
+
+        $user = Auth::user();
+
+        try {
+            DB::beginTransaction();
+
+            // 2. Récupérer la citerne et verrouiller son stock pour éviter les accès concurrents
+            $citerne = Citerne::with('stock')->findOrFail($request->source_citerne_id);
+            
+            if (!$citerne->stock) {
+                throw ValidationException::withMessages([
+                    'source_citerne_id' => "La citerne sélectionnée n'a pas de ligne de stock initialisée."
+                ]);
+            }
+
+            // Verrouillage du stock de la citerne
+            $citerneStock = $citerne->stock()->lockForUpdate()->first();
+
+            // 3. Récupérer et vérifier les bouteilles, et calculer le volume total
+            $bottles = Article::whereIn('id', $request->items)->lockForUpdate()->get();
+            $totalVolumeNeeded = 0;
+
+            foreach ($bottles as $bottle) {
+                // RÈGLE 1 : La bouteille DOIT être vide pour être remplie
+                if ($bottle->state !== 'vide') {
+                    throw ValidationException::withMessages([
+                        'error' => "Opération annulée : La bouteille {$bottle->name} (Code: {$bottle->code}) est actuellement '{$bottle->state}'. Seules les bouteilles 'vide' peuvent être remplies."
+                    ]);
+                }
+
+                // RÈGLE 2 (CRITIQUE) : Le gaz de la bouteille doit correspondre exactement au gaz de la citerne
+                if ($bottle->product_inside_id !== $citerne->current_product_id) {
+                     throw ValidationException::withMessages([
+                         'error' => "Opération annulée (Sécurité) : Incompatibilité de gaz. La bouteille {$bottle->name} (Code: {$bottle->code}) est prévue pour un autre type de gaz que celui contenu dans la citerne."
+                     ]);
+                }
+
+                // On additionne le volume (considéré en m3, litre ou kg selon votre unité de weight_per_unit)
+                $volume = (float) $bottle->weight_per_unit;
+                
+                if ($volume <= 0) {
+                    throw ValidationException::withMessages([
+                        'error' => "Opération annulée : La bouteille {$bottle->name} a une capacité de remplissage (weight_per_unit) invalide ou nulle."
+                    ]);
+                }
+
+                $totalVolumeNeeded += $volume;
+            }
+
+            // 4. Vérifier si la citerne a suffisamment de matière première
+            if ($citerneStock->quantity < $totalVolumeNeeded) {
+                throw ValidationException::withMessages([
+                    'error' => "Stock insuffisant dans la citerne ! Volume total requis : {$totalVolumeNeeded}, Stock disponible : {$citerneStock->quantity}."
+                ]);
+            }
+
+            // 5. Exécution de la production
+            // A. Déduction du stock de la citerne
+            $citerneStock->quantity -= $totalVolumeNeeded;
+            $citerneStock->save();
+
+            // B. Mise à jour des bouteilles et création de l'historique
+            foreach ($bottles as $bottle) {
+                // Mise à jour de l'état et du lot de la bouteille
+                $bottle->update([
+                    'state'        => 'plein',
+                    'batch_number' => $request->batch_number,
+                ]);
+
+                // Enregistrement de la trace dans la table ProductionHistory
+                ProductionHistory::create([
+                    'source_citerne_id'     => $citerne->id,
+                    'article_id'            => $bottle->id, // La bouteille remplie
+                    'quantity_produced'     => 1, // Une seule bouteille physique
+                    'total_weight_produced' => $bottle->weight_per_unit, // Le volume injecté dans cette bouteille spécifique
+                    'agency_id'             => $user->agency_id,
+                    'recorded_by_user_id'   => $user->id,
+                    'stock_citern'          => $citerneStock->quantity, // État du stock de la citerne APRÈS ce tirage
+                    'batch_number'          => $request->batch_number,
+                ]);
+            }
+
+            DB::commit();
+            return back()->with('success', 'Production enregistrée avec succès ! Les bouteilles sont pleines et le stock de la citerne a été mis à jour.');
+
+        } catch (ValidationException $e) {
+            // Les exceptions de validation (nos messages d'erreur personnalisés) sont renvoyées au frontend
+            DB::rollBack();
+            throw $e;
+        } catch (\Exception $e) {
+            // Interception de toute autre erreur SQL ou système
+            DB::rollBack();
+            throw ValidationException::withMessages([
+                'error' => "Erreur système inattendue lors de la production : " . $e->getMessage()
             ]);
         }
     }

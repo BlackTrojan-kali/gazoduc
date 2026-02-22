@@ -5,7 +5,7 @@ import Swal from 'sweetalert2';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
     faFilter, faTimes, faCalendarAlt, faSearch, faSpinner, 
-    faFileExport, faTrashAlt, faIndustry, faTruckDroplet, faUser 
+    faFileExport, faTrashAlt, faIndustry, faTruckDroplet, faUser, faTag
 } from '@fortawesome/free-solid-svg-icons';
 
 // Layouts
@@ -48,11 +48,13 @@ const PageContent = ({ prodMoves, agencies, articles, citernes }) => {
       const lowerTerm = searchTerm.toLowerCase();
       tempMoves = tempMoves.filter(move =>
         move.citerne?.name.toLowerCase().includes(lowerTerm) ||
-        move.vehicle?.licence_plate.toLowerCase().includes(lowerTerm) || // Recherche Camion
-        move.vehicle?.brand?.toLowerCase().includes(lowerTerm) ||       // Recherche Marque
+        move.vehicle?.licence_plate.toLowerCase().includes(lowerTerm) || 
+        move.vehicle?.brand?.toLowerCase().includes(lowerTerm) ||       
         move.article?.name.toLowerCase().includes(lowerTerm) ||
         move.agency?.name.toLowerCase().includes(lowerTerm) ||
-        move.user?.last_name.toLowerCase().includes(lowerTerm)
+        move.user?.last_name.toLowerCase().includes(lowerTerm) ||
+        // NOUVEAU: Recherche par numéro de lot
+        move.batch_number?.toLowerCase().includes(lowerTerm)
       );
     }
 
@@ -87,10 +89,14 @@ const PageContent = ({ prodMoves, agencies, articles, citernes }) => {
   }, [searchTerm, selectedAgency, selectedArticle, selectedCiterne, startDate, endDate, prodMoves.data]);
 
   // --- Suppression ---
-  const canDelete = (productionCreatedAt) => {
+  // NOUVEAU: La fonction reçoit maintenant l'objet "move" complet pour vérifier le lot
+  const canDelete = (move) => {
+    // RÈGLE STRICTE: Impossible de supprimer si c'est un lot médical tracé
+    if (move.batch_number) return false;
+
     if (!auth.user?.modif_days || auth.user.modif_days <= 0) return false;
     const today = new Date();
-    const creationDate = new Date(productionCreatedAt);
+    const creationDate = new Date(move.created_at);
     const diffDays = Math.ceil((today - creationDate) / (1000 * 60 * 60 * 24));
     return diffDays <= auth.user.modif_days;
   };
@@ -106,7 +112,7 @@ const PageContent = ({ prodMoves, agencies, articles, citernes }) => {
       cancelButtonText: 'Retour',
     }).then((result) => {
       if (result.isConfirmed) {
-        inertiaDelete(route('production.delete', id), { // Assurez-vous que la route s'appelle bien production.delete
+        inertiaDelete(route('production.delete', id), { 
           onSuccess: () => Swal.fire('Annulé !', 'La production a été annulée.', 'success'),
           onError: () => Swal.fire('Erreur', 'Impossible de supprimer.', 'error'),
         });
@@ -160,7 +166,7 @@ const PageContent = ({ prodMoves, agencies, articles, citernes }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <InputField 
                 id="search" 
-                placeholder="Rechercher..." 
+                placeholder="Rechercher (Lot, Article...)" 
                 value={searchTerm} 
                 onChange={e => setSearchTerm(e.target.value)} 
                 icon={faSearch} 
@@ -197,8 +203,9 @@ const PageContent = ({ prodMoves, agencies, articles, citernes }) => {
                         <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Date</th>
                         <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Source (Vrac)</th>
                         <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Produit Fini</th>
-                        <th className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase">Quantité</th>
-                        <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Poids Total</th>
+                        <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">N° Lot</th>
+                        <th className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase">Qté</th>
+                        <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Poids/Vol</th>
                         <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Opérateur</th>
                         <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">Action</th>
                     </tr>
@@ -212,7 +219,6 @@ const PageContent = ({ prodMoves, agencies, articles, citernes }) => {
                                     <span className="text-xs text-gray-400">{new Date(move.created_at).toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})}</span>
                                 </td>
                                 
-                                {/* Colonne Source Intelligente */}
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     {move.source_citerne_id ? (
                                         <div className="flex items-center gap-2 text-sm text-purple-700 dark:text-purple-400">
@@ -231,6 +237,18 @@ const PageContent = ({ prodMoves, agencies, articles, citernes }) => {
                                     {move.article?.name}
                                 </td>
                                 
+                                {/* NOUVEAU: Colonne Lot */}
+                                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                    {move.batch_number ? (
+                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800">
+                                            <FontAwesomeIcon icon={faTag} className="text-indigo-400 dark:text-indigo-500" />
+                                            {move.batch_number}
+                                        </span>
+                                    ) : (
+                                        <span className="text-gray-400 italic text-xs">Standard</span>
+                                    )}
+                                </td>
+
                                 <td className="px-6 py-4 whitespace-nowrap text-center">
                                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
                                         +{move.quantity_produced}
@@ -238,7 +256,7 @@ const PageContent = ({ prodMoves, agencies, articles, citernes }) => {
                                 </td>
 
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400 font-mono">
-                                    {parseFloat(move.total_weight_produced).toLocaleString('fr-FR')} kg
+                                    {parseFloat(move.total_weight_produced).toLocaleString('fr-FR')}
                                 </td>
 
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
@@ -251,7 +269,7 @@ const PageContent = ({ prodMoves, agencies, articles, citernes }) => {
                                 </td>
 
                                 <td className="px-6 py-4 whitespace-nowrap text-right">
-                                    {canDelete(move.created_at) && (
+                                    {canDelete(move) && (
                                         <button 
                                             onClick={() => handleDelete(move.id)} 
                                             disabled={processing}
@@ -266,7 +284,7 @@ const PageContent = ({ prodMoves, agencies, articles, citernes }) => {
                         ))
                     ) : (
                         <tr>
-                            <td colSpan="7" className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                            <td colSpan="8" className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                                 <div className="flex flex-col items-center">
                                     <FontAwesomeIcon icon={faSearch} className="text-3xl mb-3 opacity-20" />
                                     <p>Aucune production trouvée pour ces critères.</p>
@@ -317,7 +335,7 @@ const PageContent = ({ prodMoves, agencies, articles, citernes }) => {
 // Composant Wrapper Principal
 const ProdMoves = (props) => {
   const { auth } = usePage().props;
-  const role = auth.user?.role?.name?.toLowerCase(); // Sécurisation de l'accès au rôle
+  const role = auth.user?.role?.name?.toLowerCase(); 
 
   // Sélection du Layout en fonction du rôle
   let Layout = ProdLayout; // Par défaut
@@ -331,4 +349,4 @@ const ProdMoves = (props) => {
   );
 };
 
-export default ProdMoves; 
+export default ProdMoves;

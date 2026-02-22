@@ -19,6 +19,8 @@ class ProductionHistory extends Model
    "agency_id",
     "recorded_by_user_id",
     "stock_citern",
+    //nouveaux champs
+    "batch_number"
            
     ];
     public function agency(){

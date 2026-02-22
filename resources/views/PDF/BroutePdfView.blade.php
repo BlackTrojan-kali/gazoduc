@@ -113,6 +113,7 @@
         }
         .text-center { text-align: center; }
         .text-right { text-align: right; }
+        .text-muted { color: #666; font-size: 9px; }
 
         .total-row {
             text-align: right;
@@ -214,6 +215,8 @@
         <thead>
             <tr>
                 <th>Désignation Produit</th>
+                <th class="text-center">État</th>
+                <th class="text-center">N° Lot</th>
                 <th class="text-center">Unité</th>
                 <th class="text-right">Quantité</th>
             </tr>
@@ -221,27 +224,40 @@
         <tbody>
             @forelse($roadbill->articles as $article)
             <tr>
-                <td><strong>{{ $article->name }}</strong></td>
+                <td>
+                    <strong>{{ $article->name }}</strong>
+                    @if($article->code)
+                        <br><span class="text-muted">Code: {{ $article->code }}</span>
+                    @endif
+                </td>
+                <td class="text-center">{{ ucfirst($article->state ?? '-') }}</td>
+                <td class="text-center">
+                    @if($article->batch_number)
+                        <strong>{{ $article->batch_number }}</strong>
+                    @else
+                        -
+                    @endif
+                </td>
                 <td class="text-center">{{ $article->unit ?? 'U' }}</td>
-                <td class="text-right">{{ number_format($article->pivot->qty, 2, ',', ' ') }}</td>
+                <td class="text-right">{{ number_format($article->pivot->qty ?? 1, 2, ',', ' ') }}</td>
             </tr>
             @empty
             <tr>
-                <td colspan="3" class="text-center">Aucun article enregistré.</td>
+                <td colspan="5" class="text-center">Aucun article enregistré.</td>
             </tr>
             @endforelse
         </tbody>
     </table>
 
     <div class="total-row">
-        Total Articles : {{ $roadbill->articles->count() }} lignes
+        Total Articles : {{ $roadbill->articles->count() }} lignes physiques
     </div>
 
     <table class="signature-table">
         <tr>
             <td class="signature-box">
                 <span class="signature-title">Visa Responsable Départ</span>
-                <div class="signature-footer">Nom : {{ auth()->user()->name }}</div>
+                <div class="signature-footer">Nom : {{ auth()->user()->name ?? 'Système' }}</div>
             </td>
             <td style="width: 5%;"></td>
             <td class="signature-box">

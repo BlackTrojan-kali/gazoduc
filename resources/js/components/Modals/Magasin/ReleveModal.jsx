@@ -11,6 +11,7 @@ import Button from '../../ui/button/Button';
 
 const EditCiterneStockModal = ({ isOpen, onClose, stockToEdit,licence }) => {
   // Initialise le formulaire avec les données du stock à modifier
+  console.log(stockToEdit);
   // ou des valeurs par défaut si stockToEdit est null (quand la modal est fermée)
   const { data, setData, post, processing, errors, reset } = useForm({
     id: stockToEdit ? stockToEdit.id : null,
@@ -40,7 +41,7 @@ const EditCiterneStockModal = ({ isOpen, onClose, stockToEdit,licence }) => {
   };
 
   const handleSubmit = (e) => {
-    e.preventDefault();
+    e.preventDefault(); 
 
     // Utilisation de Inertia.js pour envoyer la requête PUT/PATCH
     // On assume une route comme 'stocks.update' qui prend l'ID du stock
