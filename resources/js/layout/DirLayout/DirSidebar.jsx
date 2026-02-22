@@ -12,7 +12,9 @@ const navItems = [
     name: "Dashboard",
     subItems: [
       { name:"Stocks", path: "/director/index", pro: false },
-      { name: "Articles", path: "/director/articles", pro: false }, 
+      { name: "Articles", path: "/director/articles", pro: false },
+      {name: "Gas Med", path:"/gas-medical"},
+      {name: "Gas Med Stock", path:"/gas-medical-inventory"},
       { name: "Citernes", path: "/citernes/index", pro: false },
     ],
   },{

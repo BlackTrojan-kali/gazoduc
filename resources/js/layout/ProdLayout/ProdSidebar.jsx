@@ -13,6 +13,7 @@ const navItems = [
     subItems: [
       { name:"Stocks", path: "/production-dashboard", pro: false },
       { name: "citernes", path: "/production-citernes", pro: false },
+      {name:"Gas Med Stock",path:"/production-medical-inventory",pro:false},
     ],
   },
   {
@@ -23,6 +24,7 @@ const navItems = [
       { name: "sorties", path: "/magasin-moves/sortie", pro: false },
       { name: "reception", path: "/receptions/gaz", pro: false },
       { name: "production", path: "/prod-history", pro: false },
+      {name:"reepreuve",path:'/gas-medical-production-maintenances',pro:false}
     ],
   }
  

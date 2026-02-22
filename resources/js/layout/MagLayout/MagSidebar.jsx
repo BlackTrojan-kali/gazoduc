@@ -20,6 +20,7 @@ const MagSidebar = () => {
       subItems: [
         { name: "Factures", path: "/commercial-page-sales", pro: false },
         { name: "Articles Vendues", path: "/sales/items", pro: false },
+      
       ],
     }
     paymentRoutes={
@@ -40,6 +41,7 @@ const MagSidebar = () => {
     subItems: [
       { name:"Stocks", path: "/magasin-index", pro: false },
       { name: "citernes", path: "/magasin-citernes", pro: false },
+        {name: "Gas Med Stock", path:"/magasin-medical-inventory"},//
     ],
   },
   {

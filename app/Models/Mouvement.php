@@ -24,6 +24,11 @@ class Mouvement extends Model
         "qualification",
         'quantity', // Quantité négative pour la sortie
         'facture_id',
+        //new attributes for medical
+        "status",
+        "state",
+        "batch_number",
+    
     ];
     public function article(){
         return $this->belongsTo(Article::class,"article_id");

@@ -64,8 +64,11 @@ use App\Http\Controllers\MagBoutiqueController;
 use App\Http\Controllers\ProductTransfertController;
 
 use App\Http\Controllers\ComBoutiqueController;
+use App\Http\Controllers\GasMedController;
 use App\Http\Controllers\GPSController;
 use App\Http\Controllers\GpsDeviceController;
+use App\Http\Controllers\MagMedController;
+use App\Http\Controllers\ProdMedController;
 use App\Http\Controllers\ProductSalesController;
 use App\Http\Controllers\ProductPaymentController;
 //auth routes
@@ -114,6 +117,16 @@ Route::get('/subscriptions/{subscription}/invoice', [SubController::class, 'down
 });
 
 Route::middleware([DirectionMiddleware::class,isArchivedMiddleWare::class])->group(function(){
+
+// Routes pour la gestion des gaz médicaux
+Route::post('/gas-medical/store', [GasMedController::class, 'store'])->name('gas_medical.store');
+Route::put('/gas-medical/update/{id}', [GasMedController::class, 'update'])->name('gas_medical.update');
+Route::delete('/gas-medical/destroy/{id}', [GasMedController::class, 'destroy'])->name('gas_medical.destroy');
+
+Route::get('/gas-medical', [GasMedController::class, 'index'])->name('gas_medical.index');
+// Route pour initialiser tous les stocks de gaz médical
+Route::post('/gas-medical/init-stocks', [GasMedController::class, 'initializeAllGasMedicalStocks'])->name('gas_medical.init_stocks');
+Route::get('/gas-medical-inventory', [GasMedController::class, 'inventory'])->name('gas_medical.inventory');
 Route::resource('gps-devices', GpsDeviceController::class)->except(['create', 'edit']);
 //Mouvements direction
 Route::get('/direction/historique-global', [DirBoutiqueController::class, 'history'])
@@ -194,6 +207,7 @@ Route::middleware([MagasinMiddleware::class,isArchivedMiddleWare::class,ClosureM
    Route::post("/magasin-citernes-depotage",[CiterneController::class,"depotage"])->name("magasin.depotage");
    Route::post("/magasin-citerne-releve/{stock}",[CiterneController::class,"releve"])->name("magasin.releve");
    //mouvement
+    Route::get('/magasin-medical-inventory', [MagMedController::class, 'inventory'])->name('mag_medical.inventory');
    //sale fuel
    Route::post("/magasin-post-sale-fuel",[ControllersFuelController::class,"store"])->name("fuel.store");
 
@@ -225,10 +239,25 @@ Route::delete('/transfers/{id}', [ProductTransfertController::class, 'destroy'])
 
 //common routes to all users
 Route::middleware([isAuthenticatedMiddleware::class,ClosureMiddleware::class])->group(function(){
-
+// Route pour le transfert multiple de bouteilles
+Route::post('/mouvements/transfer-multiple', [MagMedController::class, 'transferMultiple'])->name('mouvements.transfer_multiple');
+// Route pour la réception multiple de bouteilles (depuis Prod ou Client)
+Route::post('/mouvements/receive-multiple', [MagMedController::class, 'receiveMultiple'])->name('mouvements.receive_multiple');
+// Route pour l'inventaire de la production (Gaz Médical)
+Route::get('/production-medical-inventory', [ProdMedController::class, 'inventory'])->name('prod_medical.inventory');
+// Route pour afficher la page de l'historique des maintenances (Production)
+Route::get('/gas-medical-production-maintenances', [ProdMedController::class, 'maintenanceIndex'])
+    ->name('gas_medical.maintenance.index');
+    // Route pour enregistrer la mise en maintenance d'un lot de bouteilles
+Route::post('/gas-medical/maintenance', [ProdMedController::class, 'storeMaintenance'])->name('gas_medical.maintenance.store');
+// Route pour CLÔTURER la maintenance (NOUVEAU)
+Route::post('/gas-medical/maintenance/{id}/complete', [ProdMedController::class, 'completeMaintenance'])
+    ->name('gas_medical.maintenance.complete');
 //global boutique pdf routes
 Route::get('/product-sales', [DirBoutiqueController::class, 'salesHistory'])->name('admin.reports.sales');
-        Route::get('/product-sales/pdf', [DirBoutiqueController::class, 'downloadSalesReport'])->name('admin.reports.sales.pdf');
+
+
+Route::get('/product-sales/pdf', [DirBoutiqueController::class, 'downloadSalesReport'])->name('admin.reports.sales.pdf');
         
         Route::get('/product-payments', [DirBoutiqueController::class, 'paymentsHistory'])->name('admin.reports.payments');
         Route::get('/product-payments/pdf', [DirBoutiqueController::class, 'downloadPaymentsReport'])->name('admin.reports.payments.pdf');    

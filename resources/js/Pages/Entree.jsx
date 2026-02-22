@@ -331,7 +331,6 @@ const Entree = (props) => {
   const { auth } = usePage().props;
   const userRole = auth.user.role?.name || auth.user.role;
   const { licence, DirLicence } = useLicenceChoice();
-
   // Mapping des rôles vers les Layouts
   const LayoutMap = {
     production: ProdLayout,

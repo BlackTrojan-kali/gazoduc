@@ -16,6 +16,14 @@ class Article extends Model
             "article_id",
             "entreprise_id",
            "weight_per_unit",
+           //new attribute for medical
+            "state",
+            "batch_number",
+           "product_inside_id",
+           "last_maintenance",
+           "estimated_maintenance_date"
+
+           
     ];
     public function stock(){
         return $this->hasMany(Stock::class);
@@ -29,6 +37,10 @@ class Article extends Model
     public function prices(){
         return $this->hasMany(ArticleCategoryPrice::class);
     } 
+    public function productInside()
+    {
+        return $this->belongsTo(Article::class, 'product_inside_id');
+    }
      public function current_agency_prices()
     {
         // 1. Vérifier si un utilisateur est authentifié ET s'il a un agency_id défini
