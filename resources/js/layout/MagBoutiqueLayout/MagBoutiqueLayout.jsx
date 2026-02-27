@@ -3,7 +3,7 @@ import { SidebarProvider, useSidebar } from "../../context/SidebarContext";
 import MagBoutiqueBackdrop from "./MagBoutiqueBackdrop";
 import ToastProvider from "../../components/ui/alert/ToastProvider";
 import MagBoutiqueHeader from "./MagBoutiqueHeader";
-import MagBoutiqueSidebar from "./MagBoutiqueSidebar";
+import MagBoutiqueSidebar from "./MagBoutiqueSidebar"; 
 const LayoutContent = ({children}) => {
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
 

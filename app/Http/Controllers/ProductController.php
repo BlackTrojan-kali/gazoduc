@@ -111,62 +111,87 @@ class ProductController extends Controller
         return redirect()->back()->with('success', 'Produit supprimé avec succès.');
     }
 
-    // ----------------------------------------------------------------------
-    // --- NOUVELLES FONCTIONS DE GESTION DE STOCK --------------------------
+// ----------------------------------------------------------------------
+    // --- NOUVELLES FONCTIONS DE GESTION DE STOCK OPTIMISÉES ---------------
     // ----------------------------------------------------------------------
 
     /**
      * Action Publique : Initialise les stocks pour UN produit spécifique.
-     * Utile si on ajoute une nouvelle boutique et qu'on veut mettre à jour un produit.
      */
     public function initializeProductStock(Product $product)
     {
-        $this->ensureStockExists($product);
+        // On passe les boutiques en paramètre pour éviter de les recharger inutilement
+        $boutiques = Boutique::all();
+        $this->ensureStockExists($product, $boutiques);
+        
         return redirect()->back()->with('success', "Stocks initialisés pour le produit : {$product->designation}");
     }
 
     /**
      * Action Publique : Initialise les stocks pour TOUS les produits.
-     * Utile lors de la mise en production ou après l'ajout de nouvelles boutiques.
      */
     public function initializeAllStocks()
     {
-        // On utilise chunk pour éviter de surcharger la mémoire s'il y a des milliers de produits
-        Product::chunk(100, function ($products) {
-            foreach ($products as $product) {
-                $this->ensureStockExists($product);
-            }
-        });
-
-        return redirect()->back()->with('success', 'Tous les stocks ont été initialisés/vérifiés pour toutes les boutiques.');
-    }
-
-    /**
-     * Méthode Privée (Helper) : Logique métier d'initialisation.
-     * Parcourt toutes les boutiques et crée les lignes "magasin" et "comptoir" si absentes.
-     */
-    private function ensureStockExists(Product $product)
-    {
+        // 1. On charge les boutiques UNE SEULE FOIS pour tout le processus
         $boutiques = Boutique::all();
         $services = ['magasin', 'comptoir'];
 
+        // 2. On utilise chunkById (plus sûr que chunk quand on modifie ou insère)
+        Product::chunkById(200, function ($products) use ($boutiques, $services) {
+            
+            $stocksToInsert = [];
+            $now = now();
+
+            // 3. On prépare un gros tableau de données en mémoire (ultra rapide)
+            foreach ($products as $product) {
+                foreach ($boutiques as $boutique) {
+                    foreach ($services as $service) {
+                        $stocksToInsert[] = [
+                            'product_id'    => $product->id,
+                            'boutique_id'   => $boutique->id,
+                            'service'       => $service,
+                            'available_qty' => 0,
+                            'created_at'    => $now,
+                            'updated_at'    => $now,
+                        ];
+                    }
+                }
+            }
+
+            // 4. On insère tout d'un seul coup (Bulk Insert)
+            // insertOrIgnore tentera d'insérer. Si la combinaison existe déjà 
+            // (grâce à l'index unique), il l'ignorera sans faire d'erreur.
+            // Cela réduit 1000 requêtes individuelles en 1 seule requête !
+            \App\Models\ProductStock::insertOrIgnore($stocksToInsert);
+        });
+
+        return redirect()->back()->with('success', 'Tous les stocks ont été initialisés/vérifiés de manière optimisée.');
+    }
+
+    /**
+     * Méthode Privée (Helper) : Logique pour UN seul produit (utile lors de la création d'un produit)
+     */
+    private function ensureStockExists(Product $product, $boutiques = null)
+    {
+        // Si les boutiques ne sont pas fournies, on les charge
+        $boutiques = $boutiques ?? Boutique::all();
+        $services = ['magasin', 'comptoir'];
+        $stocksToInsert = [];
+        $now = now();
+
         foreach ($boutiques as $boutique) {
             foreach ($services as $service) {
-                // firstOrCreate vérifie si la combinaison product_id + boutique_id + service existe déjà
-                // Si non, elle la crée avec available_qty = 0
-                ProductStock::firstOrCreate(
-                    [
-                        'product_id'  => $product->id,
-                        'boutique_id' => $boutique->id,
-                        'service'     => $service,
-                    ],
-                    [
-                        'available_qty' => 0,
-                        'created_at'    => now(),
-                        'updated_at'    => now(),
-                    ]
-                );
+                $stocksToInsert[] = [
+                    'product_id'    => $product->id,
+                    'boutique_id'   => $boutique->id,
+                    'service'       => $service,
+                    'available_qty' => 0,
+                    'created_at'    => $now,
+                    'updated_at'    => $now,
+                ];
             }
         }
+
+        \App\Models\ProductStock::insertOrIgnore($stocksToInsert);
     }
 }

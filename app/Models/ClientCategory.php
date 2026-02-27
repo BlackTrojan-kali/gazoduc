@@ -7,4 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class ClientCategory extends Model
 {
     //
+    protected $fillable = [
+            "name",
+            "description",
+    ];
 }
+ 

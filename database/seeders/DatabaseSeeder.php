@@ -22,6 +22,6 @@ class DatabaseSeeder extends Seeder
         $this->call(RegionSeederphp::class);
         $this->call(CitySeeder::class);
         $this->call(TrackingDemoSeeder::class);
-    
+        $this->call(ProductCategorySeeder::class);
     }
 }

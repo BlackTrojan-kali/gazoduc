@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Head, router } from '@inertiajs/react';
-import { debounce } from 'lodash'; // Assurez-vous d'avoir lodash ou implémentez une fonction debounce simple
+import { debounce } from 'lodash'; 
+import Select from 'react-select'; // Import de React-Select
 
 import ProductCategoryFormModal from '../../../components/Modals/Boutique_Modals/Produits/ProductCategoryFormModal';
 import Button from '../../../components/ui/button/Button';
@@ -8,19 +9,32 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faEdit, faTrash, faSearch, faTags, faLayerGroup } from '@fortawesome/free-solid-svg-icons';
 import DirBoutiqueLayout from '../../../layout/DirBoutiqueLayout/DirBoutiqueLayout';
 
-const ProdCatIndex = ({ categories, filters }) => {
+const ProdCatIndex = ({ categories, allCategories, filters }) => {
   // --- États ---
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentCategory, setCurrentCategory] = useState(null);
+  
   const [search, setSearch] = useState(filters.search || '');
+  
+  // Formatage des options pour React-Select
+  const parentOptions = allCategories.map(cat => ({ value: cat.id, label: cat.name }));
+  
+  // État initial du select basé sur les filtres de l'URL
+  const [selectedParent, setSelectedParent] = useState(
+    filters.parent_id 
+      ? parentOptions.find(option => option.value == filters.parent_id) 
+      : null
+  );
 
-  // --- Gestion de la Recherche (Server-Side) ---
-  // Comme le contrôleur pagine les résultats, nous devons relancer une requête pour chercher
-  const handleSearch = useCallback(
-    debounce((query) => {
+  // --- Gestion des Filtres (Server-Side) ---
+  const applyFilters = useCallback(
+    debounce((searchQuery, parentId) => {
       router.get(
         route('product-categories.index'),
-        { search: query },
+        { 
+            search: searchQuery, 
+            parent_id: parentId // On passe le parent_id au backend
+        },
         { preserveState: true, replace: true }
       );
     }, 300),
@@ -28,18 +42,24 @@ const ProdCatIndex = ({ categories, filters }) => {
   );
 
   const onSearchChange = (e) => {
-    setSearch(e.target.value);
-    handleSearch(e.target.value);
+    const value = e.target.value;
+    setSearch(value);
+    applyFilters(value, selectedParent?.value || '');
+  };
+
+  const onParentFilterChange = (selectedOption) => {
+    setSelectedParent(selectedOption);
+    applyFilters(search, selectedOption?.value || '');
   };
 
   // --- Gestion de la Modale ---
   const openCreateModal = () => {
-    setCurrentCategory(null); // Mode Création
+    setCurrentCategory(null);
     setIsModalOpen(true);
   };
 
   const openEditModal = (category) => {
-    setCurrentCategory(category); // Mode Édition
+    setCurrentCategory(category);
     setIsModalOpen(true);
   };
 
@@ -48,13 +68,12 @@ const ProdCatIndex = ({ categories, filters }) => {
     if (confirm("Êtes-vous sûr de vouloir supprimer cette catégorie ?")) {
       router.delete(route('product-categories.destroy', id), {
         onSuccess: () => {
-            // Optionnel : Notification toast ici
+            // Notification toast ici
         }
       });
     }
   };
 
-  // Accès aux données (pagination Laravel)
   const dataList = categories.data || [];
 
   return (
@@ -81,10 +100,12 @@ const ProdCatIndex = ({ categories, filters }) => {
         </Button>
       </div>
 
-      {/* --- Barre d'outils (Recherche) --- */}
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-        <div className="relative max-w-md">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+      {/* --- Barre d'outils (Recherche & Filtres) --- */}
+      <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row gap-4">
+        
+        {/* Recherche Texte */}
+        <div className="relative flex-1 max-w-md">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
             <FontAwesomeIcon icon={faSearch} className="text-gray-400" />
           </div>
           <input
@@ -95,6 +116,29 @@ const ProdCatIndex = ({ categories, filters }) => {
             className="pl-10 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm focus:ring-brand-500 focus:border-brand-500 text-gray-900 dark:text-white"
           />
         </div>
+
+        {/* Filtre React-Select pour la Catégorie Parente */}
+        <div className="flex-1 max-w-xs z-20"> {/* z-20 important pour que le dropdown passe par-dessus le reste */}
+            <Select
+                value={selectedParent}
+                onChange={onParentFilterChange}
+                options={parentOptions}
+                isClearable
+                placeholder="Filtrer par parent..."
+                className="react-select-container"
+                classNamePrefix="react-select"
+                // Styles basiques pour l'intégrer au design Tailwind
+                styles={{
+                    control: (base) => ({
+                        ...base,
+                        borderRadius: '0.5rem',
+                        borderColor: '#D1D5DB', // gray-300
+                        padding: '1px',
+                    })
+                }}
+            />
+        </div>
+
       </div>
 
       {/* --- Tableau --- */}
@@ -103,8 +147,8 @@ const ProdCatIndex = ({ categories, filters }) => {
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700/50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/4">Nom</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Description</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/3">Nom</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Catégorie Parente</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">Actions</th>
               </tr>
             </thead>
@@ -123,8 +167,15 @@ const ProdCatIndex = ({ categories, filters }) => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
-                        {cat.description || <span className="italic opacity-50">Aucune description</span>}
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        {/* Affichage du parent au lieu de la description */}
+                        {cat.parent ? (
+                            <span className="bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded border border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600">
+                                {cat.parent.name}
+                            </span>
+                        ) : (
+                            <span className="italic opacity-50 text-xs">Catégorie Principale</span>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -160,15 +211,15 @@ const ProdCatIndex = ({ categories, filters }) => {
         {categories.links && (
            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
               <div className="text-sm text-gray-500 dark:text-gray-400">
-                 Affichage de {categories.from} à {categories.to} sur {categories.total} résultats
+                 Affichage de {categories.from || 0} à {categories.to || 0} sur {categories.total || 0} résultats
               </div>
-              <div className="flex gap-1">
+              <div className="flex gap-1 overflow-x-auto">
                  {categories.links.map((link, k) => (
                     <button
                        key={k}
-                       onClick={() => link.url && router.get(link.url, { search }, { preserveState: true })}
+                       onClick={() => link.url && router.get(link.url, { search, parent_id: selectedParent?.value }, { preserveState: true })}
                        disabled={!link.url || link.active}
-                       className={`px-3 py-1 rounded text-sm ${
+                       className={`px-3 py-1 rounded text-sm whitespace-nowrap ${
                           link.active 
                           ? 'bg-brand-600 text-white' 
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300'
@@ -186,6 +237,7 @@ const ProdCatIndex = ({ categories, filters }) => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         category={currentCategory}
+        categories={allCategories} // On passe la liste pour le select interne
       />
     </div>
   );

@@ -3,7 +3,7 @@ import { Link, usePage } from "@inertiajs/react"; // <--- IMPORT usePage HERE
 
 import { useSidebar } from "../../context/SidebarContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronDown, faCoins, faDashboard, faDollar, faDotCircle, faDriversLicense, faGlobe,  faIndustry,  faMoneyBill,  faSave,  faTimeline,  faUser, faUserAlt, faUserFriends,  } from "@fortawesome/free-solid-svg-icons";
+import { faChevronDown, faCoins, faDashboard, faDollar, faDotCircle, faDriversLicense, faGlobe,  faIndustry,  faMoneyBill,  faSave,  faShop,  faTimeline,  faUser, faUserAlt, faUserFriends,  } from "@fortawesome/free-solid-svg-icons";
 
 
 const navItems = [
@@ -26,8 +26,16 @@ const navItems = [
 ];
 
 const othersItems= [
-  
-];
+   {
+    icon:  <FontAwesomeIcon icon={faShop} />,
+    name: "Fournisseurs",
+    subItems: [
+      { name: "Ordres de Commande", path: "/purchase-orders", pro: false },
+    { name: "Receptions", path: "/receipts", pro: false },
+    
+    ],
+  },
+]; 
 
 const MagBoutiqueSidebar = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();

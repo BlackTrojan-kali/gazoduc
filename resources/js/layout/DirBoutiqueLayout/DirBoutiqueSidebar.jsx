@@ -3,7 +3,7 @@ import { Link, usePage } from "@inertiajs/react"; // <--- IMPORT usePage HERE
 
 import { useSidebar } from "../../context/SidebarContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronDown, faCoins, faDashboard, faDollar, faDotCircle, faDriversLicense, faGlobe,  faIndustry,  faMoneyBill,  faSave,  faTimeline,  faUser, faUserAlt, faUserFriends,  } from "@fortawesome/free-solid-svg-icons";
+import { faChevronDown, faCoins, faDashboard, faDollar, faDotCircle, faDriversLicense, faGlobe,  faIndustry,  faMoneyBill,  faReceipt,  faSave,  faTimeline,  faUser, faUserAlt, faUserFriends,  } from "@fortawesome/free-solid-svg-icons";
 
 
 const navItems = [
@@ -15,12 +15,13 @@ const navItems = [
       { name: "Produits", path: "/product/index", pro: false },
       { name: "Stock Produits", path: "/product/stocks-index", pro: false },
       { name: "Categories Produits", path: "/product/category/index", pro: false },
-    ],
+    ], 
   },{
     icon:  <FontAwesomeIcon icon={faTimeline} />,
     name: "Caisses",
     subItems: [
       { name:"Caisses", path: "/counters/index", pro: false },
+      {name:"Sessions Caisse", path:"/pos-sessions",pro:false}
     ],
   },
   {
@@ -56,6 +57,11 @@ const othersItems= [
     name: "Clients",
    subItems: [
       { name: "Clients", path: "/customers", pro: false },
+    ],
+  }, { icon:  <FontAwesomeIcon icon={faReceipt} />,
+    name: "Fournisseurs",
+   subItems: [
+      { name: "Fournisseurs", path: "/suppliers", pro: false },
     ],
   }
 ];

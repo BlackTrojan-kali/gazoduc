@@ -81,10 +81,17 @@
             border: 1px solid #ddd;
             padding: 10px 8px;
             text-align: left;
+            vertical-align: top; /* Aligner le texte vers le haut */
         }
         .items-table th {
             background-color: #f8f8f8;
             font-weight: bold;
+        }
+        .item-meta {
+            font-size: 9px;
+            color: #666;
+            margin-top: 4px;
+            font-style: italic;
         }
         .totals-container {
             width: 100%;
@@ -132,7 +139,7 @@
             </div>
             <div class="header-center">
                 <h1>Facture</h1>
-                <p>N°: <b>{{ $facture->id }}</b></p>
+                <p>N°: <b>{{ str_pad($facture->id, 6, '0', STR_PAD_LEFT) }}</b></p>
                 <p>Date: {{ $facture->created_at->format('d/m/Y') }}</p>
             </div>
             <div class="header-right">
@@ -153,8 +160,8 @@
             </div>
             <div class="sale-info">
                 <h3>Informations de la Vente</h3>
-                <p>Type de vente: <b>{{ $facture->invoice_type }}</b></p>
-                <p>Mode de paiement: <b>{{ $facture->currency }}</b></p>
+                <p>Type de vente: <b>{{ ucfirst($facture->invoice_type) }}</b></p>
+                <p>Mode de paiement: <b>{{ ucfirst($facture->currency) }}</b></p>
                 <p>Vendeur: <b>{{ $facture->user->first_name }} {{ $facture->user->last_name }}</b></p>
             </div>
         </div>
@@ -162,16 +169,39 @@
         <table class="items-table">
             <thead>
                 <tr>
-                    <th>Article</th>
-                    <th class="text-center" style="width: 80px;">Qté</th>
-                    <th class="text-right" style="width: 120px;">Prix Unitaire</th>
-                    <th class="text-right" style="width: 120px;">Sous-total</th>
+                    <th>Désignation Article</th>
+                    <th class="text-center" style="width: 60px;">Qté</th>
+                    <th class="text-right" style="width: 110px;">Prix Unitaire</th>
+                    <th class="text-right" style="width: 110px;">Sous-total</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach ($facture->items as $item)
                     <tr>
-                        <td>{{ $item->article->name }}</td>
+                        <td>
+                            <strong>{{ $item->article->name }}</strong>
+                            
+                            {{-- Bloc PHP pour gérer intelligemment les tirets de séparation --}}
+                            @php
+                                $details = [];
+                                if ($item->article->code) {
+                                    $details[] = 'Code: ' . $item->article->code;
+                                }
+                                if ($item->article->batch_number) {
+                                    $details[] = 'Lot: ' . $item->article->batch_number;
+                                }
+                                if ($item->article->state) {
+                                    $details[] = 'État: ' . ucfirst($item->article->state);
+                                }
+                            @endphp
+
+                            {{-- Si au moins un détail existe, on l'affiche en petit en dessous --}}
+                            @if(!empty($details))
+                                <div class="item-meta">
+                                    {{ implode(' • ', $details) }}
+                                </div>
+                            @endif
+                        </td>
                         <td class="text-center">{{ $item->quantity }}</td>
                         <td class="text-right">{{ number_format($item->unit_price, 2, ',', ' ') }}</td>
                         <td class="text-right">{{ number_format($item->subtotal, 2, ',', ' ') }}</td>

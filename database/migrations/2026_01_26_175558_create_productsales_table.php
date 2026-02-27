@@ -19,6 +19,8 @@ return new class extends Migration
             $table->foreign("user_id")->on("users")->references("id")->onDelete("cascade");
             $table->unsignedBigInteger("customer_id");
             $table->foreign("customer_id")->on("customers")->references("id")->onDelete("cascade");
+            $table->unsignedBigInteger("pos_session_id");
+            $table->foreign("pos_session_id")->on("pos_sessions")->references("id")->onDelete("cascade");
             $table->string("facture_code");
             $table->bigInteger("total_ht");
             $table->bigInteger("total_tva")->nullable();

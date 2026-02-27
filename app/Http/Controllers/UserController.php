@@ -478,29 +478,46 @@ class UserController extends Controller
         return back()->with("warning","user archived successfully");
     }
 
+    /**
+     * Affiche la liste du personnel des boutiques avec filtres avancés.
+     */
     public function index_boutique(Request $request)
     {
-        // 1. Chargement des utilisateurs avec toutes les relations nécessaires
-        // On charge 'boutique' et 'counter' pour l'affichage
-        $users = User::where('is_boutique', true)
-            ->with(['role', 'agency', 'counter', 'boutique']) 
-            ->when($request->input('search'), function ($query, $search) {
-                $query->where(function($q) use ($search) {
-                    $q->where('first_name', 'like', "%{$search}%")
-                      ->orWhere('last_name', 'like', "%{$search}%")
-                      ->orWhere('email', 'like', "%{$search}%")
-                      ->orWhere('code', 'like', "%{$search}%");
-                });
-            })
-            ->latest()
-            ->paginate(10)
-            ->withQueryString();
+        // 1. Préparation de la requête avec Eager Loading
+        $query = User::where('is_boutique', true)
+            ->with(['role', 'agency', 'counter', 'boutique']);
 
-        // 2. Données pour les formulaires (Modale)
-        $roles = Role::whereIn('name', ['magasin', 'commercial'])->get(['id', 'name']);
+        // 2. Filtre par Recherche (Nom, Prénom, Email, Code)
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                  ->orWhere('last_name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('code', 'like', "%{$search}%");
+            });
+        }
+
+        // 3. NOUVEAU : Filtre par Rôle (ex: commercial, magasin, controleur)
+        if ($request->filled('role_id')) {
+            $query->where('role_id', $request->role_id);
+        }
+
+        // 4. NOUVEAU : Filtre par Boutique
+        if ($request->filled('boutique_id')) {
+            $query->where('boutique_id', $request->boutique_id);
+        }
+
+        // 5. Exécution avec Tri et Pagination
+        $users = $query->latest()
+                       ->paginate(10)
+                       ->withQueryString();
+
+        // 6. Données pour les filtres de l'interface et la modale de création
+        $roles = Role::whereIn('name', ['magasin', 'commercial', 'controleur'])->get(['id', 'name']);
         $agencies = Agency::orderBy('name')->get(['id', 'name']);
-        $boutiques = Boutique::orderBy('name')->with("counters")->get(['id', 'name',]); // Nouveau
-        $counters = Counter::orderBy('name')->get(['id', 'name',"boutique_id"]);
+        $boutiques = Boutique::orderBy('name')->with('counters')->get(['id', 'name']);
+        $counters = Counter::orderBy('name')->get(['id', 'name', 'boutique_id']);
 
         return Inertia::render('DirBoutique/Users/UserBoutiqueIndex', [
             'users'     => $users,
@@ -508,7 +525,8 @@ class UserController extends Controller
             'agencies'  => $agencies,
             'boutiques' => $boutiques,
             'counters'  => $counters,
-            'filters'   => $request->only(['search']),
+            // NOUVEAU : On passe tous les filtres actifs à React pour maintenir l'état des Selects
+            'filters'   => $request->only(['search', 'role_id', 'boutique_id']),
         ]);
     }
 
@@ -521,7 +539,7 @@ class UserController extends Controller
     public function store_boutique(Request $request)
     {
         $commercialRole = Role::where('name', 'commercial')->firstOrFail();
-        $allowedRoles = Role::whereIn('name', ['magasin', 'commercial'])->pluck('id');
+        $allowedRoles = Role::whereIn('name', ['magasin', 'commercial',"controleur"])->pluck('id');
             
         $validated = $request->validate([
             'first_name'   => ['required', 'string', 'max:255'],

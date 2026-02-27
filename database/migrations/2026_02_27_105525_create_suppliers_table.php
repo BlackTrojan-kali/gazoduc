@@ -7,15 +7,18 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Run the migrations. 
+     * Run the migrations.
      */
     public function up(): void
     {
-        Schema::create('productcategories', function (Blueprint $table) {
+        Schema::create('suppliers', function (Blueprint $table) {
             $table->id();
             $table->string("name");
-            $table->unsignedBigInteger("parent_id")->nullable();
-            $table->foreign("parent_id")->references("id")->on("productcategories")->onDelete("cascade");
+            $table->string("contact_name")->nullable();
+            $table->string("phone")->nullable();
+            $table->string("tax_id")->nullable();
+            $table->string("address")->nullable();
+            $table->string("payment_terms")->nullable();
             $table->timestamps();
         });
     }
@@ -25,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('productcategories');
+        Schema::dropIfExists('suppliers');
     }
 };

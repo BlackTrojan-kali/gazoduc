@@ -22,6 +22,7 @@ return new class extends Migration
             $table->string("prix_achat")->nullable();
             $table->string("prix_vente");
             $table->float("tva");
+            $table->string("type")->nullable();//(Enum: 'stockable', 'consommable', 'service' - utile si vous intégrez le restaurant plus tard)
             $table->string("unit");
             $table->bigInteger("stock_alert");
             $table->float("value_per_unit");

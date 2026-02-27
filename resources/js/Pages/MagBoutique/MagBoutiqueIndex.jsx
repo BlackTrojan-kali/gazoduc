@@ -22,12 +22,12 @@ const MagBoutiqueIndex = ({ stocks, userBoutique, filters, products }) => {
   // --- Gestion Filtres ---
   const handleSearch = (e) => {
       e.preventDefault();
-      router.get(route('mag-boutique.index'), { search, service }, { preserveState: true });
+      router.get(route('magasin.boutique.index'), { search, service }, { preserveState: true });
   };
 
   const handleServiceChange = (e) => {
       setService(e.target.value);
-      router.get(route('mag-boutique.index'), { search, service: e.target.value }, { preserveState: true });
+      router.get(route('magasin.boutique.index'), { search, service: e.target.value }, { preserveState: true });
   };
 
   // --- Composant Jauge (Mini) ---

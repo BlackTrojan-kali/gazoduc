@@ -68,9 +68,14 @@ use App\Http\Controllers\GasMedController;
 use App\Http\Controllers\GPSController;
 use App\Http\Controllers\GpsDeviceController;
 use App\Http\Controllers\MagMedController;
+use App\Http\Controllers\PosSessionController;
 use App\Http\Controllers\ProdMedController;
 use App\Http\Controllers\ProductSalesController;
 use App\Http\Controllers\ProductPaymentController;
+use App\Http\Controllers\PurchaseOrderController;
+use App\Http\Controllers\ReceiptController;
+use App\Http\Controllers\SupplierController;
+
 //auth routes
 Route::get('/login',[AuthController::class,"loginPage"] )->name("login");
 Route::post('/login',[AuthController::class,"login"] )->name("login");
@@ -117,7 +122,13 @@ Route::get('/subscriptions/{subscription}/invoice', [SubController::class, 'down
 });
 
 Route::middleware([DirectionMiddleware::class,isArchivedMiddleWare::class])->group(function(){
-
+// Gestion des Fournisseurs
+    Route::prefix('suppliers')->name('suppliers.')->group(function () {
+        Route::get('/', [SupplierController::class, 'index'])->name('index');
+        Route::post('/', [SupplierController::class, 'store'])->name('store');
+        Route::put('/{supplier}', [SupplierController::class, 'update'])->name('update');
+        Route::delete('/{supplier}', [SupplierController::class, 'destroy'])->name('destroy');
+    });
 // Routes pour la gestion des gaz médicaux
 Route::post('/gas-medical/store', [GasMedController::class, 'store'])->name('gas_medical.store');
 Route::put('/gas-medical/update/{id}', [GasMedController::class, 'update'])->name('gas_medical.update');
@@ -160,7 +171,7 @@ Route::get('/direction/export-historique', [DirBoutiqueController::class, 'expor
     Route::put('/counters/{counter}/transfert-point', [CounterController::class, 'updateTransfertPoint'])
          ->name('counters.update-transfert-point');
     //BOUTIQUE USER Routes
-    Route::get("/boutique/users/index",[UserController::class,"index_boutique"])->name("boutique.users.index");
+    Route::get("/boutique/users/index",[UserController::class,"index_boutique"])->name("boutique_users.index");
     Route::post("/boutique/users/store",[UserController::class,"store_boutique"])->name("boutique_users.store");
     Route::put("/boutique/users/update/{user}",[UserController::class,"update_boutique"])->name("boutique_users.update");
     Route::post("/boutique/users/delete/{user}",[UserController::class,"destroy_boutique"])->name("boutique_users.destroy");
@@ -238,7 +249,30 @@ Route::delete('/transfers/{id}', [ProductTransfertController::class, 'destroy'])
 
 //common routes to all users
 Route::middleware([isAuthenticatedMiddleware::class,ClosureMiddleware::class])->group(function(){
+// Gestion des Bons de Réception (Entrées en stock)
+    Route::prefix('receipts')->name('receipts.')->group(function () {
+        Route::get('/', [ReceiptController::class, 'index'])->name('index');
+        Route::post('/', [ReceiptController::class, 'store'])->name('store');
+        Route::put('/{receipt}', [ReceiptController::class, 'update'])->name('update');
+        Route::delete('/{receipt}', [ReceiptController::class, 'destroy'])->name('destroy');
+    });
+Route::prefix('purchase-orders')->name('purchase-orders.')->group(function () {
+        Route::get('/', [PurchaseOrderController::class, 'index'])->name('index');
+        Route::post('/', [PurchaseOrderController::class, 'store'])->name('store');
+        Route::put('/{purchaseOrder}', [PurchaseOrderController::class, 'update'])->name('update');
+        Route::delete('/{purchaseOrder}', [PurchaseOrderController::class, 'destroy'])->name('destroy');
+        Route::get('/{purchaseOrder}/pdf', [PurchaseOrderController::class, 'downloadPdf'])->name('pdf');        
+        // Mettre à jour uniquement le statut (ex: Valider l'envoi au fournisseur)
+        Route::patch('/{purchaseOrder}/status', [PurchaseOrderController::class, 'updateStatus'])->name('updateStatus');
+    });
 
+// Gestion des Sessions de Caisse
+    Route::prefix('pos-sessions')->name('pos-sessions.')->group(function () {
+        Route::get('/', [PosSessionController::class, 'index'])->name('index');
+        Route::post('/', [PosSessionController::class, 'store'])->name('store');
+        Route::get('/{session}', [PosSessionController::class, 'show'])->name('show');
+        Route::put('/{session}', [PosSessionController::class, 'update'])->name('update');
+    });
 // Route pour valider une nouvelle production (remplissage de bouteilles)
 Route::post('/gas-medical/production', [ProdMedController::class, 'storeProduction'])->name('gas_medical.production.store');
 

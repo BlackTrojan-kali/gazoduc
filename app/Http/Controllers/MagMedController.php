@@ -203,7 +203,8 @@ class MagMedController extends Controller
                 $sourceStock->decrement('quantity', 1);
 
                 // B. On ajoute à la destination
-          /*      $destinationStock = Stock::firstOrCreate(
+        if($destinationLocation == "commercial"){
+                $destinationStock = Stock::firstOrCreate(
                     [
                         'article_id'   => $articleId,
                         'agency_id'    => $user->agency_id,
@@ -214,8 +215,9 @@ class MagMedController extends Controller
                         'theorical_quantity' => 0,
                     ]
                 );
-            */    
-              //  $destinationStock->increment('quantity', 1);
+            
+                $destinationStock->increment('quantity', 1);
+            }
             }
 
             // Si tout s'est bien passé pour TOUS les articles, on valide
