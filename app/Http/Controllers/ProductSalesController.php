@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Product;
 use App\Models\ProductSale;
 use App\Models\ProductSaleItem;
 use App\Models\ProductStock;
@@ -17,122 +18,139 @@ use Inertia\Inertia;
 
 class ProductSalesController extends Controller
 {
-   // ... méthode store ...
-   public function store(Request $request)
-{
-    $validated = $request->validate([
-        'customer_id'     => 'required|exists:customers,id',
-        'counter_id'      => 'required|exists:counters,id',
-        'payment_mode'    => 'required|string',
-        'received_amount' => 'nullable|numeric',
-        'total_ht'        => 'required|numeric',
-        'total_ttc'       => 'required|numeric',
-        'items'           => 'required|array|min:1',
-        'items.*.product_id' => 'required|exists:products,id',
-        'items.*.qty'        => 'required|numeric|min:1',
-        'items.*.unit_price' => 'required|numeric',
-        'items.*.sub_total'  => 'required|numeric',
-    ]);
-
-    $user = Auth::user();
-
-    try {
-        $saleId = null;
-
-        DB::transaction(function () use ($validated, $user, &$saleId) {
-            
-            $factureCode = 'FAC-' . strtoupper(Str::random(8)) . '-' . time();
-
-            // 1. ENREGISTREMENT DE LA VENTE
-            $sale = ProductSale::create([
-                'boutique_id'     => $user->boutique_id,
-                'user_id'         => $user->id,
-                'customer_id'     => $validated['customer_id'],
-                'counter_id'      => $validated['counter_id'],
-                'facture_code'    => $factureCode,
-                'total_ht'        => $validated['total_ht'],
-                'total_ttc'       => $validated['total_ttc'],
-                'received_amount' => $validated['received_amount'],
-                'payment_mode'    => $validated['payment_mode'],
-                'status'          => 'completed',
-                'sync_status'     => 'pending',
-            ]);
-
-            $saleId = $sale->id;
-
-            // 2. TRAITEMENT DES LIGNES (Items + Stock + Mouvements)
-            foreach ($validated['items'] as $item) {
-                
-                // A. Création de la ligne de vente
-                ProductSaleItem::create([
-                    'sale_id'    => $sale->id,
-                    'product_id' => $item['product_id'],
-                    'qty'        => $item['qty'],
-                    'unit_price' => $item['unit_price'],
-                    'discount'   => $item['discount'] ?? 0,
-                    'sub_total'  => $item['sub_total'],
-                ]);
-
-                // B. Récupération et Décrémentation du Stock Comptoir
-                $stock = ProductStock::where([
-                    'product_id'  => $item['product_id'],
-                    'boutique_id' => $user->boutique_id,
-                    'service'     => 'comptoir'
-                ])->lockForUpdate()->first(); // Verrouillage important
-
-                $currentStock = 0;
-                if ($stock) {
-                    $currentStock = $stock->available_qty; // Stock avant vente
-                    $stock->decrement('available_qty', $item['qty']);
-                }
-
-                // C. ENREGISTREMENT DU MOUVEMENT DE SORTIE (Historique)
-                // C'est ici qu'on trace que le produit est sorti pour une vente
-                ProductMove::create([
-                    'boutique_id' => $user->boutique_id,
-                    'user_id'     => $user->id,
-                    'product_id'  => $item['product_id'],
-                    'type'        => 'sortie',
-                    'qty'         => $item['qty'],
-                    'departure'   => 'Comptoir', // Source
-                    'destination' => 'Client',   // Destination
-                    'description' => "Vente ticket #{$factureCode}", // Libellé explicite
-                    // Optionnel : enregistrer le stock restant pour audit
-                    'remaining_stock' => $stock ? ($currentStock - $item['qty']) : 0 
-                ]);
-            }
-
-            // 3. GESTION DES FACTURES NON ASSOCIÉES (SINGLETON)
-            // On utilise firstOrCreate pour garantir qu'une ligne existe, puis on update
-            $unassociated = UnassociatedFacture::lockForUpdate()->first();
-
-            if (!$unassociated) {
-                // Si la table est vide, on la crée avec le premier ID
-                UnassociatedFacture::create(['product_sales_id' => [$sale->id]]);
-            } else {
-                // Si elle existe, on récupère le tableau existant, on ajoute, et on sauvegarde
-                $currentIds = $unassociated->product_sales_id ?? [];
-                
-                // On évite les doublons par sécurité
-                if (!in_array($sale->id, $currentIds)) {
-                    $currentIds[] = $sale->id;
-                    $unassociated->update(['product_sales_id' => $currentIds]);
-                }
-            }
-        });
-
-        // 4. RETOUR AVEC URL D'IMPRESSION
-        // On renvoie un succès ET l'URL pour générer le PDF
-        return redirect()->back()->with([
-            'success' => 'Vente enregistrée avec succès.',
-            'print_url' => route('sales.print', $saleId) 
+ /**
+     * Valide le panier, encaisse le paiement, déduit les stocks et met en attente la facture.
+     */
+/**
+     * Valide le panier, encaisse le paiement, déduit les stocks et met en attente la facture.
+     */
+    public function store(Request $request)
+    {
+        // 1. Validation : On écoute 'cart' (venant de React) au lieu de 'items'
+        $validated = $request->validate([
+            'customer_id'       => 'nullable|exists:customers,id',
+            'counter_id'        => 'required|exists:counters,id',
+            'payment_mode'      => 'required|string',
+            'amount_paid'       => 'nullable|numeric', 
+            'total_ht'          => 'required|numeric',
+            'total_ttc'         => 'required|numeric',
+            'cart'              => 'required|array|min:1',
+            'cart.*.id'         => 'required|exists:products,id',
+            'cart.*.qty'        => 'required|numeric|min:0.01',
+            'cart.*.discount'   => 'nullable|numeric',
         ]);
 
-    } catch (\Exception $e) {
-        return redirect()->back()->withErrors(['error' => "Erreur transaction : " . $e->getMessage()]);
-    }
-}
-    /**
+        $user = Auth::user();
+
+        // --- NOUVEAU : VÉRIFICATION DE LA SESSION DE CAISSE ---
+        // On cherche la session active du caissier dans cette boutique.
+        // (Ajustez 'open' selon le mot exact que vous utilisez pour le statut d'une session ouverte, ex: 'en cours', 'ouvert')
+        $activeSession = \App\Models\PosSession::where('user_id', $user->id)
+                            ->where('boutique_id', $user->boutique_id)
+                            ->where('status', 'open') // Ou whereNull('closed_at') selon votre logique
+                            ->first();
+
+        if (!$activeSession) {
+            return redirect()->back()->withErrors(['message' => "Impossible d'encaisser : Vous devez d'abord ouvrir une session de caisse pour votre service."]);
+        }
+
+        try {
+            $saleId = null;
+
+            DB::transaction(function () use ($validated, $user, $activeSession, &$saleId) {
+                
+                // Génération d'un code unique
+                $factureCode = 'FAC-' . strtoupper(\Illuminate\Support\Str::random(6)) . '-' . time();
+
+                // --- 1. ENREGISTREMENT DE LA VENTE ---
+                $sale = Productsale::create([
+                    'boutique_id'     => $user->boutique_id,
+                    'user_id'         => $user->id,
+                    'pos_session_id'  => $activeSession->id, // <-- AJOUT DE L'ID DE SESSION ICI
+                    'customer_id'     => $validated['customer_id'] ?? null,
+                    'counter_id'      => $validated['counter_id'],
+                    'facture_code'    => $factureCode,
+                    'total_ht'        => $validated['total_ht'],
+                    'total_tva'       => 0, 
+                    'total_ttc'       => $validated['total_ttc'],
+                    'received_amount'     => $validated['amount_paid'],
+                    'payment_mode'    => $validated['payment_mode'],
+                    'status'          => 'completed',
+                    'sync_status'     => 'pending',
+                ]);
+
+                $saleId = $sale->id;
+
+                // --- 2. TRAITEMENT DES LIGNES (Items + Stock + Mouvements) ---
+                foreach ($validated['cart'] as $item) {
+                    
+                    // On récupère le produit officiel pour recalculer le prix réel
+                    $product = Product::findOrFail($item['id']);
+                    $unitPrice = $product->prix_vente;
+                    $subTotal = ($unitPrice * $item['qty']) - ($item['discount'] ?? 0);
+
+                    // A. Création de la ligne de vente
+                    Productsaleitem::create([
+                        'sale_id'    => $sale->id,
+                        'product_id' => $product->id,
+                        'qty'        => $item['qty'],
+                        'unit_price' => $unitPrice,
+                        'discount'   => $item['discount'] ?? 0,
+                        'sub_total'  => $subTotal,
+                    ]);
+
+                    // B. Récupération et Décrémentation du Stock Comptoir (Avec Verrouillage)
+                    $stock = Productstock::where([
+                        'product_id'  => $product->id,
+                        'boutique_id' => $user->boutique_id,
+                        'service'     => 'comptoir'
+                    ])->lockForUpdate()->first();
+
+                    if (!$stock || $stock->available_qty < $item['qty']) {
+                        throw new \Exception("Stock insuffisant en caisse pour : " . $product->designation);
+                    }
+
+                    $stock->decrement('available_qty', $item['qty']);
+
+                    // C. ENREGISTREMENT DU MOUVEMENT DE SORTIE (Historique)
+                    ProductMove::create([
+                        'product_id'      => $product->id,
+                        'boutique_id'     => $user->boutique_id,
+                        'user_id'         => $user->id,
+                        'qty'             => $item['qty'],
+                        'type'            => 'SORTIE',
+                        'departure'       => 'COMPTOIR', 
+                        'destination'     => 'CLIENT',  
+                        'label'           => "Vente Caisse #{$factureCode}", 
+                        'remaining_stock' => $stock->available_qty 
+                    ]);
+                }
+
+                // --- 3. GESTION DES FACTURES NON ASSOCIÉES (SINGLETON) ---
+                $unassociated = \App\Models\UnassociatedFacture::lockForUpdate()->first();
+
+                if (!$unassociated) {
+                    \App\Models\UnassociatedFacture::create(['product_sales_id' => [$sale->id]]);
+                } else {
+                    $currentIds = $unassociated->product_sales_id ?? [];
+                    
+                    if (!in_array($sale->id, $currentIds)) {
+                        $currentIds[] = $sale->id;
+                        $unassociated->update(['product_sales_id' => $currentIds]);
+                    }
+                }
+            });
+
+            // --- 4. RETOUR AVEC URL D'IMPRESSION ---
+            return redirect()->back()->with([
+                'success'   => 'Vente enregistrée avec succès.',
+                'print_url' => route('sales.print', $saleId) 
+            ]);
+
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['message' => "Erreur transaction : " . $e->getMessage()]);
+        }
+    }   /**
      * Génère le Ticket de Caisse (PDF format thermique)
      */
   // Méthode pour générer le PDF (Assurez-vous d'avoir installé barryvdh/laravel-dompdf)

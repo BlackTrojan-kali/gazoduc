@@ -303,7 +303,7 @@ const MagBoutiqueSidebar = () => {
                 }`}
               >
                 {isExpanded || isHovered || isMobileOpen ? (
-                  "Users"
+                  "Fournisseurs"
                 ) : (
                   <FontAwesomeIcon icon={faDotCircle} /> 
                 )}

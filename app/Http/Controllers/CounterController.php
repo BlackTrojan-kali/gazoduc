@@ -4,36 +4,53 @@ namespace App\Http\Controllers;
 
 use App\Models\Counter;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class CounterController extends Controller
 {
     /**
-     * Affiche la liste de toutes les caisses, triées par Région.
+     * Affiche la liste des caisses.
+     * Directeur : Voit toutes les caisses triées par Région/Ville/Boutique.
+     * Contrôleur : Ne voit que les caisses de sa propre boutique.
      */
     public function index()
     {
-        // 1. Récupération de TOUTES les caisses
-        // On utilise le "Deep Eager Loading" (chargement imbriqué) pour récupérer :
-        // La boutique liée > La ville liée > La région liée
-        $counters = Counter::with(['boutique.city.region'])
-            ->get()
-            // 2. Tri Côté Collection (PHP)
-            // Puisqu'on ne filtre pas en SQL, on trie la collection résultante
-            // pour que l'affichage soit logique (Regroupé par Région, puis Ville, puis Boutique)
+        $user = Auth::user();
+        // DÉTERMINATION DU RÔLE
+        $isDirecteur = $user->role->name === 'direction'; 
+
+        // 1. Préparation de la requête avec Eager Loading (chargement imbriqué)
+        $query = Counter::with(['boutique.city.region']);
+
+        // --- LA RÈGLE D'OR : CONTRÔLEUR VS DIRECTEUR ---
+        // Si ce n'est pas le directeur, on verrouille la requête sur la boutique de l'utilisateur
+        if (!$isDirecteur) {
+            $query->where('boutique_id', $user->boutique_id);
+        }
+
+        // 2. Récupération et Tri Côté Collection (PHP)
+        $counters = $query->get()
             ->sortBy(function ($counter) {
+                // On utilise "?? 'Z'" par sécurité au cas où une caisse aurait perdu sa relation boutique/ville
+                $regionName = $counter->boutique->city->region->name ?? 'Z';
+                $cityName   = $counter->boutique->city->name ?? 'Z';
+                $boutiqueName = $counter->boutique->name ?? 'Z';
+
                 return sprintf('%s-%s-%s', 
-                    $counter->boutique->city->region->name, // 1er critère : Région
-                    $counter->boutique->city->name,         // 2ème critère : Ville
-                    $counter->boutique->name                // 3ème critère : Boutique
+                    $regionName,   // 1er critère : Région
+                    $cityName,     // 2ème critère : Ville
+                    $boutiqueName  // 3ème critère : Boutique
                 );
             })
-            ->values(); // Réindexe le tableau pour le JSON (évite les clés bizarres)
+            ->values(); // Réindexe le tableau pour le JSON (évite les clés objets en JavaScript)
 
         return Inertia::render('DirBoutique/CounterIndex', [
-            'counters' => $counters
+            'counters'    => $counters,
+            'isDirecteur' => $isDirecteur, // On le passe au front-end (pour cacher des colonnes inutiles pour le contrôleur)
         ]);
     }
+
     public function updateTransfertPoint(Request $request, Counter $counter)
     {
         // 1. Validation de la somme

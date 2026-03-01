@@ -15,6 +15,7 @@ const navItems = [
       { name: "Produits", path: "/product/index", pro: false },
       { name: "Stock Produits", path: "/product/stocks-index", pro: false },
       { name: "Categories Produits", path: "/product/category/index", pro: false },
+      { name: "Statistiques", path: "/statistics", pro: false }, 
     ], 
   },{
     icon:  <FontAwesomeIcon icon={faTimeline} />,

@@ -13,12 +13,25 @@ use Illuminate\Support\Facades\Auth;
 class PosSessionController extends Controller
 {
     /**
-     * Affiche l'historique filtrable des sessions de caisse (Vision Contrôleur/Directeur)
+     * Affiche l'historique filtrable des sessions de caisse.
+     * Directeur : Voit toutes les sessions de toutes les boutiques.
+     * Contrôleur : Ne voit que les sessions de sa propre boutique.
      */
     public function index(Request $request)
     {
+        $user = Auth::user();
+        
+        // DÉTERMINATION DU RÔLE
+        $isDirecteur = $user->role->name === 'direction'; 
+
         // 1. Initialisation de la requête avec les relations
         $query = PosSession::with(['user', 'boutique']);
+
+        // --- LA RÈGLE D'OR : CONTRÔLEUR VS DIRECTEUR ---
+        // On verrouille la requête sur la boutique du contrôleur
+        if (!$isDirecteur) {
+            $query->where('boutique_id', $user->boutique_id);
+        }
 
         // 2. Filtre par Recherche (Nom du caissier ou ID de session)
         if ($request->filled('search')) {
@@ -32,9 +45,12 @@ class PosSessionController extends Controller
             });
         }
 
-        // 3. Filtre par Boutique
+        // 3. Filtre par Boutique (Seulement pour le Directeur)
         if ($request->filled('boutique_id')) {
-            $query->where('boutique_id', $request->boutique_id);
+            if ($isDirecteur) {
+                $query->where('boutique_id', $request->boutique_id);
+            }
+            // Si pas directeur, on ignore ce paramètre de l'URL car on a déjà verrouillé sa boutique plus haut
         }
 
         // 4. Filtre par Statut (ex: 'ouvert', 'ferme')
@@ -56,14 +72,21 @@ class PosSessionController extends Controller
                           ->withQueryString();
 
         // 7. Données pour les menus déroulants des filtres
-        $boutiques = Boutique::orderBy('name')->get(['id', 'name']);
+        // Le directeur a besoin de toute la liste. Le contrôleur n'a besoin d'aucune (ou juste la sienne).
+        if ($isDirecteur) {
+            $boutiques = Boutique::orderBy('name')->get(['id', 'name']);
+        } else {
+            $boutiques = Boutique::where('id', $user->boutique_id)->get(['id', 'name']);
+        }
 
         return Inertia::render('DirBoutique/Pos/SessionIndex', [
-            'sessions'  => $sessions,
-            'boutiques' => $boutiques,
-            'filters'   => $request->only(['search', 'boutique_id', 'status', 'date_start', 'date_end']),
+            'sessions'    => $sessions,
+            'boutiques'   => $boutiques,
+            'isDirecteur' => $isDirecteur, // Toujours utile de l'envoyer à React pour masquer le champ "Boutique"
+            'filters'     => $request->only(['search', 'boutique_id', 'status', 'date_start', 'date_end']),
         ]);
     }
+
 
     /**
      * Affiche les détails d'une session spécifique (avec toutes ses ventes)
@@ -82,31 +105,37 @@ class PosSessionController extends Controller
     /**
      * Ouvre une nouvelle session de caisse (Généralement appelé par le caissier au matin)
      */
-    public function store(Request $request)
+    /**
+     * Ouvre une nouvelle session de caisse.
+     */
+    public function openSession(Request $request)
     {
         $validated = $request->validate([
-            'boutique_id'     => ['required', 'exists:boutiques,id'],
             'opening_balance' => ['required', 'numeric', 'min:0'],
         ]);
 
-        // Vérifier si l'utilisateur n'a pas déjà une session ouverte
-        $hasOpenSession = PosSession::where('user_id', Auth::user()->id)
-                                    ->where('status', 'ouvert')
-                                    ->exists();
+        $user = Auth::user();
 
-        if ($hasOpenSession) {
+        // 1. Vérifier qu'il n'y a pas déjà une session ouverte pour cet utilisateur
+        $activeSession = PosSession::where('user_id', $user->id)
+            ->where('boutique_id', $user->boutique_id)
+            ->where('status', 'open')
+            ->first();
+
+        if ($activeSession) {
             return back()->withErrors(['message' => 'Vous avez déjà une session de caisse ouverte.']);
         }
 
+        // 2. Créer la nouvelle session
         PosSession::create([
-            'user_id'         => Auth::user()->id,
-            'boutique_id'     => $validated['boutique_id'],
+            'user_id'         => $user->id,
+            'boutique_id'     => $user->boutique_id,
             'opening_balance' => $validated['opening_balance'],
             'opened_at'       => now(),
-            'status'          => 'ouvert',
+            'status'          => 'open',
         ]);
 
-        return redirect()->back()->with('success', 'Session de caisse ouverte avec succès.');
+        return redirect()->back()->with('success', 'Votre session de caisse est désormais ouverte. Bonnes ventes !');
     }
 
     /**

@@ -30,7 +30,7 @@ const ProdCatIndex = ({ categories, allCategories, filters }) => {
   const applyFilters = useCallback(
     debounce((searchQuery, parentId) => {
       router.get(
-        route('product-categories.index'),
+        route('product.category.index'),
         { 
             search: searchQuery, 
             parent_id: parentId // On passe le parent_id au backend

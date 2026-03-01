@@ -190,10 +190,10 @@ class ReceiptController extends Controller
                     'boutique_id' => $receipt->boutique_id,
                     'service'     => 'magasin', // Toujours en réserve à la livraison
                 ],
-                ['qty' => 0]
+                ['available_qty' => 0]
             );
 
-            $stock->qty += $receiptLine->quantity_accepted;
+            $stock->available_qty += $receiptLine->quantity_accepted;
             $stock->save();
 
             // --- B. TRAÇABILITÉ : CRÉATION DU MOUVEMENT (ProductMove) ---
@@ -201,8 +201,8 @@ class ReceiptController extends Controller
                 'product_id'      => $receiptLine->product_id,
                 'boutique_id'     => $receipt->boutique_id,
                 'qty'             => $receiptLine->quantity_accepted,
-                'remaining_stock' => $stock->qty, // Le stock APRÈS le mouvement
-                'type'            => 'ENTREE',
+                'remaining_stock' => $stock->available_qty, // Le stock APRÈS le mouvement
+                'type'            => 'entree',
                 'label'           => 'Réception Commande ' . $purchaseOrder->reference,
                 'departure'       => 'FOURNISSEUR',
                 'destination'     => 'MAGASIN',

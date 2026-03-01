@@ -54,9 +54,13 @@ class AuthController extends Controller
         return redirect()->route("prod.index")->with("success","authentification reussie");
         break;
          case "controleur":
-                  
-        return redirect()->route("controlleur.index")->with("success","authentification reussie");
-        break;
+          if(Auth::user()->boutique_id){        
+            return redirect()->route("boutiques.index")->with("success","authentification reussie");
+          
+          }else{
+            return redirect()->route("controlleur.index")->with("success","authentification reussie");
+          }
+          break;
          case "commercial":
                  
             if(Auth::user()->boutique_id){

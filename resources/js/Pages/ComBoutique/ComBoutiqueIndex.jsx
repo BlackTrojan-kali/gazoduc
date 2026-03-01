@@ -3,8 +3,8 @@ import { Head, router, Link } from '@inertiajs/react';
 import ComBoutiqueLayout from '../../layout/ComBoutiqueLayout/ComBoutiqueLayout';
 import CommercialStockMoveModal from '../../components/Modals/Boutique_Modals/Moves/CommercialStockMoveModal';
 import CreateSaleModal from '../../components/Modals/Boutique_Modals/Sales/CreateSaleModal'; 
-// Import de la modale de versement créée précédemment
 import CreatePaymentModal from '../../components/Modals/Boutique_Modals/Payments/CreatePaymentModal'; 
+import OpenSessionModal from '../../components/Modals/Boutique_Modals/Sales/OpenSessionModal'; // Modale d'ouverture de caisse
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
@@ -19,24 +19,23 @@ import {
     faExclamationTriangle
 } from '@fortawesome/free-solid-svg-icons';
 
-// Ajout des props 'stats' et 'salesToAssociate'
-const ComBoutiqueIndex = ({ stocks, filters, customers = [], userCounterId, stats, salesToAssociate = [] }) => {
-    
+// Ajout de "activeSession" dans les props
+const ComBoutiqueIndex = ({ stocks, filters, customers = [], userCounterId, stats, salesToAssociate = [], activeSession }) => {
     // --- États ---
     const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
     const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
-    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false); // Nouvel état pour le versement
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+    const [isOpenSessionModalOpen, setIsOpenSessionModalOpen] = useState(false); // État pour la modale d'ouverture
     const [search, setSearch] = useState(filters.search || '');
 
     // --- Logique du Seuil de Versement ---
-    // On vérifie si le montant en attente dépasse le point de transfert défini
     const isTransferDue = (stats?.unassociated_total || 0) >= (stats?.transfer_point || 0) && (stats?.unassociated_total > 0);
 
     // --- Gestion de la Recherche (Debounce) ---
     useEffect(() => {
         const timer = setTimeout(() => {
             router.get(
-                route("commercial.boutique.index"),
+                route(route().current()), 
                 { search: search },
                 { preserveState: true, replace: true, preserveScroll: true }
             );
@@ -49,7 +48,7 @@ const ComBoutiqueIndex = ({ stocks, filters, customers = [], userCounterId, stat
     const productsForMoveModal = useMemo(() => {
         return stocks.data.map(stockItem => ({
             ...stockItem.product, 
-            stock_comptoir: stockItem.available_qty, 
+            stock_comptoir: Number(stockItem.available_qty) || 0,
             unit: stockItem.product.unit 
         }));
     }, [stocks.data]);
@@ -64,14 +63,20 @@ const ComBoutiqueIndex = ({ stocks, filters, customers = [], userCounterId, stat
             prix_vente: stockItem.product.prix_vente, 
             tva: stockItem.product.tva, 
             image_url: stockItem.product.image_url,
-            stock_comptoir: stockItem.available_qty,
+            stock_comptoir: Number(stockItem.available_qty) || 0,
             unit: stockItem.product.unit
         }));
     }, [stocks.data]);
 
+    // Helper pour les images
+    const getImageUrl = (url) => {
+        if (!url) return null;
+        return url.startsWith('/') ? url : `/storage/${url}`;
+    };
+
     return (
         <>
-            <Head title="Mon Stock Commercial" />
+            <Head title="Caisse & Stock Comptoir" />
 
             <div className="py-6">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
@@ -83,7 +88,7 @@ const ComBoutiqueIndex = ({ stocks, filters, customers = [], userCounterId, stat
                             <div>
                                 <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Ventes du Jour</p>
                                 <p className="text-2xl font-extrabold text-gray-800 dark:text-white mt-1">
-                                    {Number(stats?.total_sales_today || 0).toLocaleString()} <span className="text-sm font-normal">FCFA</span>
+                                    {Number(stats?.total_sales_today || 0).toLocaleString('fr-FR')} <span className="text-sm font-normal">FCFA</span>
                                 </p>
                             </div>
                             <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
@@ -97,11 +102,11 @@ const ComBoutiqueIndex = ({ stocks, filters, customers = [], userCounterId, stat
                         }`}>
                             <div>
                                 <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-1">
-                                    Non Associé
-                                    {isTransferDue && <FontAwesomeIcon icon={faExclamationTriangle} className="text-red-500 animate-pulse"/>}
+                                    En Attente de Versement
+                                    {isTransferDue && <FontAwesomeIcon icon={faExclamationTriangle} className="text-red-500 animate-pulse ml-1"/>}
                                 </p>
                                 <p className={`text-2xl font-extrabold mt-1 ${isTransferDue ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-white'}`}>
-                                    {Number(stats?.unassociated_total || 0).toLocaleString()} <span className="text-sm font-normal">FCFA</span>
+                                    {Number(stats?.unassociated_total || 0).toLocaleString('fr-FR')} <span className="text-sm font-normal">FCFA</span>
                                 </p>
                             </div>
                             <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
@@ -114,9 +119,9 @@ const ComBoutiqueIndex = ({ stocks, filters, customers = [], userCounterId, stat
                         {/* Carte 3 : Point de Transfert (Info) */}
                         <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border-l-4 border-gray-300 dark:border-gray-600 flex items-center justify-between opacity-80">
                             <div>
-                                <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Seuil Versement</p>
+                                <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Seuil de Versement</p>
                                 <p className="text-2xl font-extrabold text-gray-600 dark:text-gray-300 mt-1">
-                                    {Number(stats?.transfer_point || 0).toLocaleString()} <span className="text-sm font-normal">FCFA</span>
+                                    {Number(stats?.transfer_point || 0).toLocaleString('fr-FR')} <span className="text-sm font-normal">FCFA</span>
                                 </p>
                             </div>
                             <div className="h-10 w-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400">
@@ -130,7 +135,7 @@ const ComBoutiqueIndex = ({ stocks, filters, customers = [], userCounterId, stat
                         <div>
                             <h2 className="font-semibold text-2xl text-gray-800 dark:text-gray-200 leading-tight flex items-center gap-2">
                                 <FontAwesomeIcon icon={faCubes} className="text-blue-600"/>
-                                Stock Comptoir
+                                Stock Comptoir (Caisse)
                             </h2>
                             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                                 Gestion du stock et point de vente.
@@ -139,7 +144,7 @@ const ComBoutiqueIndex = ({ stocks, filters, customers = [], userCounterId, stat
 
                         <div className="flex flex-wrap gap-3">
                             
-                            {/* BOUTON NOUVEAU VERSEMENT (Conditionnel) */}
+                            {/* BOUTON NOUVEAU VERSEMENT */}
                             <button
                                 onClick={() => setIsPaymentModalOpen(true)}
                                 disabled={!isTransferDue}
@@ -148,7 +153,7 @@ const ComBoutiqueIndex = ({ stocks, filters, customers = [], userCounterId, stat
                                     ? 'bg-red-600 hover:bg-red-700 text-white hover:scale-105 animate-bounce-slow' 
                                     : 'bg-gray-200 text-gray-400 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500'
                                 }`}
-                                title={!isTransferDue ? `Le montant en attente (${stats?.unassociated_total}) est inférieur au seuil (${stats?.transfer_point})` : "Effectuer un versement maintenant"}
+                                title={!isTransferDue ? `Le montant en attente est inférieur au seuil (${stats?.transfer_point})` : "Effectuer un versement maintenant"}
                             >
                                 <FontAwesomeIcon icon={faHandHoldingDollar} className="mr-2" />
                                 Faire un Versement
@@ -156,17 +161,29 @@ const ComBoutiqueIndex = ({ stocks, filters, customers = [], userCounterId, stat
 
                             <div className="w-px h-10 bg-gray-300 dark:bg-gray-600 mx-2 hidden md:block"></div>
 
-                            {/* Bouton VENTE (POS) */}
+                            {/* BOUTON VENTE (POS) AVEC VERIFICATION DE SESSION */}
                             {userCounterId ? (
-                                <button
-                                    onClick={() => setIsSaleModalOpen(true)}
-                                    className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg font-bold shadow-md flex items-center transition-all transform hover:scale-105"
-                                >
-                                    <FontAwesomeIcon icon={faCashRegister} className="mr-2" />
-                                    Nouvelle Vente
-                                </button>
+                                activeSession ? (
+                                    // SI LA CAISSE EST OUVERTE : On permet la vente
+                                    <button
+                                        onClick={() => setIsSaleModalOpen(true)}
+                                        className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg font-bold shadow-md flex items-center transition-all transform hover:scale-105"
+                                    >
+                                        <FontAwesomeIcon icon={faCashRegister} className="mr-2" />
+                                        Nouvelle Vente
+                                    </button>
+                                ) : (
+                                    // SI LA CAISSE EST FERMÉE : On force l'ouverture
+                                    <button
+                                        onClick={() => setIsOpenSessionModalOpen(true)}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-bold shadow-md flex items-center transition-all animate-pulse hover:scale-105"
+                                    >
+                                        <FontAwesomeIcon icon={faCashRegister} className="mr-2" />
+                                        Ouvrir ma Caisse
+                                    </button>
+                                )
                             ) : (
-                                <div className="text-xs text-red-500 font-bold bg-red-100 px-3 py-2 rounded border border-red-200">
+                                <div className="text-xs text-red-500 font-bold bg-red-100 px-3 py-2 rounded border border-red-200 flex items-center">
                                     ⚠️ Caisse non assignée
                                 </div>
                             )}
@@ -217,7 +234,7 @@ const ComBoutiqueIndex = ({ stocks, filters, customers = [], userCounterId, stat
                                                     <div className="flex items-center">
                                                         <div className="flex-shrink-0 h-10 w-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400 overflow-hidden">
                                                             {stock.product.image_url ? (
-                                                                <img src={`/storage/${stock.product.image_url}`} alt="" className="h-full w-full object-cover"/>
+                                                                <img src={getImageUrl(stock.product.image_url)} alt={stock.product.designation} className="h-full w-full object-cover"/>
                                                             ) : (
                                                                 <FontAwesomeIcon icon={faBoxOpen} />
                                                             )}
@@ -233,7 +250,7 @@ const ComBoutiqueIndex = ({ stocks, filters, customers = [], userCounterId, stat
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono">
-                                                    {stock.product.sku}
+                                                    {stock.product.sku || '-'}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-gray-700 dark:text-gray-300">
                                                     {Number(stock.product.prix_vente).toLocaleString('fr-FR')} FCFA
@@ -304,7 +321,7 @@ const ComBoutiqueIndex = ({ stocks, filters, customers = [], userCounterId, stat
                 </div>
             </div>
 
-            {/* --- MODALE DE SORTIE (Mouvements) --- */}
+            {/* --- MODALES --- */}
             <CommercialStockMoveModal 
                 isOpen={isMoveModalOpen}
                 onClose={() => setIsMoveModalOpen(false)}
@@ -312,7 +329,6 @@ const ComBoutiqueIndex = ({ stocks, filters, customers = [], userCounterId, stat
                 routeName="commercial.stock.store"
             />
 
-            {/* --- MODALE DE VENTE (POS) --- */}
             <CreateSaleModal
                 isOpen={isSaleModalOpen}
                 onClose={() => setIsSaleModalOpen(false)}
@@ -321,19 +337,22 @@ const ComBoutiqueIndex = ({ stocks, filters, customers = [], userCounterId, stat
                 userCounterId={userCounterId}
             />
 
-            {/* --- MODALE DE VERSEMENT (Nouvelle) --- */}
             <CreatePaymentModal
                 isOpen={isPaymentModalOpen}
                 onClose={() => setIsPaymentModalOpen(false)}
-                salesToAssociate={salesToAssociate} // Données passées par le contrôleur
+                salesToAssociate={salesToAssociate} 
                 counterId={userCounterId}
             />
-
+            
+            {/* Modale d'Ouverture de Caisse */}
+            <OpenSessionModal
+                isOpen={isOpenSessionModalOpen}
+                onClose={() => setIsOpenSessionModalOpen(false)}
+            />
         </>
     );
 }
 
-// Application du Layout
 ComBoutiqueIndex.layout = page => <ComBoutiqueLayout children={page} />;
 
 export default ComBoutiqueIndex;

@@ -74,6 +74,7 @@ use App\Http\Controllers\ProductSalesController;
 use App\Http\Controllers\ProductPaymentController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\ReceiptController;
+use App\Http\Controllers\StatisticsController;
 use App\Http\Controllers\SupplierController;
 
 //auth routes
@@ -122,13 +123,7 @@ Route::get('/subscriptions/{subscription}/invoice', [SubController::class, 'down
 });
 
 Route::middleware([DirectionMiddleware::class,isArchivedMiddleWare::class])->group(function(){
-// Gestion des Fournisseurs
-    Route::prefix('suppliers')->name('suppliers.')->group(function () {
-        Route::get('/', [SupplierController::class, 'index'])->name('index');
-        Route::post('/', [SupplierController::class, 'store'])->name('store');
-        Route::put('/{supplier}', [SupplierController::class, 'update'])->name('update');
-        Route::delete('/{supplier}', [SupplierController::class, 'destroy'])->name('destroy');
-    });
+
 // Routes pour la gestion des gaz médicaux
 Route::post('/gas-medical/store', [GasMedController::class, 'store'])->name('gas_medical.store');
 Route::put('/gas-medical/update/{id}', [GasMedController::class, 'update'])->name('gas_medical.update');
@@ -139,38 +134,7 @@ Route::get('/gas-medical', [GasMedController::class, 'index'])->name('gas_medica
 Route::post('/gas-medical/init-stocks', [GasMedController::class, 'initializeAllGasMedicalStocks'])->name('gas_medical.init_stocks');
 Route::get('/gas-medical-inventory', [GasMedController::class, 'inventory'])->name('gas_medical.inventory');
 Route::resource('gps-devices', GpsDeviceController::class)->except(['create', 'edit']);
-//Mouvements direction
-Route::get('/direction/historique-global', [DirBoutiqueController::class, 'history'])
-         ->name('direction.history');
-Route::get('/direction/export-historique', [DirBoutiqueController::class, 'export_history'])
-     ->name('direction.export_history');
-     Route::get('/direction/transferts', [DirBoutiqueController::class, 'transferHistory'])
-     ->name('direction.transfers');
-         //BOUTIQUES ROUTES
-    Route::get("/boutiques/index",[DirBoutiqueController::class,"index"])->name("boutiques.index");
-    Route::post("/boutiques/store",[BoutiqueController::class,"store"])->name("boutiques.store");
-    Route::put("/boutiques/update/{boutique}",[BoutiqueController::class,"update"])->name("boutiques.update");
-    Route::delete("/boutiques/delete/{boutique}",[BoutiqueController::class,"destroy"])->name("boutiques.destroy");
-    //BOUTIQUE PRODUCT CATEGORY
-    Route::get("/product/category/index",[ProductCategoryController::class,"index"])->name("product.category.index");
-    Route::post("/product/category/store",[ProductCategoryController::class,"store"])->name("product-categories.store");
-    Route::put("/product/category/update/{category}",[ProductCategoryController::class,"update"])->name("product-categories.update");
-    Route::delete("/product/category/delete/{category}",[ProductCategoryController::class,"destroy"])->name("product-categories.destroy");
-    //BOUTIQUE PRODUCT
-    Route::get("/product/index",[ProductController::class,"index"])->name("product.index");
-    Route::post("/product/store",[ProductController::class,"store"])->name("products.store");
-    Route::put("/product/update/{product}",[ProductController::class,"update"])->name("products.update");
-    Route::delete("/product/delete/{product}",[ProductController::class,"destroy"])->name("products.destroy");
-    Route::post("/product/all-stock",[ProductController::class,"initializeAllStocks"])->name("products.init-all-stocks");
-    Route::post("/product/stock/{product}",[ProductController::class,"initializeProductStock"])->name("products.init-stock");
-   //Boutique Product Stocks
-
-    Route::get("/product/stocks-index",[ProductStockController::class,"index"])->name("product.stocks");
-   //BOUTIQUE COUNTERS
-    Route::get("/counters/index",[CounterController::class,"index"])->name("counters.index");
-    Route::put('/counters/{counter}/transfert-point', [CounterController::class, 'updateTransfertPoint'])
-         ->name('counters.update-transfert-point');
-    //BOUTIQUE USER Routes
+   //BOUTIQUE USER Routes
     Route::get("/boutique/users/index",[UserController::class,"index_boutique"])->name("boutique_users.index");
     Route::post("/boutique/users/store",[UserController::class,"store_boutique"])->name("boutique_users.store");
     Route::put("/boutique/users/update/{user}",[UserController::class,"update_boutique"])->name("boutique_users.update");
@@ -249,6 +213,47 @@ Route::delete('/transfers/{id}', [ProductTransfertController::class, 'destroy'])
 
 //common routes to all users
 Route::middleware([isAuthenticatedMiddleware::class,ClosureMiddleware::class])->group(function(){
+// Gestion des Fournisseurs
+    Route::prefix('suppliers')->name('suppliers.')->group(function () {
+        Route::get('/', [SupplierController::class, 'index'])->name('index');
+        Route::post('/', [SupplierController::class, 'store'])->name('store');
+        Route::put('/{supplier}', [SupplierController::class, 'update'])->name('update');
+        Route::delete('/{supplier}', [SupplierController::class, 'destroy'])->name('destroy');
+    });
+//Mouvements direction
+Route::get('/direction/historique-global', [DirBoutiqueController::class, 'history'])
+         ->name('direction.history');
+Route::get('/direction/export-historique', [DirBoutiqueController::class, 'export_history'])
+     ->name('direction.export_history');
+     Route::get('/direction/transferts', [DirBoutiqueController::class, 'transferHistory'])
+     ->name('direction.transfers');
+         //BOUTIQUES ROUTES
+    Route::get("/boutiques/index",[DirBoutiqueController::class,"index"])->name("boutiques.index");
+    Route::post("/boutiques/store",[BoutiqueController::class,"store"])->name("boutiques.store");
+    Route::put("/boutiques/update/{boutique}",[BoutiqueController::class,"update"])->name("boutiques.update");
+    Route::delete("/boutiques/delete/{boutique}",[BoutiqueController::class,"destroy"])->name("boutiques.destroy");
+    //BOUTIQUE PRODUCT CATEGORY
+    Route::get("/product/category/index",[ProductCategoryController::class,"index"])->name("product.category.index");
+    Route::post("/product/category/store",[ProductCategoryController::class,"store"])->name("product-categories.store");
+    Route::put("/product/category/update/{category}",[ProductCategoryController::class,"update"])->name("product-categories.update");
+    Route::delete("/product/category/delete/{category}",[ProductCategoryController::class,"destroy"])->name("product-categories.destroy");
+    //BOUTIQUE PRODUCT
+    Route::get("/product/index",[ProductController::class,"index"])->name("product.index");
+    Route::post("/product/store",[ProductController::class,"store"])->name("products.store");
+    Route::put("/product/update/{product}",[ProductController::class,"update"])->name("products.update");
+    Route::delete("/product/delete/{product}",[ProductController::class,"destroy"])->name("products.destroy");
+    Route::post("/product/all-stock",[ProductController::class,"initializeAllStocks"])->name("products.init-all-stocks");
+    Route::post("/product/stock/{product}",[ProductController::class,"initializeProductStock"])->name("products.init-stock");
+   //Boutique Product Stocks
+
+    Route::get("/product/stocks-index",[ProductStockController::class,"index"])->name("product.stocks");
+   //BOUTIQUE COUNTERS
+    Route::get("/counters/index",[CounterController::class,"index"])->name("counters.index");
+    Route::put('/counters/{counter}/transfert-point', [CounterController::class, 'updateTransfertPoint'])
+         ->name('counters.update-transfert-point');
+ 
+// Tableau de bord des statistiques et KPIs
+    Route::get('/statistics', [StatisticsController::class, 'index'])->name('statistics.index');
 // Gestion des Bons de Réception (Entrées en stock)
     Route::prefix('receipts')->name('receipts.')->group(function () {
         Route::get('/', [ReceiptController::class, 'index'])->name('index');
@@ -269,7 +274,7 @@ Route::prefix('purchase-orders')->name('purchase-orders.')->group(function () {
 // Gestion des Sessions de Caisse
     Route::prefix('pos-sessions')->name('pos-sessions.')->group(function () {
         Route::get('/', [PosSessionController::class, 'index'])->name('index');
-        Route::post('/', [PosSessionController::class, 'store'])->name('store');
+        Route::post('/', [PosSessionController::class, 'openSession'])->name('open');
         Route::get('/{session}', [PosSessionController::class, 'show'])->name('show');
         Route::put('/{session}', [PosSessionController::class, 'update'])->name('update');
     });

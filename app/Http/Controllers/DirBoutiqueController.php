@@ -27,17 +27,26 @@ class DirBoutiqueController extends Controller
         return Inertia("DirBoutique/DirBoutiqueIndex",compact("cities","boutiques","regions"));
     }
     /**
-     * Affiche l'historique global de tous les mouvements (Toutes boutiques confondues).
+     * Affiche l'historique global des mouvements (Multi-tenant: Contrôleur vs Directeur).
      */
     public function history(Request $request)
     {
+        $user = \Illuminate\Support\Facades\Auth::user();
+        $isDirecteur = $user->role->name === 'direction';
+
         // 1. Base de la requête avec les relations nécessaires
-        $query = ProductMove::query()
+        $query = \App\Models\ProductMove::query()
             ->with([
                 'product:id,designation,sku',   // Le produit concerné
                 'boutique:id,name',             // La boutique où ça s'est passé
                 'user:id,first_name,last_name'  // Qui a fait l'action
             ]);
+
+        // --- SÉCURITÉ MULTI-TENANT ---
+        // Le contrôleur ne peut voir que les mouvements (Entrées/Sorties) de sa propre boutique
+        if (!$isDirecteur) {
+            $query->where('boutique_id', $user->boutique_id);
+        }
 
         // 2. Filtre Global (Recherche texte)
         if ($request->filled('search')) {
@@ -56,7 +65,7 @@ class DirBoutiqueController extends Controller
         }
 
         // 3. Filtre par Boutique (Spécifique pour le Directeur)
-        if ($request->filled('boutique_id')) {
+        if ($request->filled('boutique_id') && $isDirecteur) {
             $query->where('boutique_id', $request->boutique_id);
         }
 
@@ -79,14 +88,21 @@ class DirBoutiqueController extends Controller
                        ->withQueryString(); // Garde les filtres lors du changement de page
 
         // 7. Données pour les filtres (Liste des boutiques)
-        $boutiques = Boutique::select('id', 'name')->orderBy('name')->get();
-        $products = Product::all();
+        // Optimisation : On ne charge la liste complète des boutiques que si c'est le directeur
+        $boutiques = $isDirecteur ? \App\Models\Boutique::select('id', 'name')->orderBy('name')->get() : [];
+        
+        // Petit conseil d'optimisation : Si vous avez des milliers de produits, 
+        // Product::all() risque d'être lourd pour la RAM. À terme, il vaudra mieux 
+        // utiliser une API de recherche asynchrone côté React (Select avec recherche).
+        $products = \App\Models\Product::all(); 
+
         return Inertia::render('DirBoutique/History/GlobalIndex', [
-            'moves'     => $moves,
-            'boutiques' => $boutiques, // Pour le menu déroulant "Filtrer par boutique"
-            'filters'   => $request->only(['search', 'boutique_id', 'type', 'date_start', 'date_end']),
-            "products" =>$products
-            ]);
+            'moves'       => $moves,
+            'boutiques'   => $boutiques, // Pour le menu déroulant "Filtrer par boutique"
+            'isDirecteur' => $isDirecteur, // Renvoi au front-end pour masquer le select Boutique
+            'filters'     => $request->only(['search', 'boutique_id', 'type', 'date_start', 'date_end']),
+            'products'    => $products
+        ]);
     }
     public function export_history(Request $request)
     {
@@ -138,23 +154,35 @@ class DirBoutiqueController extends Controller
         return $pdf->download('rapport_global_' . date('Ymd_Hi') . '.pdf');
     }
 
-    /**
+   /**
      * Historique global des transferts avec filtres avancés (Région, Chauffeur, Véhicule).
      */
     public function transferHistory(Request $request)
     {
+        $user = \Illuminate\Support\Facades\Auth::user();
+        $isDirecteur = $user->role->name === 'direction';
+
         // 1. Construction de la requête de base
-        $query = ProductTransfert::query()
+        $query = \App\Models\ProductTransfert::query()
             ->with([
-                'boutiqueDeparture.region', // Important pour le filtre et l'affichage
+                'boutiqueDeparture.region', 
                 'boutiqueArrival.region',
                 'vehicule:id,type,licence_plate',
                 'chauffeur:id,name',
                 'userEmitting:id,first_name,last_name',
-                'items.product' // Pour compter le nombre d'articles
+                'items.product' 
             ]);
 
-        // 2. Filtre par RÉGION (Départ OU Arrivée)
+        // --- SÉCURITÉ MULTI-TENANT ---
+        // Le contrôleur ne voit que les transferts qui PARTENT ou qui ARRIVENT dans SA boutique
+        if (!$isDirecteur) {
+            $query->where(function($q) use ($user) {
+                $q->where('boutique_departure_id', $user->boutique_id) // Remplacez par le vrai nom de votre colonne si différent
+                  ->orWhere('boutique_arrival_id', $user->boutique_id);
+            });
+        }
+
+        // 2. Filtre par RÉGION (Départ OU Arrivée) - Uniquement pour Directeur ou si pertinent
         if ($request->filled('region_id')) {
             $regionId = $request->region_id;
             $query->where(function($q) use ($regionId) {
@@ -185,7 +213,7 @@ class DirBoutiqueController extends Controller
             $query->whereDate('departure_date', '<=', $request->date_end);
         }
 
-        // 6. Filtre par STATUT (Optionnel mais utile)
+        // 6. Filtre par STATUT 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
@@ -196,34 +224,40 @@ class DirBoutiqueController extends Controller
                            ->withQueryString();
 
         // 7. Données pour les listes déroulantes (Filtres)
-        $regions = Region::select('id', 'name')->orderBy('name')->get();
-        $chauffeurs = Chauffeur::where('archived', false)->select('id', 'name')->orderBy('name')->get();
-        $vehicules = Vehicule::where('archived', false)->select('id', 'type', 'licence_plate')->orderBy('type')->get();
+        $regions = \App\Models\Region::select('id', 'name')->orderBy('name')->get();
+        $chauffeurs = \App\Models\Chauffeur::where('archived', false)->select('id', 'name')->orderBy('name')->get();
+        $vehicules = \App\Models\Vehicule::where('archived', false)->select('id', 'type', 'licence_plate')->orderBy('type')->get();
 
         return Inertia::render('DirBoutique/History/GlobalTransferIndex', [
-            'transfers'  => $transfers,
-            'regions'    => $regions,
-            'chauffeurs' => $chauffeurs,
-            'vehicules'  => $vehicules,
-            'filters'    => $request->only(['region_id', 'chauffeur_id', 'vehicule_id', 'date_start', 'date_end', 'status'])
+            'transfers'   => $transfers,
+            'regions'     => $regions,
+            'chauffeurs'  => $chauffeurs,
+            'vehicules'   => $vehicules,
+            'isDirecteur' => $isDirecteur,
+            'filters'     => $request->only(['region_id', 'chauffeur_id', 'vehicule_id', 'date_start', 'date_end', 'status'])
         ]);
     }
     
-/**
+    /**
      * Historique Global des Ventes (Toutes boutiques ou filtré)
      */
     public function salesHistory(Request $request)
     {
-        // On charge la liste des boutiques pour le filtre (select)
-        $boutiques = Boutique::orderBy('name')->get(['id', 'name']);
+        $user = \Illuminate\Support\Facades\Auth::user();
+        $isDirecteur = $user->role->name === 'direction';
 
-        $query = ProductSale::with(['boutique', 'user', 'customer', 'items'])
+        $query = \App\Models\Productsale::with(['boutique', 'user', 'customer', 'items'])
             ->orderBy('created_at', 'desc');
+
+        // --- SÉCURITÉ MULTI-TENANT ---
+        if (!$isDirecteur) {
+            $query->where('boutique_id', $user->boutique_id);
+        }
 
         // --- FILTRES ---
 
-        // 1. Boutique (Spécifique ou Toutes)
-        if ($request->filled('boutique_id')) {
+        // 1. Boutique (Spécifique ou Toutes - Pour le Directeur uniquement)
+        if ($request->filled('boutique_id') && $isDirecteur) {
             $query->where('boutique_id', $request->boutique_id);
         }
 
@@ -246,20 +280,23 @@ class DirBoutiqueController extends Controller
         }
 
         // Calculs des totaux pour l'affichage rapide (Cards)
-        // On clone la requête pour ne pas casser la pagination
         $statsQuery = clone $query;
         $totalRevenue = $statsQuery->sum('total_ttc');
         $totalSalesCount = $statsQuery->count();
 
         $sales = $query->paginate(20)->withQueryString();
 
+        // On ne charge la liste des boutiques que si c'est le directeur
+        $boutiques = $isDirecteur ? \App\Models\Boutique::orderBy('name')->get(['id', 'name']) : [];
+
         return Inertia::render('DirBoutique/History/GlobalSalesHistory', [
-            'sales' => $sales,
-            'boutiques' => $boutiques,
-            'filters' => $request->only(['search', 'date_start', 'date_end', 'boutique_id']),
-            'stats' => [
+            'sales'       => $sales,
+            'boutiques'   => $boutiques,
+            'isDirecteur' => $isDirecteur,
+            'filters'     => $request->only(['search', 'date_start', 'date_end', 'boutique_id']),
+            'stats'       => [
                 'total_revenue' => $totalRevenue,
-                'count' => $totalSalesCount
+                'count'         => $totalSalesCount
             ]
         ]);
     }
@@ -269,17 +306,26 @@ class DirBoutiqueController extends Controller
      */
     public function paymentsHistory(Request $request)
     {
-        $boutiques = Boutique::orderBy('name')->get(['id', 'name']);
+        $user = \Illuminate\Support\Facades\Auth::user();
+        $isDirecteur = $user->role->name === 'direction';
 
-        // On assume que le versement est lié à une boutique via le User ou le Counter
-        // Ici, on utilise la relation via User -> Boutique pour simplifier
-        $query = BoutiquePayment::with(['user.boutique', 'productSales'])
+        // On utilise la relation via User -> Boutique
+        $query = \App\Models\BoutiquePayment::with(['user.boutique', 'productSales'])
             ->orderBy('created_at', 'desc');
+
+        // --- SÉCURITÉ MULTI-TENANT ---
+        if (!$isDirecteur) {
+            // Le versement est lié à l'utilisateur qui l'a fait. 
+            // On vérifie que cet utilisateur appartient à la boutique du contrôleur.
+            $query->whereHas('user', function($q) use ($user) {
+                $q->where('boutique_id', $user->boutique_id);
+            });
+        }
 
         // --- FILTRES ---
 
-        // 1. Boutique (Via User)
-        if ($request->filled('boutique_id')) {
+        // 1. Boutique (Via User - Pour le Directeur uniquement)
+        if ($request->filled('boutique_id') && $isDirecteur) {
             $query->whereHas('user', function($q) use ($request) {
                 $q->where('boutique_id', $request->boutique_id);
             });
@@ -296,21 +342,25 @@ class DirBoutiqueController extends Controller
         // 3. Recherche
         if ($request->filled('search')) {
             $search = $request->input('search');
-            $query->where('reference', 'like', "%{$search}%")
+            $query->where(function($q) use ($search) {
+                $q->where('reference', 'like', "%{$search}%")
                   ->orWhere('amount', 'like', "%{$search}%");
+            });
         }
 
         $totalAmount = (clone $query)->sum('amount');
         $payments = $query->paginate(20)->withQueryString();
 
+        $boutiques = $isDirecteur ? \App\Models\Boutique::orderBy('name')->get(['id', 'name']) : [];
+
         return Inertia::render('DirBoutique/History/GlobalPaymentHistory', [
-            'payments' => $payments,
-            'boutiques' => $boutiques,
-            'filters' => $request->only(['search', 'date_start', 'date_end', 'boutique_id']),
-            'stats' => ['total_amount' => $totalAmount]
+            'payments'    => $payments,
+            'boutiques'   => $boutiques,
+            'isDirecteur' => $isDirecteur,
+            'filters'     => $request->only(['search', 'date_start', 'date_end', 'boutique_id']),
+            'stats'       => ['total_amount' => $totalAmount]
         ]);
     }
-
     /**
      * Génération PDF Rapport Ventes (Global ou Spécifique)
      */

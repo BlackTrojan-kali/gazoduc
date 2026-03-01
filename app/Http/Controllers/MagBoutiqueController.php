@@ -185,7 +185,11 @@ public function destroy($id)
                     ->where('boutique_id', $user->boutique_id)
                     ->lockForUpdate()
                     ->firstOrFail();
-
+                if ($move->departure == "FOURNISSEUR"){
+                    
+                          throw new \Exception("Impossible de supprimer un mouvement d'origine FOURNISSEUR");
+                       
+                }
                 // On récupère le stock du Comptoir (celui de l'utilisateur courant)
                 $stockComptoir = ProductStock::where([
                     'product_id'  => $move->product_id,

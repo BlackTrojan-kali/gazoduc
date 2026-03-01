@@ -7,9 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 class Productsale extends Model
 {
     //
-    protected $fillable= [
-        "boutique_id", "user_id", "customer_id", "facture_code", "total_ht", "total_tva", "total_ttc", "amount_paid",
-"payment_mode", "status", "sync_status","counter_id"
+   protected $fillable= [
+        "boutique_id", "user_id", "pos_session_id", "customer_id", "facture_code", // <-- Ajout ici
+        "total_ht", "total_tva", "total_ttc", "amount_paid",
+        "payment_mode", "status", "sync_status","counter_id"
     ];
     public function boutique(){
         return $this->belongsTo(Boutique::class);
@@ -23,7 +24,7 @@ class Productsale extends Model
     }
     
     public function counter(){
-        return $this->belongTo(Counter::class,"counter_id");
+        return $this->belongsTo(Counter::class,"counter_id");
     }
     public function items(){
         return $this->hasMany(Productsaleitem::class,"sale_id");

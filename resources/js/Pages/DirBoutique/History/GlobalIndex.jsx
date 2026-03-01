@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Head, router, Link } from '@inertiajs/react';
 import DirBoutiqueLayout from '../../../layout/DirBoutiqueLayout/DirBoutiqueLayout'; 
 import GlobalExportHistoryModal from '../../../components/Modals/Boutique_Modals/Moves/GlobalExportHistoryModal'; 
+import Select from 'react-select'; // Import de React Select
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
     faHistory, 
@@ -14,8 +15,8 @@ import {
     faArrowRight
 } from '@fortawesome/free-solid-svg-icons';
 
-// CORRECTION 1 : Ajout de valeurs par défaut pour éviter le crash si une prop est manquante
-const GlobalIndex = ({ moves = { data: [], links: [] }, boutiques = [], filters = {}, products = [] }) => {
+// Ajout de isDirecteur dans les props pour la sécurité de l'interface
+const GlobalIndex = ({ moves = { data: [], links: [] }, boutiques = [], filters = {}, products = [], isDirecteur = true }) => {
   
   // --- États ---
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -25,6 +26,26 @@ const GlobalIndex = ({ moves = { data: [], links: [] }, boutiques = [], filters 
   const [type, setType] = useState(filters.type || '');
   const [dateStart, setDateStart] = useState(filters.date_start || '');
   const [dateEnd, setDateEnd] = useState(filters.date_end || '');
+
+  // --- Options pour React Select ---
+  const boutiqueOptions = boutiques.map(b => ({ value: b.id, label: b.name }));
+  const typeOptions = [
+      { value: 'entree', label: 'Entrées (+)' },
+      { value: 'sortie', label: 'Sorties (-)' }
+  ];
+
+  // Styles de base pour React Select pour correspondre à votre thème
+  const selectStyles = {
+      control: (base) => ({
+          ...base,
+          minHeight: '40px',
+          borderRadius: '0.5rem',
+          borderColor: '#e5e7eb',
+          boxShadow: 'none',
+          '&:hover': { borderColor: '#d1d5db' },
+          backgroundColor: 'transparent'
+      })
+  };
 
   // --- Gestion des Filtres ---
   const applyFilters = () => {
@@ -62,7 +83,7 @@ const GlobalIndex = ({ moves = { data: [], links: [] }, boutiques = [], filters 
                 Mouvements de Stock Globaux
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-                Suivi centralisé des entrées et sorties de toutes les boutiques.
+                Suivi centralisé des entrées et sorties {isDirecteur ? 'de toutes les boutiques' : 'de votre boutique'}.
             </p>
         </div>
 
@@ -82,48 +103,49 @@ const GlobalIndex = ({ moves = { data: [], links: [] }, boutiques = [], filters 
         <div className="md:col-span-3">
             <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Recherche</label>
             <div className="relative">
-                <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-3 text-gray-400" />
+                <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-3 text-gray-400 z-10" />
                 <input 
                     type="text"
                     placeholder="Produit, SKU, Auteur..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    className="pl-10 w-full rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900 focus:ring-blue-500 text-sm dark:text-white"
+                    className="pl-10 w-full rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900 focus:ring-blue-500 text-sm dark:text-white h-[40px]"
                 />
             </div>
         </div>
 
-        {/* Filtre Boutique */}
-        <div className="md:col-span-2">
-            <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Boutique</label>
-            <div className="relative">
-                <FontAwesomeIcon icon={faStore} className="absolute left-3 top-3 text-gray-400" />
-                <select 
-                    value={boutiqueId}
-                    onChange={(e) => setBoutiqueId(e.target.value)}
-                    className="pl-10 w-full rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900 focus:ring-blue-500 appearance-none text-sm dark:text-white"
-                >
-                    <option value="">Toutes les boutiques</option>
-                    {boutiques.map(b => (
-                        <option key={b.id} value={b.id}>{b.name}</option>
-                    ))}
-                </select>
+        {/* Filtre Boutique (Visible uniquement si Directeur) */}
+        {isDirecteur && (
+            <div className="md:col-span-2">
+                <label className="text-xs font-bold text-gray-500 uppercase mb-1 block flex items-center gap-1">
+                    <FontAwesomeIcon icon={faStore} className="text-gray-400" />
+                    Boutique
+                </label>
+                <Select
+                    options={boutiqueOptions}
+                    value={boutiqueOptions.find(opt => opt.value == boutiqueId) || null}
+                    onChange={(selected) => setBoutiqueId(selected ? selected.value : '')}
+                    placeholder="Toutes..."
+                    isClearable
+                    className="text-sm"
+                    styles={selectStyles}
+                />
             </div>
-        </div>
+        )}
 
         {/* Filtre Type */}
-        <div className="md:col-span-2">
+        <div className={isDirecteur ? "md:col-span-2" : "md:col-span-3"}>
             <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Type</label>
-            <select 
-                value={type}
-                onChange={(e) => setType(e.target.value)}
-                className="w-full rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900 focus:ring-blue-500 text-sm dark:text-white"
-            >
-                <option value="">Tout voir</option>
-                <option value="entree">Entrées (+)</option>
-                <option value="sortie">Sorties (-)</option>
-            </select>
+            <Select
+                options={typeOptions}
+                value={typeOptions.find(opt => opt.value == type) || null}
+                onChange={(selected) => setType(selected ? selected.value : '')}
+                placeholder="Tout voir"
+                isClearable
+                className="text-sm"
+                styles={selectStyles}
+            />
         </div>
 
         {/* Dates */}
@@ -134,7 +156,7 @@ const GlobalIndex = ({ moves = { data: [], links: [] }, boutiques = [], filters 
                     type="date" 
                     value={dateStart}
                     onChange={e => setDateStart(e.target.value)}
-                    className="w-full rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900 text-sm p-2 dark:text-white dark:[color-scheme:dark]"
+                    className="w-full rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900 text-sm p-2 dark:text-white dark:[color-scheme:dark] h-[40px]"
                 />
             </div>
             <div>
@@ -143,22 +165,22 @@ const GlobalIndex = ({ moves = { data: [], links: [] }, boutiques = [], filters 
                     type="date" 
                     value={dateEnd}
                     onChange={e => setDateEnd(e.target.value)}
-                    className="w-full rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900 text-sm p-2 dark:text-white dark:[color-scheme:dark]"
+                    className="w-full rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900 text-sm p-2 dark:text-white dark:[color-scheme:dark] h-[40px]"
                 />
             </div>
         </div>
 
         {/* Boutons Action */}
-        <div className="md:col-span-2 flex gap-2">
+        <div className="md:col-span-2 flex gap-2 h-[40px]">
             <button 
                 onClick={applyFilters}
-                className="flex-1 bg-gray-900 hover:bg-black text-white py-2 rounded-lg text-sm font-medium transition-colors"
+                className="flex-1 bg-gray-900 hover:bg-black text-white rounded-lg text-sm font-medium transition-colors h-full flex items-center justify-center"
             >
                 <FontAwesomeIcon icon={faFilter} className="mr-1"/> Filtrer
             </button>
             <button 
                 onClick={handleReset}
-                className="px-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors"
+                className="px-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors h-full flex items-center justify-center"
                 title="Réinitialiser"
             >
                 <FontAwesomeIcon icon={faUndo} />
@@ -218,7 +240,7 @@ const GlobalIndex = ({ moves = { data: [], links: [] }, boutiques = [], filters 
 
                             {/* Type */}
                             <td className="px-6 py-4 whitespace-nowrap">
-                                {move.type === 'entree' ? (
+                                {move.type === 'entree' || move.type === 'ENTREE' ? (
                                     <span className="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded dark:bg-green-900/30 dark:text-green-400">
                                         ENTRÉE
                                     </span>
@@ -229,10 +251,10 @@ const GlobalIndex = ({ moves = { data: [], links: [] }, boutiques = [], filters 
                                 )}
                             </td>
 
-                            {/* Quantité (CORRECTION 2: Sécurisation du nombre) */}
+                            {/* Quantité */}
                             <td className="px-6 py-4 whitespace-nowrap text-right">
-                                <span className={`font-mono font-bold text-sm ${move.type === 'entree' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                                    {move.type === 'entree' ? '+' : '-'}{Number(move.qty || 0).toLocaleString()}
+                                <span className={`font-mono font-bold text-sm ${(move.type === 'entree' || move.type === 'ENTREE') ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                    {(move.type === 'entree' || move.type === 'ENTREE') ? '+' : '-'}{Number(move.qty || 0).toLocaleString()}
                                 </span>
                             </td>
 
