@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-    use App\Models\BoutiquePayment;
+use App\Models\Boutiquepayment;
 use App\Models\ProductSale;
 use App\Models\UnassociatedFacture; // Import du modèle tampon
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -26,7 +26,7 @@ class ProductPaymentController extends Controller
 
         // On récupère les paiements liés à la boutique de l'utilisateur (via le User ou le Counter)
         // On charge la relation 'productSales' pour voir quelles factures ont été payées
-        $query = BoutiquePayment::with(['user', 'counter', 'productSales.customer'])
+        $query = Boutiquepayment::with(['user', 'counter', 'productSales.customer'])
             ->where('user_id', $user->id) // Ou ->where('counter_id', $user->counter_id) selon votre logique métier
             ->orderBy('created_at', 'desc');
 
@@ -72,7 +72,7 @@ public function store(Request $request)
         $user = Auth::user();
 
         // A. Création du Versement
-        $payment = BoutiquePayment::create([
+        $payment = Boutiquepayment::create([
             'counter_id'   => $validated['counter_id'] ?? $user->counter_id,
             'user_id'      => $user->id,
             'amount'       => $validated['amount'],
@@ -129,7 +129,7 @@ public function store(Request $request)
         $endDate = Carbon::parse($request->end_date)->endOfDay();
 
         // Récupération des données pour le PDF
-        $payments = BoutiquePayment::with(['user', 'productSales'])
+        $payments = Boutiquepayment::with(['user', 'productSales'])
             ->where('user_id', $user->id)
             ->whereBetween('created_at', [$startDate, $endDate])
             ->orderBy('created_at', 'desc')

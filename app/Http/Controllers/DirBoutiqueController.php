@@ -15,6 +15,7 @@ use App\Models\Vehicule;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class DirBoutiqueController extends Controller
@@ -35,7 +36,7 @@ class DirBoutiqueController extends Controller
         $isDirecteur = $user->role->name === 'direction';
 
         // 1. Base de la requête avec les relations nécessaires
-        $query = \App\Models\ProductMove::query()
+        $query = ProductMove::query()
             ->with([
                 'product:id,designation,sku',   // Le produit concerné
                 'boutique:id,name',             // La boutique où ça s'est passé
@@ -94,7 +95,7 @@ class DirBoutiqueController extends Controller
         // Petit conseil d'optimisation : Si vous avez des milliers de produits, 
         // Product::all() risque d'être lourd pour la RAM. À terme, il vaudra mieux 
         // utiliser une API de recherche asynchrone côté React (Select avec recherche).
-        $products = \App\Models\Product::all(); 
+        $products = Product::all(); 
 
         return Inertia::render('DirBoutique/History/GlobalIndex', [
             'moves'       => $moves,
@@ -137,7 +138,7 @@ class DirBoutiqueController extends Controller
 
         // 3. Export PDF
         $boutiqueName = $request->filled('boutique_id') 
-            ? \App\Models\Boutique::find($request->boutique_id)->name 
+            ? Boutique::find($request->boutique_id)->name 
             : 'TOUTES LES BOUTIQUES';
 
         $data = [
@@ -148,7 +149,7 @@ class DirBoutiqueController extends Controller
         ];
 
         // Utilisez la même vue PDF que précédemment, ou une version "Paysage" si beaucoup de colonnes
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('boutique_pdf.moves_history_global', $data);
+        $pdf = Pdf::loadView('boutique_pdf.moves_history_global', $data);
         $pdf->setPaper('a4', 'landscape'); // Paysage recommandé pour le mode "Global"
 
         return $pdf->download('rapport_global_' . date('Ymd_Hi') . '.pdf');
@@ -159,11 +160,11 @@ class DirBoutiqueController extends Controller
      */
     public function transferHistory(Request $request)
     {
-        $user = \Illuminate\Support\Facades\Auth::user();
+        $user = Auth::user();
         $isDirecteur = $user->role->name === 'direction';
 
         // 1. Construction de la requête de base
-        $query = \App\Models\ProductTransfert::query()
+        $query = Producttransfert::query()
             ->with([
                 'boutiqueDeparture.region', 
                 'boutiqueArrival.region',
@@ -224,9 +225,9 @@ class DirBoutiqueController extends Controller
                            ->withQueryString();
 
         // 7. Données pour les listes déroulantes (Filtres)
-        $regions = \App\Models\Region::select('id', 'name')->orderBy('name')->get();
-        $chauffeurs = \App\Models\Chauffeur::where('archived', false)->select('id', 'name')->orderBy('name')->get();
-        $vehicules = \App\Models\Vehicule::where('archived', false)->select('id', 'type', 'licence_plate')->orderBy('type')->get();
+        $regions = Region::select('id', 'name')->orderBy('name')->get();
+        $chauffeurs = Chauffeur::where('archived', false)->select('id', 'name')->orderBy('name')->get();
+        $vehicules = Vehicule::where('archived', false)->select('id', 'type', 'licence_plate')->orderBy('type')->get();
 
         return Inertia::render('DirBoutique/History/GlobalTransferIndex', [
             'transfers'   => $transfers,
@@ -243,10 +244,10 @@ class DirBoutiqueController extends Controller
      */
     public function salesHistory(Request $request)
     {
-        $user = \Illuminate\Support\Facades\Auth::user();
+        $user = Auth::user();
         $isDirecteur = $user->role->name === 'direction';
 
-        $query = \App\Models\Productsale::with(['boutique', 'user', 'customer', 'items'])
+        $query = Productsale::with(['boutique', 'user', 'customer', 'items'])
             ->orderBy('created_at', 'desc');
 
         // --- SÉCURITÉ MULTI-TENANT ---
@@ -287,7 +288,7 @@ class DirBoutiqueController extends Controller
         $sales = $query->paginate(20)->withQueryString();
 
         // On ne charge la liste des boutiques que si c'est le directeur
-        $boutiques = $isDirecteur ? \App\Models\Boutique::orderBy('name')->get(['id', 'name']) : [];
+        $boutiques = $isDirecteur ? Boutique::orderBy('name')->get(['id', 'name']) : [];
 
         return Inertia::render('DirBoutique/History/GlobalSalesHistory', [
             'sales'       => $sales,
@@ -306,11 +307,11 @@ class DirBoutiqueController extends Controller
      */
     public function paymentsHistory(Request $request)
     {
-        $user = \Illuminate\Support\Facades\Auth::user();
+        $user = Auth::user();
         $isDirecteur = $user->role->name === 'direction';
 
         // On utilise la relation via User -> Boutique
-        $query = \App\Models\BoutiquePayment::with(['user.boutique', 'productSales'])
+        $query = Boutiquepayment::with(['user.boutique', 'productSales'])
             ->orderBy('created_at', 'desc');
 
         // --- SÉCURITÉ MULTI-TENANT ---
@@ -351,7 +352,7 @@ class DirBoutiqueController extends Controller
         $totalAmount = (clone $query)->sum('amount');
         $payments = $query->paginate(20)->withQueryString();
 
-        $boutiques = $isDirecteur ? \App\Models\Boutique::orderBy('name')->get(['id', 'name']) : [];
+        $boutiques = $isDirecteur ? Boutique::orderBy('name')->get(['id', 'name']) : [];
 
         return Inertia::render('DirBoutique/History/GlobalPaymentHistory', [
             'payments'    => $payments,

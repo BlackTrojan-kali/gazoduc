@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Exports\ProductMovesExport;
 use App\Models\Product;
 use App\Models\ProductMove;
-use App\Models\ProductStock; // Ou Productstock selon votre nom de fichier
+use App\Models\Productstock; // Ou Productstock selon votre nom de fichier
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -31,7 +31,7 @@ class MagBoutiqueController extends Controller
         $products = Product::all();
         // 1. Construction de la requête
         // On filtre directement par la boutique de l'utilisateur
-        $query = ProductStock::query()
+        $query = Productstock::query()
             ->where('boutique_id', $user->boutique_id)
             ->with(['product.category']); // On charge les infos du produit
 
@@ -88,7 +88,7 @@ class MagBoutiqueController extends Controller
             // --- SCÉNARIO 1 : ENTRÉE ---
             if ($validated['type'] === 'entree') {
                 
-                $stockMagasin = ProductStock::firstOrCreate(
+                $stockMagasin = Productstock::firstOrCreate(
                     ['product_id' => $validated['product_id'], 'boutique_id' => $validated['boutique_id'], 'service' => 'magasin'],
                     ['available_qty' => 0]
                 );
@@ -114,7 +114,7 @@ class MagBoutiqueController extends Controller
             // --- SCÉNARIO 2 : SORTIE ---
             elseif ($validated['type'] === 'sortie') {
                 
-                $stockMagasin = ProductStock::where([
+                $stockMagasin = Productstock::where([
                     'product_id'  => $validated['product_id'],
                     'boutique_id' => $validated['boutique_id'],
                     'service'     => 'magasin'
@@ -142,7 +142,7 @@ class MagBoutiqueController extends Controller
                 // --- TRANSFERT VERS COMMERCIAL (COMPTOIR) ---
                 if (isset($validated['destination']) && strtolower($validated['destination']) === 'commercial') {
                     
-                    $stockComptoir = ProductStock::firstOrCreate(
+                    $stockComptoir = Productstock::firstOrCreate(
                         ['product_id' => $validated['product_id'], 'boutique_id' => $validated['boutique_id'], 'service' => 'comptoir'],
                         ['available_qty' => 0]
                     );
@@ -191,7 +191,7 @@ public function destroy($id)
                        
                 }
                 // On récupère le stock du Comptoir (celui de l'utilisateur courant)
-                $stockComptoir = ProductStock::where([
+                $stockComptoir = Productstock::where([
                     'product_id'  => $move->product_id,
                     'boutique_id' => $move->boutique_id,
                     'service'     => 'comptoir'
@@ -205,7 +205,7 @@ public function destroy($id)
                         
                         // On doit reprendre le stock au Magasin.
                         // MAIS D'ABORD : Vérifier si le magasin a encore ce stock !
-                        $stockMagasin = ProductStock::where([
+                        $stockMagasin = Productstock::where([
                             'product_id'  => $move->product_id,
                             'boutique_id' => $move->boutique_id,
                             'service'     => 'magasin'
@@ -225,7 +225,7 @@ public function destroy($id)
                             $stockComptoir->increment('available_qty', $move->qty);
                         } else {
                             // Si le stock comptoir n'existe plus (cas rare), on le recrée
-                            ProductStock::create([
+                            Productstock::create([
                                 'product_id' => $move->product_id, 'boutique_id' => $move->boutique_id,
                                 'service' => 'comptoir', 'available_qty' => $move->qty
                             ]);
@@ -267,7 +267,7 @@ public function destroy($id)
                     $stockComptoir->decrement('available_qty', $move->qty);
 
                     // 3. On rend au magasin (Provenance probable)
-                    ProductStock::where([
+                    Productstock::where([
                         'product_id'  => $move->product_id,
                         'boutique_id' => $move->boutique_id,
                         'service'     => 'magasin'

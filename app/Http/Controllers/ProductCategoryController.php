@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ProductCategory;
+use App\Models\Productcategory;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Validation\Rule;
@@ -14,7 +14,7 @@ class ProductCategoryController extends Controller
     public function index(Request $request)
     {
         // 1. Récupération paginée pour le tableau (avec la relation parent pour l'affichage)
-        $categories = ProductCategory::query()
+        $categories = Productcategory::query()
             ->with('parent') // Si vous avez défini la relation parent() dans le modèle
             ->when($request->input('search'), function ($query, $search) {
                 // On retire la recherche sur 'description' qui n'existe plus
@@ -25,7 +25,7 @@ class ProductCategoryController extends Controller
             ->withQueryString();
 
         // 2. Récupération de TOUTES les catégories (id et name) pour le Select du modal
-        $allCategories = ProductCategory::select('id', 'name')->orderBy('name')->get();
+        $allCategories = Productcategory::select('id', 'name')->orderBy('name')->get();
 
         return Inertia::render('DirBoutique/Category/ProdCatIndex', [
             'categories' => $categories,
@@ -49,7 +49,7 @@ class ProductCategoryController extends Controller
             'parent_id.exists' => 'La catégorie parente sélectionnée est invalide.',
         ]);
 
-        ProductCategory::create($validated);
+        Productcategory::create($validated);
 
         return redirect()->back()->with('success', 'Catégorie créée avec succès.');
     }
@@ -84,7 +84,7 @@ class ProductCategoryController extends Controller
     /** 
      * Supprime une catégorie.
      */
-    public function destroy(ProductCategory $category)
+    public function destroy(Productcategory $category)
     {
         // Sécurité : Vérifier si des produits sont liés avant de supprimer
         // Si vous avez une relation defined 'products()' dans votre modèle

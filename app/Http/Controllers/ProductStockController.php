@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Boutique;
+use App\Models\Productcategory;
+use App\Models\Productstock;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
@@ -20,7 +23,7 @@ class ProductStockController extends Controller
         $isDirecteur = $user->role->name == 'direction'; 
         
         // 1. Préparation de la requête avec Eager Loading
-        $query = \App\Models\ProductStock::query()
+        $query = Productstock::query()
             ->with(['product.category', 'boutique']);
 
         // --- SÉCURITÉ MULTI-TENANT (Isolation par rôle) ---
@@ -97,13 +100,13 @@ class ProductStockController extends Controller
         
         // Le directeur voit toutes les boutiques. Le contrôleur ne voit que la sienne (ou pas du tout le filtre)
         if ($isDirecteur) {
-            $boutiques = \App\Models\Boutique::orderBy('name')->get(['id', 'name']);
+            $boutiques = Boutique::orderBy('name')->get(['id', 'name']);
         } else {
             // Optionnel: on peut lui renvoyer uniquement sa boutique pour affichage
-            $boutiques = \App\Models\Boutique::where('id', $user->boutique_id)->get(['id', 'name']);
+            $boutiques = Boutique::where('id', $user->boutique_id)->get(['id', 'name']);
         }
 
-        $categories = \App\Models\ProductCategory::orderBy('name')->get(['id', 'name']);
+        $categories = Productcategory::orderBy('name')->get(['id', 'name']);
 
         return Inertia::render('DirBoutique/Products/ProductStockIndex', [
             'stocks'      => $stocks,

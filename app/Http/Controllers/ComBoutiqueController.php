@@ -6,7 +6,7 @@ use App\Models\Boutique;
 use App\Models\Boutiquepayment;
 use App\Models\Customer;
 use App\Models\Product;
-use App\Models\ProductStock;
+use App\Models\Productstock;
 use App\Models\ProductMove;
 use App\Models\Productsale;
 use App\Models\UnassociatedFacture;
@@ -131,7 +131,7 @@ class ComBoutiqueController extends Controller
             // --- ÉTAPE A : GESTION DU COMPTOIR (SORTIE) ---
 
             // 2. Verrouillage du stock 'comptoir'
-            $stockComptoir = ProductStock::where([
+            $stockComptoir = Productstock::where([
                 'product_id'  => $validated['product_id'],
                 'boutique_id' => $user->boutique_id,
                 'service'     => 'comptoir'
@@ -168,7 +168,7 @@ class ComBoutiqueController extends Controller
                 // 6. Récupération ou Création du stock 'Magasin'
                 // Note : On ne lock pas ici car firstOrCreate gère mal le lock atomique, 
                 // mais pour une incrémentation le risque est minime.
-                $stockMagasin = ProductStock::firstOrCreate(
+                $stockMagasin = Productstock::firstOrCreate(
                     [
                         'product_id'  => $validated['product_id'],
                         'boutique_id' => $user->boutique_id,

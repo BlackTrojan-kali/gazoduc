@@ -6,9 +6,9 @@ use App\Models\Boutique;
 use App\Models\Chauffeur;
 use App\Models\Product;
 use App\Models\ProductMove;
-use App\Models\ProductStock;
-use App\Models\ProductTransfert;
-use App\Models\ProductTransfertItem;
+use App\Models\Productstock;
+use App\Models\Producttransfert;
+use App\Models\Producttransfertitem;
 use App\Models\User; // Pour valider le receveur
 use App\Models\Vehicule;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -30,7 +30,7 @@ class ProductTransfertController extends Controller
 
         // --- 1. LISTE DES TRANSFERTS (Pour le tableau) ---
         // On récupère les transferts "PENDING" où ma boutique est impliquée
-        $transfers = ProductTransfert::query()
+        $transfers = Producttransfert::query()
             
             ->where(function($q) use ($user) {
                 $q->where('boutique_departure_id', $user->boutique_id)
@@ -122,7 +122,7 @@ class ProductTransfertController extends Controller
         DB::transaction(function () use ($validated, $user, $boutiqueDepartureId) {
             
             // 1. Création du Bordereau de Transfert
-            $transfert = ProductTransfert::create([
+            $transfert = Producttransfert::create([
                 'vehicule_id'           => $validated['vehicule_id'],
                 'chauffeur_id'          => $validated['chauffeur_id'],
                 'boutique_departure_id' => $boutiqueDepartureId,
@@ -138,7 +138,7 @@ class ProductTransfertController extends Controller
             foreach ($validated['items'] as $item) {
                 
                 // A. Verrouillage du stock en magasin pour la boutique de départ
-                $stock = ProductStock::where([
+                $stock = Productstock::where([
                     'product_id'  => $item['product_id'],
                     'boutique_id' => $boutiqueDepartureId,
                     'service'     => 'magasin'
@@ -169,7 +169,7 @@ class ProductTransfertController extends Controller
 
                 // E. Liaison de l'article au transfert
                 // Note : Vérifiez bien si votre colonne est 'transfert_id' ou 'tranfert_id'
-                ProductTransfertItem::create([
+                Producttransfertitem::create([
                     'product_id'   => $item['product_id'],
                     'tranfert_id' => $transfert->id, // Correction du nom probable
                     'move_id'      => $move->id,
@@ -198,7 +198,7 @@ class ProductTransfertController extends Controller
         try {
             DB::transaction(function () use ($id, $user) {
                 // Verrouillage du transfert
-                $transfert = ProductTransfert::with('items')->lockForUpdate()->findOrFail($id);
+                $transfert = Producttransfert::with('items')->lockForUpdate()->findOrFail($id);
 
                 if ($transfert->status !== 'pending') {
                     throw new \Exception("Ce transfert a déjà été traité.");
@@ -211,7 +211,7 @@ class ProductTransfertController extends Controller
                 // 1. Mise à jour Stock Arrivée (ENTRÉE)
                 foreach ($transfert->items as $item) {
                     // Création ou récupération du stock dans la boutique d'arrivée
-                    $stockArrivee = ProductStock::firstOrCreate(
+                    $stockArrivee = Productstock::firstOrCreate(
                         [
                             'product_id'  => $item->product_id,
                             'boutique_id' => $user->boutique_id,
@@ -229,6 +229,7 @@ class ProductTransfertController extends Controller
                         'user_id'     => $user->id,
                         'qty'         => $item->qty,
                         'type'        => 'entree',
+                        "remaining_stock"=>$stockArrivee->available_qty,
                         'departure'   => 'Transfert #' . $transfert->id,
                         'destination' => 'Magasin',
                         'label'       => 'Réception transfert depuis ' . $transfert->boutique_departure_id,
@@ -264,7 +265,7 @@ class ProductTransfertController extends Controller
         try {
             DB::transaction(function () use ($id, $user) {
                 // 1. Récupération avec verrouillage
-                $transfert = ProductTransfert::with('items')->lockForUpdate()->findOrFail($id);
+                $transfert = Producttransfert::with('items')->lockForUpdate()->findOrFail($id);
 
                 // 2. Vérifications de sécurité
                 if ($transfert->status !== 'pending') {
@@ -278,7 +279,7 @@ class ProductTransfertController extends Controller
                 // 3. Remboursement du Stock (Annulation de la sortie)
                 foreach ($transfert->items as $item) {
                     // A. On récupère le stock de la boutique de DÉPART
-                    $stockDepart = ProductStock::where([
+                    $stockDepart = Productstock::where([
                         'product_id'  => $item->product_id,
                         'boutique_id' => $transfert->boutique_departure_id,
                         'service'     => 'magasin'
@@ -314,7 +315,7 @@ class ProductTransfertController extends Controller
     public function print_waybill($id)
     {
         // 1. Chargement des données complètes
-        $transfert = ProductTransfert::with([
+        $transfert = Producttransfert::with([
             'boutiqueDeparture',
             'boutiqueArrival',
             'vehicule',

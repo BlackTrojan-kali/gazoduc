@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PosSession;
 use App\Models\Product;
-use App\Models\ProductSale;
-use App\Models\ProductSaleItem;
-use App\Models\ProductStock;
+use App\Models\Productsale;
+use App\Models\Productstock;
 use App\Models\ProductMove;
+use App\Models\Productsaleitem;
 use App\Models\UnassociatedFacture; // Import du modèle
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -45,7 +46,7 @@ class ProductSalesController extends Controller
         // --- NOUVEAU : VÉRIFICATION DE LA SESSION DE CAISSE ---
         // On cherche la session active du caissier dans cette boutique.
         // (Ajustez 'open' selon le mot exact que vous utilisez pour le statut d'une session ouverte, ex: 'en cours', 'ouvert')
-        $activeSession = \App\Models\PosSession::where('user_id', $user->id)
+        $activeSession = PosSession::where('user_id', $user->id)
                             ->where('boutique_id', $user->boutique_id)
                             ->where('status', 'open') // Ou whereNull('closed_at') selon votre logique
                             ->first();
@@ -127,10 +128,10 @@ class ProductSalesController extends Controller
                 }
 
                 // --- 3. GESTION DES FACTURES NON ASSOCIÉES (SINGLETON) ---
-                $unassociated = \App\Models\UnassociatedFacture::lockForUpdate()->first();
+                $unassociated = UnassociatedFacture::lockForUpdate()->first();
 
                 if (!$unassociated) {
-                    \App\Models\UnassociatedFacture::create(['product_sales_id' => [$sale->id]]);
+                UnassociatedFacture::create(['product_sales_id' => [$sale->id]]);
                 } else {
                     $currentIds = $unassociated->product_sales_id ?? [];
                     
@@ -156,12 +157,12 @@ class ProductSalesController extends Controller
   // Méthode pour générer le PDF (Assurez-vous d'avoir installé barryvdh/laravel-dompdf)
 public function print($id)
 {
-    $sale = ProductSale::with(['items.product', 'user', 'customer', 'boutique'])->findOrFail($id);
+    $sale = Productsale::with(['items.product', 'user', 'customer', 'boutique'])->findOrFail($id);
     
     // Format Ticket de caisse (80mm de large environ)
     $customPaper = [0, 0, 226.77, 800]; // Largeur fixe, Hauteur ajustable selon contenu si besoin
 
-    $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('boutique_pdf.ticket', compact('sale'))
+    $pdf = Pdf::loadView('boutique_pdf.ticket', compact('sale'))
         ->setPaper($customPaper, 'portrait');
 
     return $pdf->stream("Ticket-{$sale->facture_code}.pdf");
@@ -180,7 +181,7 @@ public function generateHistoryPdf(Request $request)
     $endDate = Carbon::parse($request->end_date)->endOfDay();
 
     // Récupération des ventes avec les relations nécessaires
-    $sales = ProductSale::with(['items.product', 'customer', 'user'])
+    $sales = Productsale::with(['items.product', 'customer', 'user'])
         ->where('boutique_id', $user->boutique_id)
         ->whereBetween('created_at', [$startDate, $endDate])
         ->where('status', 'completed') // On ne prend que les ventes validées
@@ -192,7 +193,7 @@ public function generateHistoryPdf(Request $request)
     $countSales = $sales->count();
 
     // Chargement du PDF
-    $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('boutique_pdf.sales_history', [
+    $pdf =Pdf::loadView('boutique_pdf.sales_history', [
         'sales' => $sales,
         'start_date' => $startDate,
         'end_date' => $endDate,
@@ -210,7 +211,7 @@ public function history(Request $request)
 {
     $user = Auth::user();
     
-    $query = ProductSale::with(['user', 'customer', 'items.product']) // On charge les relations
+    $query = Productsale::with(['user', 'customer', 'items.product']) // On charge les relations
         ->where('boutique_id', $user->boutique_id)
         ->orderBy('created_at', 'desc');
 
