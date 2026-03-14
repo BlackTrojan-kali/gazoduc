@@ -11,10 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('product_moves', function (Blueprint $table) {
-            //
-            
-            $table->string("service")->nullable();
+        Schema::create('suppliers', function (Blueprint $table) {
+            $table->id();
+            $table->string("name");
+            $table->string("contact_email")->nullable();
+            $table->float("tax_number")->nullable();
+            $table->string("category");
+            $table->timestamps();
         });
     }
 
@@ -23,8 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('product_moves', function (Blueprint $table) {
-            //
-        });
+        Schema::dropIfExists('suppliers');
     }
 };

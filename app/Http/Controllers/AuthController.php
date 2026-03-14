@@ -33,7 +33,7 @@ class AuthController extends Controller
         break;
             case "direction":
            
-           if (Auth::user()->entreprise->subscription->licence->name == "gaz et petrol"){
+           if (Auth::user()->entreprise->subscription->licence->name == "gaz et petrol" || "oxygene"){
                  return redirect()->route("director.licence")->with("success","authentification reussie");
            }else{
            return redirect()->route("director.index")->with("success","authentification reussie");
@@ -43,7 +43,7 @@ class AuthController extends Controller
                return redirect()->route("magasin.boutique.index")->with("info","veillez choisir une licence");
          
             }else{
-           if (Auth::user()->entreprise->subscription->licence->name == "gaz et petrol"){
+           if (Auth::user()->entreprise->subscription->licence->name == "gaz et petrol" || Auth::user()->entreprise->subscription->licence->name=="oxygene"){
             return redirect()->route("magasin.licence")->with("info","veillez choisir une licence");
            }else{
            return redirect()->route("magasin.index")->with("success","authentification reussie");

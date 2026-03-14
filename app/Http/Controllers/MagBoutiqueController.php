@@ -185,14 +185,12 @@ public function destroy($id)
                     ->where('boutique_id', $user->boutique_id)
                     ->lockForUpdate()
                     ->firstOrFail();
-
                 // On récupère le stock du Comptoir (celui de l'utilisateur courant)
                 $stockComptoir = ProductStock::where([
                     'product_id'  => $move->product_id,
                     'boutique_id' => $move->boutique_id,
-                    'service'     => 'comptoir'
+                    'service'     => $user->role->name
                 ])->lockForUpdate()->first();
-
                 // --- CAS A : Annulation d'une SORTIE (ex: Annuler un retour magasin ou une perte) ---
                 if ($move->type === 'sortie') {
                     
@@ -251,24 +249,28 @@ public function destroy($id)
                 elseif ($move->type === 'entree') {
                     
                     // Si on annule une entrée, on doit retirer le stock du comptoir et le rendre au magasin.
-                    
+                
                     // 1. Vérifier si le comptoir a encore le stock (qu'il n'a pas été vendu entre temps)
                     $comptoirQty = $stockComptoir ? $stockComptoir->available_qty : 0;
-
+                    
                     if ($comptoirQty < $move->qty) {
                         throw new \Exception("Impossible d'annuler cette entrée : Vous avez déjà vendu ces articles (Stock comptoir insuffisant).");
                     }
 
                     // 2. On retire du comptoir
-                    $stockComptoir->decrement('available_qty', $move->qty);
+                    $stockComptoir->available_qty -= $move->qty;
+                    $stockComptoir->save();
 
                     // 3. On rend au magasin (Provenance probable)
+                   if( Auth::user()->role->name == "comptoir"){ 
                     ProductStock::where([
                         'product_id'  => $move->product_id,
                         'boutique_id' => $move->boutique_id,
                         'service'     => 'magasin'
                     ])->increment('available_qty', $move->qty);
+                   }
                 }
+
 
                 // Suppression finale du mouvement historique
                 $move->delete();

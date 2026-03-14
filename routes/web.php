@@ -64,8 +64,16 @@ use App\Http\Controllers\MagBoutiqueController;
 use App\Http\Controllers\ProductTransfertController;
 
 use App\Http\Controllers\ComBoutiqueController;
+use App\Http\Controllers\CylinderController;
+use App\Http\Controllers\CylinderTypeController;
+use App\Http\Controllers\FillingRecordController;
+use App\Http\Controllers\GasController;
+use App\Http\Controllers\MagMedController;
+use App\Http\Controllers\ProductionBatchController;
 use App\Http\Controllers\ProductSalesController;
 use App\Http\Controllers\ProductPaymentController;
+use App\Http\Controllers\StorageTankController;
+
 //auth routes
 Route::get('/login',[AuthController::class,"loginPage"] )->name("login");
 Route::post('/login',[AuthController::class,"login"] )->name("login");
@@ -112,6 +120,19 @@ Route::get('/subscriptions/{subscription}/invoice', [SubController::class, 'down
 });
 
 Route::middleware([DirectionMiddleware::class,isArchivedMiddleWare::class])->group(function(){
+/*************************** */
+/*OXYGENE ROUTES */
+/*********************** */
+Route::resource('gases', GasController::class);
+//cylinders
+Route::resource('cylinder-types', CylinderTypeController::class);
+//storage tanks
+Route::resource('storage-tanks', StorageTankController::class);
+Route::patch('storage-tanks/{storageTank}/volume', [StorageTankController::class, 'updateVolume'])->name('storage-tanks.update-volume');
+//cylinders
+Route::resource('cylinders', CylinderController::class);
+Route::patch('cylinders/{cylinder}/status', [CylinderController::class, 'updateStatus'])->name('cylinders.update-status');
+
 //Mouvements direction
 Route::get('/direction/historique-global', [DirBoutiqueController::class, 'history'])
          ->name('direction.history');
@@ -222,7 +243,26 @@ Route::delete('/transfers/{id}', [ProductTransfertController::class, 'destroy'])
 
 //common routes to all users
 Route::middleware([isAuthenticatedMiddleware::class,ClosureMiddleware::class])->group(function(){
+//production batch
+Route::get('production-batches/export-production', [ProductionBatchController::class, 'exportProductionHistory'])->name('production-batches.export-production');
+Route::get('production-batches/export-direction', [ProductionBatchController::class, 'exportDirectionReport'])->name('production-batches.export-direction');
+Route::resource('production-batches', ProductionBatchController::class);
+//
+// Historique pour la direction
+Route::get('filling-records', [FillingRecordController::class, 'index'])->name('filling-records.index');
+// URL: /mag-med  | Nom de la route: mag-med.index
+    Route::get('/mag-med', [MagMedController::class, 'index'])->name('mag-med.index');
+   //to produice med
+    Route::get('/mag-med/production', [MagMedController::class, 'toProduction'])->name('mag-med.production');
+    Route::post('/mag-med/production/scan', [MagMedController::class, 'storeToProduction'])->name('mag-med.production.store');
+// Interface MES pour l'atelier de production
+Route::get('production/filling-station', [FillingRecordController::class, 'create'])->name('production.filling-station');
+Route::post('production/verify-scan', [FillingRecordController::class, 'verifyScan'])->name('production.verify-scan');
+Route::post('production/process-filling', [FillingRecordController::class, 'store'])->name('production.process-filling');
+Route::get('/mag-med/api/search-cylinders', [App\Http\Controllers\MagMedController::class, 'searchCylinders'])->name('mag-med.api.search');
 
+// Traitement du formulaire de la modale de transfert inter-agences
+Route::post('/dispatch', [MagMedController::class, 'storeDispatch'])->name('mag-med.dispatch.store');
 //global boutique pdf routes
 Route::get('/product-sales', [DirBoutiqueController::class, 'salesHistory'])->name('admin.reports.sales');
         Route::get('/product-sales/pdf', [DirBoutiqueController::class, 'downloadSalesReport'])->name('admin.reports.sales.pdf');

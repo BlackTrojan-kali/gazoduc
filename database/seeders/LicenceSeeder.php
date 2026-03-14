@@ -18,7 +18,10 @@ class LicenceSeeder extends Seeder
             ['name' => 'gaz', "type"=>"Annuel",'description' => 'Uniquement pour le gaz'],
             ['name' => 'gaz et petrol', "type"=>"Annuel",'description' => 'pour le gaz et le carburant'],
             ['name' => 'petrol', "type"=>"Annuel",'description' => 'Uniquement pour le petrol'],
-        ];
+            [
+            "name"=>'oxygene',"type"=>"Annuel","description"=>"uniquement pour l'oxygene"
+            ]
+            ];
 
         foreach ($licences as $licence) {
             DB::table('licences')->insertOrIgnore([ // insertOrIgnore pour éviter les duplicatas si le seeder est lancé plusieurs fois
