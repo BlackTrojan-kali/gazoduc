@@ -7,7 +7,7 @@ import {
   faPlus, 
   faEdit, 
   faClipboardCheck, 
-  faCreditCard,
+  faTachometerAlt, // Remplacement de faCreditCard par faTachometerAlt pour refléter la notion d'index
   faSearch,
   faFilter,
   faLayerGroup,
@@ -28,7 +28,7 @@ import FuelSaleFormModal from '../../components/Modals/Fuel/FuelSaleFormModal';
 import MagFuelLayout from '../../layout/FuelLayout/MagFuelLayout';
 import useLicenceChoice from '../../hooks/useLicenceChoice';
 
-const MagFuelCiterne = ({ stocks, articles, clients, agencies, cuvesFixes, pompes, citernesMobiles }) => {
+const MagFuelCiterne = ({ stocks, articles, agencies, cuvesFixes, pompes, citernesMobiles }) => {
     // --- Gestion des Modals ---
     const [isReceptionModalOpen, setIsReceptionModalModalOpen] = useState(false);
     const [isDepotageModalOpen, setIsDepotageModalOpen] = useState(false);
@@ -155,11 +155,11 @@ const MagFuelCiterne = ({ stocks, articles, clients, agencies, cuvesFixes, pompe
 
                     <button onClick={openFuelSaleModal} className="flex items-center justify-center gap-3 rounded-xl border border-dashed border-green-300 bg-white p-4 transition hover:border-green-500 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-green-400">
                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400">
-                            <FontAwesomeIcon icon={faCreditCard} />
+                            <FontAwesomeIcon icon={faTachometerAlt} />
                         </div>
                         <div className="text-left">
-                            <span className="block font-medium text-gray-700 dark:text-gray-200">Vente Carburant</span>
-                            <span className="text-xs text-gray-500">Enregistrer une sortie</span>
+                            <span className="block font-medium text-gray-700 dark:text-gray-200">Clôture & Index</span>
+                            <span className="text-xs text-gray-500">Saisir les relevés de pompe</span>
                         </div>
                     </button>
                 </div>
@@ -321,7 +321,7 @@ const MagFuelCiterne = ({ stocks, articles, clients, agencies, cuvesFixes, pompe
                                                                                 className="flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white transition hover:bg-blue-700"
                                                                             >
                                                                                 <FontAwesomeIcon icon={faClipboardCheck} />
-                                                                                Relever
+                                                                                Jauger
                                                                             </button>
                                                                             <button
                                                                                 onClick={() => openEditStockModal(stock, 'theoretical')}
@@ -394,10 +394,8 @@ const MagFuelCiterne = ({ stocks, articles, clients, agencies, cuvesFixes, pompe
             <FuelSaleFormModal
                 isOpen={isFuelSaleModalOpen}
                 onClose={closeFuelSaleModal}
-                articles={articles}
                 agencies={agencies}
                 pompes={pompes}
-                clients={clients}
             />
         </>
     );

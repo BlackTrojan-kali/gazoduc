@@ -2,236 +2,232 @@ import React, { useEffect, useMemo } from 'react';
 import { useForm, usePage } from '@inertiajs/react';
 import Modal from '../Modal';
 import Swal from 'sweetalert2';
-import { faSpinner } from '@fortawesome/free-solid-svg-icons';
-import Input from '../../form/input/InputField'; // Assurez-vous que ce chemin est correct
-import Button from '../../ui/button/Button'; // Assurez-vous que ce chemin est correct
-import Select from 'react-select';
+import { faSpinner, faTachometerAlt, faGasPump, faVial, faInfoCircle, faBuilding } from '@fortawesome/free-solid-svg-icons';
+import Input from '../../form/input/InputField'; 
+import Button from '../../ui/button/Button'; 
+import Select from 'react-select'; 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
-// Note: Ce composant suppose qu'il reçoit la liste des pompes (pumps)
-// au lieu de la liste des citernes (tanks) via le prop 'pompes'.
-// Il est crucial que les données 'pompes' soient fournies par le contrôleur Inertia.
-
-const FuelSaleFormModal = ({ isOpen, onClose, articles, agencies, pompes, clients }) => {
-    // Récupération de l'ID utilisateur connecté pour l'associer automatiquement à la vente
+const FuelSaleFormModal = ({ isOpen, onClose, agencies, pompes }) => {
     const { props: { auth } } = usePage();
     const currentUserId = auth.user ? auth.user.id : null;
     
     // Initialisation du formulaire Inertia
-    // Changement: Remplacement de 'citerne_id' par 'pompe_id'
+    // Le champ 'client_id' a été supprimé
     const { data, setData, post, processing, errors, reset } = useForm({
-        pompe_id: '', // Nouvelle clé: L'ID de la pompe utilisée pour la vente
+        pistolet_id: '', 
         agency_id: '',
-        article_id: '', 
-        client_id: '',
-        quantity: '', 
-        // L'ID utilisateur est géré ici mais envoyé dans le POST
+        index_fermeture: '', 
+        volume_test: '', 
         user_id: currentUserId,
-        status: 'NA', // Statut par défaut
     });
     
-    // --- Gestion des Options Select (Optimisation avec useMemo) ---
-    
-    const articleOptions = useMemo(() => articles.map(article => ({
-        value: String(article.id),
-        label: article.name
-    })), [articles]);
+    // --- Gestion des Options Select ---
     
     const agencyOptions = useMemo(() => agencies.map(agency => ({
         value: String(agency.id),
         label: agency.name
     })), [agencies]);
 
-    // NOUVELLES OPTIONS: Pour les pompes
-    const pompeOptions = useMemo(() => pompes.map(pompe => ({
-        value: String(pompe.id),
-        label: pompe.name
-    })), [pompes]);
+    // Groupement des Pistolets par Pompe (Îlot)
+    const pistoletOptions = useMemo(() => {
+        if (!pompes) return [];
+        return pompes.map(pompe => ({
+            label: pompe.name, // Nom du groupe
+            options: pompe.pistolets?.map(p => ({
+                value: String(p.id),
+                label: `${p.name} (${p.citerne?.article?.name || 'Produit inconnu'})`,
+                current_index: p.current_index, // On garde l'index pour affichage
+                article_name: p.citerne?.article?.name || 'Inconnu'
+            })) || []
+        })).filter(group => group.options.length > 0); // On ne garde que les pompes qui ont des pistolets
+    }, [pompes]);
+
+    // --- Calcul en Temps Réel du Volume (UX/UI) ---
     
-    const clientOptions = useMemo(() => clients.map(client => ({
-        value: String(client.id),
-        label: client.name
-    })), [clients]);
+    // Trouver le pistolet sélectionné pour récupérer son index de départ
+    const selectedPistoletObj = useMemo(() => {
+        if (!data.pistolet_id || !pompes) return null;
+        for (const pompe of pompes) {
+            const p = pompe.pistolets?.find(p => String(p.id) === data.pistolet_id);
+            if (p) return p;
+        }
+        return null;
+    }, [data.pistolet_id, pompes]);
+
+    // Calcul du volume à la volée
+    const liveCalculatedVolume = useMemo(() => {
+        if (!selectedPistoletObj || data.index_fermeture === '') return null;
+        
+        const ouverture = Number(selectedPistoletObj.current_index) || 0;
+        const fermeture = Number(data.index_fermeture);
+        const test = Number(data.volume_test) || 0;
+        
+        let volumeBrut = fermeture - ouverture;
+        
+        // Gestion de la remise à zéro du compteur mécanique (Rollover)
+        if (volumeBrut < 0) {
+            volumeBrut = (9999999 - ouverture) + fermeture;
+        }
+        
+        return volumeBrut - test;
+    }, [selectedPistoletObj, data.index_fermeture, data.volume_test]);
 
     // --- Hooks et Logique du Formulaire ---
 
-    // Réinitialisation du formulaire à l'ouverture de la modale
     useEffect(() => {
         if (isOpen) {
-            // Changement: Réinitialisation de 'pompe_id'
-            reset({
-                pompe_id: '',
-                agency_id: '',
-                article_id: '',
-                client_id: '',
-                quantity: '',
-                user_id: currentUserId,
-                status: 'NA',
-            });
+            reset();
         }
-    }, [isOpen, reset, currentUserId]);
+    }, [isOpen, reset]);
     
-    // Gestion du changement des champs Input
     const handleChange = (e) => {
         const { id, value } = e.target;
         setData(id, value);
     };
 
-    // Gestion de l'envoi du formulaire
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        // Envoi du formulaire à la route de stockage
-        post(route('fuel.store'), { // Assurez-vous que cette route existe
+        // Validation front-end préventive
+        if (liveCalculatedVolume !== null && liveCalculatedVolume <= 0) {
+            Swal.fire('Erreur d\'Index', 'Le volume net calculé doit être supérieur à zéro. Vérifiez vos index.', 'warning');
+            return;
+        }
+
+        post(route('fuel.store'), { 
             onSuccess: () => {
                  Swal.fire({
                      icon: 'success',
-                     title: 'Succès !',
-                     text: 'La vente a été enregistrée et le stock sera déduit de la cuve appropriée, monsieur.',
-                     confirmButtonText: 'OK'
+                     title: 'Clôture validée !',
+                     text: 'Le relevé d\'index est enregistré et les stocks ont été mis à jour.',
+                     confirmButtonText: 'Terminer'
                  });
-                 onClose(); // Fermer la modale
+                 onClose();
             },
             onError: (validationErrors) => {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Erreur de validation',
-                    text: 'Veuillez corriger les erreurs dans le formulaire, monsieur.',
-                    confirmButtonText: 'Compris'
-                });
                 console.error("Validation Errors:", validationErrors);
             },
         });
     };
 
-    // --- Rendu du Composant ---
-    
-    // Style de base pour les sélecteurs
+    // --- Styles React-Select ---
     const selectCustomStyles = {
-        control: (styles, { isFocused, isSelected }) => ({
+        control: (styles, { isFocused }) => ({
             ...styles,
             minHeight: '40px',
             borderColor: isFocused ? '#3b82f6' : styles.borderColor,
             boxShadow: isFocused ? '0 0 0 1px #3b82f6' : styles.boxShadow,
-            '&:hover': {
-                borderColor: isFocused ? '#3b82f6' : styles.borderColor,
-            },
+            '&:hover': { borderColor: isFocused ? '#3b82f6' : styles.borderColor },
         }),
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Enregistrer une Vente de Carburant">
+        <Modal isOpen={isOpen} onClose={onClose} title="Clôture de Quart : Saisie des Index">
             <form onSubmit={handleSubmit} className="space-y-6">
                 
-                {/* Ligne 1: Agence et Article */}
+                {/* --- LIGNE 1 : Station et Pistolet --- */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    
-                    {/* Agence */}
                     <div>
-                        <label htmlFor="agency_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Agence <span className="text-red-500">*</span>
+                        <label htmlFor="agency_id" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-2">
+                            <FontAwesomeIcon icon={faBuilding} className="text-slate-400" /> Station <span className="text-red-500">*</span>
                         </label>
                         <Select
                             inputId="agency_id"
                             styles={selectCustomStyles}
                             options={agencyOptions}
                             value={agencyOptions.find(opt => opt.value === String(data.agency_id))}
-                            onChange={(selectedOption) => {
-                                setData('agency_id', selectedOption ? selectedOption.value : '');
-                            }}
-                            placeholder="Sélectionnez l'agence"
+                            onChange={(opt) => setData('agency_id', opt ? opt.value : '')}
+                            placeholder="Sélectionnez la station"
                             isClearable
                         />
-                        {errors.agency_id && <p className="text-sm text-red-600 mt-1">{errors.agency_id}</p>}
+                        {errors.agency_id && <p className="text-xs text-red-500 mt-1">{errors.agency_id}</p>}
                     </div>
 
-                    {/* Article Vendu (Carburant) */}
                     <div>
-                        <label htmlFor="article_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Article Vendu <span className="text-red-500">*</span>
+                        <label htmlFor="pistolet_id" className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1 flex items-center gap-2">
+                            <FontAwesomeIcon icon={faGasPump} className="text-blue-500" /> Pistolet Relevé <span className="text-red-500">*</span>
                         </label>
                         <Select
-                            inputId="article_id"
+                            inputId="pistolet_id"
                             styles={selectCustomStyles}
-                            options={articleOptions}
-                            value={articleOptions.find(opt => opt.value === String(data.article_id))}
-                            onChange={(selectedOption) => {
-                                setData('article_id', selectedOption ? selectedOption.value : '');
-                            }}
-                            placeholder="Sélectionnez l'article"
+                            options={pistoletOptions}
+                            value={pistoletOptions.flatMap(group => group.options).find(opt => opt.value === String(data.pistolet_id))}
+                            onChange={(opt) => setData('pistolet_id', opt ? opt.value : '')}
+                            placeholder="Ex: Pistolet 1 (Super)..."
                             isClearable
                         />
-                        {errors.article_id && <p className="text-sm text-red-600 mt-1">{errors.article_id}</p>}
+                        {errors.pistolet_id && <p className="text-xs text-red-500 mt-1">{errors.pistolet_id}</p>}
                     </div>
                 </div>
 
-                {/* Ligne 2: Pompe et Client */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                    {/* CHAMP MIS À JOUR: Pompe Utilisée */}
-                    <div>
-                        <label htmlFor="pompe_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Pompe Utilisée <span className="text-red-500">*</span>
-                        </label>
-                        <Select
-                            inputId="pompe_id"
-                            styles={selectCustomStyles}
-                            options={pompeOptions}
-                            value={pompeOptions.find(opt => opt.value === String(data.pompe_id))}
-                            onChange={(selectedOption) => {
-                                setData('pompe_id', selectedOption ? selectedOption.value : '');
-                            }}
-                            placeholder="Sélectionnez la pompe"
-                            isClearable
-                        />
-                        {errors.pompe_id && <p className="text-sm text-red-600 mt-1">{errors.pompe_id}</p>}
-                        {/* Rappel : Le contrôleur devra déterminer la cuve à déduire en fonction de cette pompe et de l'article. */}
-                    </div>
-                    
-                    {/* Client */}
-                    <div>
-                        <label htmlFor="client_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Client <span className="text-red-500">*</span>
-                        </label>
-                        <Select
-                            inputId="client_id"
-                            styles={selectCustomStyles}
-                            options={clientOptions}
-                            value={clientOptions.find(opt => opt.value === String(data.client_id))}
-                            onChange={(selectedOption) => {
-                                setData('client_id', selectedOption ? selectedOption.value : '');
-                            }}
-                            placeholder="Sélectionnez un client"
-                            isClearable
-                        />
-                        {errors.client_id && <p className="text-sm text-red-600 mt-1">{errors.client_id}</p>}
-                    </div>
+                {/* --- BLOC INFO PISTOLET (Visible uniquement si sélectionné) --- */}
+                <div className={`transition-all duration-300 overflow-hidden ${selectedPistoletObj ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}>
+                    {selectedPistoletObj && (
+                        <div className="flex justify-between items-center bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800/50">
+                            <div className="flex flex-col">
+                                <span className="text-[10px] uppercase font-bold text-blue-400">Produit dans la cuve</span>
+                                <span className="text-sm font-bold text-blue-700 dark:text-blue-300">
+                                    {selectedPistoletObj.citerne?.article?.name || 'Inconnu'}
+                                </span>
+                            </div>
+                            <div className="flex flex-col items-end">
+                                <span className="text-[10px] uppercase font-bold text-blue-400">Dernier Index Connu (Ouverture)</span>
+                                <span className="text-xl font-mono font-bold text-blue-600 dark:text-blue-400">
+                                    {Number(selectedPistoletObj.current_index).toFixed(2)}
+                                </span>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
-                {/* Ligne 3: Quantité */}
-                <div className="grid grid-cols-1 gap-4"> 
-                    {/* Quantité */}
+                {/* --- LIGNE 2 : Les Index (Saisie) --- */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 dark:bg-slate-900/30 p-4 rounded-xl border border-slate-200 dark:border-slate-700"> 
                     <Input
-                        id="quantity"
+                        id="index_fermeture"
                         type="number"
                         step="0.01" 
-                        min='0.01'
-                        label="Quantité (en Litres/Unités)"
-                        value={data.quantity}
+                        min="0"
+                        label={<span className="flex items-center gap-2"><FontAwesomeIcon icon={faTachometerAlt} /> Index de Fermeture Actuel *</span>}
+                        value={data.index_fermeture}
                         onChange={handleChange}
-                        error={errors.quantity}
-                        onWheel={(e) => e.target.blur()}
-                        placeholder="Ex: 50.5"
+                        error={errors.index_fermeture}
+                        placeholder="Ex: 14502.50"
+                        disabled={!data.pistolet_id}
                         required
                     />
-                </div>
-                
-                {/* Champs cachés requis par le modèle FuelSale */}
-                <input type="hidden" name="user_id" value={data.user_id || ''} />
-                <input type="hidden" name="status" value={data.status} />
 
+                    <Input
+                        id="volume_test"
+                        type="number"
+                        step="0.01" 
+                        min="0"
+                        label={<span className="flex items-center gap-2 text-slate-500"><FontAwesomeIcon icon={faVial} /> Étalonnage / Purge (L)</span>}
+                        value={data.volume_test}
+                        onChange={handleChange}
+                        error={errors.volume_test}
+                        placeholder="Volume remis en cuve..."
+                        disabled={!data.pistolet_id}
+                    />
+                </div>
+
+                {/* --- RÉCAPITULATIF UX --- */}
+                {liveCalculatedVolume !== null && (
+                    <div className={`p-4 rounded-xl border flex items-center justify-between ${liveCalculatedVolume > 0 ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'}`}>
+                        <div className="flex items-center gap-2">
+                            <FontAwesomeIcon icon={faInfoCircle} className={liveCalculatedVolume > 0 ? 'text-green-500' : 'text-red-500'} />
+                            <span className={`text-sm font-semibold ${liveCalculatedVolume > 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                                Volume Net Vendu :
+                            </span>
+                        </div>
+                        <span className={`text-2xl font-mono font-bold ${liveCalculatedVolume > 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                            {liveCalculatedVolume.toFixed(2)} L
+                        </span>
+                    </div>
+                )}
+                
                 {/* Boutons d'Action */}
-                <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex justify-end pt-4 border-t border-slate-200 dark:border-slate-700 mt-2">
                     <Button
                         type="button"
                         onClick={onClose}
@@ -239,12 +235,12 @@ const FuelSaleFormModal = ({ isOpen, onClose, articles, agencies, pompes, client
                         className="mr-3"
                         disabled={processing}
                     >
-                        Annuler
+                        Annuler 
                     </Button>
                     <Button
                         type="submit"
                         variant="primary"
-                        disabled={processing || !data.user_id} // Désactiver si l'utilisateur n'est pas identifié
+                        disabled={processing || !data.user_id || liveCalculatedVolume === null || liveCalculatedVolume <= 0}
                     >
                         {processing ? (
                             <>
@@ -252,7 +248,7 @@ const FuelSaleFormModal = ({ isOpen, onClose, articles, agencies, pompes, client
                                 Enregistrement...
                             </>
                         ) : (
-                            'Enregistrer la Vente'
+                            'Valider la Clôture'
                         )}
                     </Button>
                 </div>

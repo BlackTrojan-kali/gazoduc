@@ -69,24 +69,57 @@ class MagasinController extends Controller
         return Inertia("Fuel/MagFuelIndex",compact("stocks","articles","agencies", "clients"));
     }
 
-    // New citerne_index function for fuel logic
-    public function fuel_citerne_index(){
-        $stocks = Stock::where("agency_id",Auth::user()->agency_id)
-        ->where("storage_type","carburant")
-        ->with("article","citerne")
-        ->get();
-        $agencies = Agency::where("id",Auth::user()->agency_id)->where("entreprise_id",Auth::user()->entreprise_id)->get();
-        $entreprises = Entreprise::where("id",Auth::user()->entreprise_id)->get();
-        $articles = Article::where("entreprise_id",Auth::user()->entreprise_id)->where("type","produit_petrolier")->get();
-        $citernesMobiles = Vehicule::where("archived",0)->where("type","Camion-citerne")->get();
-         $cuvesFixes = Citerne::where("entreprise_id",Auth::user()->entreprise_id)->where("agency_id",Auth::user()->agency_id)->where("type","carburant")->with("entreprise","agency","article")->get();
-         $pompes = Pompe::where("agency_id",Auth::user()->agency_id)->with("cuves")->get();
-       
-         $clients = Client::all();
-        if(Auth::user()->role->name !=="direction"){
-        $clients= Client::where("agency_id",Auth::user()->agency_id)->with("category")->get();
-            
-        } 
-        return Inertia("Fuel/MagFuelCiterne",compact("clients","stocks","agencies","articles","citernesMobiles","pompes","cuvesFixes"));
+  // New citerne_index function for fuel logic
+    public function fuel_citerne_index()
+    {
+        $user = Auth::user();
+        $agencyId = $user->agency_id;
+        $entrepriseId = $user->entreprise_id;
+
+        $stocks = Stock::where("agency_id", $agencyId)
+            ->where("storage_type", "carburant")
+            ->with("article", "citerne")
+            ->get();
+
+        $agencies = Agency::where("id", $agencyId)
+            ->where("entreprise_id", $entrepriseId)
+            ->get();
+
+        $articles = Article::where("entreprise_id", $entrepriseId)
+            ->where("type", "produit_petrolier")
+            ->get();
+
+        $citernesMobiles = Vehicule::where("archived", 0)
+            ->where("type", "Camion-citerne")
+            ->get();
+
+        $cuvesFixes = Citerne::where("entreprise_id", $entrepriseId)
+            ->where("agency_id", $agencyId)
+            ->where("type", "carburant")
+            ->with("entreprise", "agency", "article")
+            ->get();
+
+        // 🚨 CHANGEMENT MAJEUR ICI : 
+        // On ne charge plus "cuves", on charge "pistolets", la "citerne" du pistolet, et "l'article" de la citerne.
+        $pompes = Pompe::where("agency_id", $agencyId)
+            ->with(['pistolets.citerne.article'])
+            ->get();
+
+        // Gestion des clients selon le rôle
+        if ($user->role->name !== "direction") {
+            $clients = Client::where("agency_id", $agencyId)->with("category")->get();
+        } else {
+            $clients = Client::all();
+        }
+
+        return Inertia("Fuel/MagFuelCiterne", compact(
+            "clients", 
+            "stocks", 
+            "agencies", 
+            "articles", 
+            "citernesMobiles", 
+            "pompes", 
+            "cuvesFixes"
+        ));
     }
 }

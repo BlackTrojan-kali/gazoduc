@@ -12,26 +12,35 @@ class CitySeeder extends Seeder
      */
     public function run(): void
     {
-        // On récupère les IDs des régions pour garantir la cohérence
-        $regions = [
-            'Centre'   => DB::table('regions')->where('name', 'Centre')->value('id'),
-            'Littoral' => DB::table('regions')->where('name', 'Littoral')->value('id'),
-            'Nord'     => DB::table('regions')->where('name', 'Nord')->value('id'),
+        // 1. Définition des chefs-lieux par région
+        $capitals = [
+            'Adamaoua'     => 'Ngaoundéré',
+            'Centre'       => 'Yaoundé',
+            'Est'          => 'Bertoua',
+            'Extrême-Nord' => 'Maroua',
+            'Littoral'     => 'Douala',
+            'Nord'         => 'Garoua',
+            'Nord-Ouest'   => 'Bamenda',
+            'Ouest'        => 'Bafoussam',
+            'Sud'          => 'Ebolowa',
+            'Sud-Ouest'    => 'Buea',
         ];
 
-        $cities = [
-            ['name' => 'Yaoundé', 'region_name' => 'Centre'],
-            ['name' => 'Douala',  'region_name' => 'Littoral'],
-            ['name' => 'Garoua',  'region_name' => 'Nord'],
-        ];
-
-        foreach ($cities as $city) {
-            $regionId = $regions[$city['region_name']];
+        // 2. Boucle sur chaque région pour insérer son chef-lieu
+        foreach ($capitals as $regionName => $cityName) {
+            // On récupère l'ID de la région correspondante
+            $regionId = DB::table('regions')->where('name', $regionName)->value('id');
 
             if ($regionId) {
                 DB::table('cities')->updateOrInsert(
-                    ['name' => $city['name'], 'region_id' => $regionId],
-                    ['created_at' => now(), 'updated_at' => now()]
+                    [
+                        'name'      => $cityName, 
+                        'region_id' => $regionId
+                    ],
+                    [
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ]
                 );
             }
         }

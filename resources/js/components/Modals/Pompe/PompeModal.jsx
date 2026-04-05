@@ -1,15 +1,15 @@
 import React, { useEffect } from 'react';
 import { useForm } from '@inertiajs/react';
-import Modal from '../Modal'; // Ajustez le chemin si nécessaire
-import InputField from "../../form/input/InputField"; // Ajustez le chemin
-import Button from '../../ui/button/Button'; // Ajustez le chemin
-import Swal from 'sweetalert2'; // Pour les notifications de succès
+import Modal from '../Modal'; 
+import InputField from "../../form/input/InputField"; 
+import Button from '../../ui/button/Button'; 
+import Swal from 'sweetalert2'; 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner } from '@fortawesome/free-solid-svg-icons';
 import Select from 'react-select';
 
 /**
- * Modal pour la création et la modification d'une pompe.
+ * Modal pour la création et la modification d'une pompe (Îlot de distribution).
  * @param {boolean} isOpen - État d'ouverture de la modale.
  * @param {function} onClose - Fonction de fermeture de la modale.
  * @param {Array<{id: number, name: string}>} agencies - Liste des agences pour la sélection.
@@ -76,22 +76,20 @@ const PompeModal = ({ isOpen, onClose, agencies, pompe = null, title }) => {
                 Swal.fire({
                     icon: 'success',
                     title: isEditing ? 'Modification réussie !' : 'Création réussie !',
-                    text: `La pompe ${data.name} a été ${isEditing ? 'mise à jour' : 'créée'} avec succès.`,
+                    text: `L'îlot "${data.name}" a été ${isEditing ? 'mis à jour' : 'créé'} avec succès.`,
                     showConfirmButton: false,
                     timer: 3000
                 });
             },
             onError: (validationErrors) => {
-                // Inertia gère l'affichage des erreurs sous les champs via 'errors'
                 console.error("Erreurs de validation:", validationErrors);
             },
         });
     };
 
-    // Option sélectionnée pour l'agence (nécessaire pour React-Select)
     const selectedAgencyOption = agencyOptions.find(option => option.value === data.agency_id);
 
-    // --- Dynamic styles for React-Select (Copied for consistency) ---
+    // --- Dynamic styles for React-Select ---
     const reactSelectStyles = {
         control: (baseStyles, state) => ({
             ...baseStyles,
@@ -115,31 +113,23 @@ const PompeModal = ({ isOpen, onClose, agencies, pompe = null, title }) => {
         singleValue: (baseStyles) => ({
             ...baseStyles,
             color: '#1F2937',
-            '.dark &': {
-                color: '#E5E7EB',
-            }
+            '.dark &': { color: '#E5E7EB' }
         }),
         placeholder: (baseStyles) => ({
             ...baseStyles,
             color: '#9CA3AF',
-            '.dark &': {
-                color: '#6B7280',
-            }
+            '.dark &': { color: '#6B7280' }
         }),
         input: (baseStyles) => ({
             ...baseStyles,
             color: '#1F2937',
-            '.dark &': {
-                color: '#E5E7EB',
-            }
+            '.dark &': { color: '#E5E7EB' }
         }),
         menu: (baseStyles) => ({
             ...baseStyles,
             backgroundColor: '#FFFFFF',
             zIndex: 9999,
-            '.dark &': {
-                backgroundColor: '#1F2937',
-            }
+            '.dark &': { backgroundColor: '#1F2937' }
         }),
         option: (baseStyles, state) => ({
             ...baseStyles,
@@ -163,22 +153,27 @@ const PompeModal = ({ isOpen, onClose, agencies, pompe = null, title }) => {
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={title}>
             <form onSubmit={handleSubmit} className="space-y-4">
+                
+                <div className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 p-3 rounded-lg text-xs mb-4">
+                    <strong>Note :</strong> Vous créez ici l'infrastructure physique (la carrosserie). Les pistolets et compteurs seront configurés à l'étape suivante.
+                </div>
+
                 {/* --- Champ Nom de la Pompe --- */}
                 <InputField
                     id="name"
                     type="text"
-                    label="Nom de la Pompe"
+                    label="Nom de la Pompe / Îlot"
                     value={data.name}
                     onChange={handleChange}
                     error={errors.name}
-                    placeholder="Ex: Pompe P-01"
+                    placeholder="Ex: Îlot 1 (Avant)"
                     required
                 />
 
                 {/* --- Champ Agence (agency_id) --- */}
                 <div className="mb-4">
                     <label htmlFor="agency_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Agence Associée
+                        Station / Agence de rattachement
                     </label>
                     <Select
                         id="agency_id"
@@ -186,21 +181,21 @@ const PompeModal = ({ isOpen, onClose, agencies, pompe = null, title }) => {
                         options={agencyOptions}
                         value={selectedAgencyOption}
                         onChange={handleSelectChange}
-                        placeholder="Sélectionner une agence"
+                        placeholder="Sélectionner une station"
                         isClearable={true}
                         isSearchable={true}
                         required
                         classNamePrefix="react-select"
-                        styles={reactSelectStyles} // Application des styles cohérents
+                        styles={reactSelectStyles}
                     />
                     {errors.agency_id && <p className="text-sm text-red-600 mt-1">{errors.agency_id}</p>}
                 </div>
 
-                <div className="flex justify-end pt-4">
+                <div className="flex justify-end pt-4 border-t border-gray-100 dark:border-gray-700 mt-6">
                     <button
                         type="button"
-                        onClick={onClose} // Utiliser onClose pour fermer
-                        className="mr-3 rounded-lg px-4 py-2.5 text-sm font-semibold text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+                        onClick={onClose} 
+                        className="mr-3 rounded-lg px-4 py-2.5 text-sm font-semibold text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
                         disabled={processing}
                     >
                         Annuler
@@ -213,10 +208,10 @@ const PompeModal = ({ isOpen, onClose, agencies, pompe = null, title }) => {
                         {processing ? (
                             <>
                                 <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
-                                Envoi...
+                                Traitement...
                             </>
                         ) : (
-                            pompe ? 'Modifier la Pompe' : 'Créer la Pompe'
+                            pompe ? 'Enregistrer les modifications' : 'Créer l\'infrastructure'
                         )}
                     </Button>
                 </div>

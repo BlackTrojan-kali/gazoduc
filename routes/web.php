@@ -149,16 +149,16 @@ Route::get('/direction/export-historique', [DirBoutiqueController::class, 'expor
     Route::put("/boutique/users/update/{user}",[UserController::class,"update_boutique"])->name("boutique_users.update");
     Route::post("/boutique/users/delete/{user}",[UserController::class,"destroy_boutique"])->name("boutique_users.destroy");
     
-    //pompes routes
-    Route::get("/pompes/index",[PompeController::class,"index"])->name("pompes.index");
-    Route::post("/pompes/store",[PompeController::class,"store"])->name("pompes.store");
-    Route::put("/pompes/update/{pompe}",[PompeController::class,"update"])->name("pompes.update");
-    Route::delete("/pompes/delete/{pompe}",[PompeController::class,"destroy"])->name("pompes.destroy");
-    //associate pompe citerne
-    Route::post('/pompes/{pompe}/associate-citernes', [PompeController::class, 'associateCiternes'])->name('pompes.associate-citernes');
-    //dissociate pompe citerne
-    Route::post('/pompes/{pompe}/dissociate-citernes', [PompeController::class, 'dissociateCiternes'])->name('pompes.dissociate-citernes');
-    //direction routes
+// Routes de base pour l'entité Pompe
+    Route::get("/pompes", [PompeController::class, "index"])->name("pompes.index");
+    Route::post("/pompes", [PompeController::class, "store"])->name("pompes.store");
+    Route::put("/pompes/{pompe}", [PompeController::class, "update"])->name("pompes.update");
+    Route::delete("/pompes/{pompe}", [PompeController::class, "destroy"])->name("pompes.destroy");
+    
+    // Routes pour gérer les Pistolets de cette pompe
+    Route::post('/pompes/{pompe}/pistolets-store', [PompeController::class, 'associateCiternes'])->name('pompes.pistolets.store');
+    Route::post('/pompes/{pompe}/pistolets', [PompeController::class, 'dissociateCiternes'])->name('pompes.pistolets.destroy');
+     //direction routes
     Route::get("/director/index",[DirectionController::class,"index"])->name("director.index");
     //articles routes
     Route::get("/director/articles",[ArticleController::class,"index"])->name("articles.index");

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Pompe extends Model
 {
@@ -34,5 +35,9 @@ class Pompe extends Model
     {
         // Utilisation de la table pivot que vous avez spécifiée: "pompe_citernes"
         return $this->belongsToMany(Citerne::class, "pompe_citernes");
+    }
+    public function pistolets(): HasMany
+    {
+        return $this->hasMany(Pistolet::class);
     }
 }

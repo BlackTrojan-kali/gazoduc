@@ -13,7 +13,7 @@ const navItems = [
     subItems: [
       { name: "Articles", path: "/fuel-articles", pro: false }, 
       { name: "Cuves", path: "/fuel-citernes", pro: false },
-      { name: "Pompes", path: "/pompes/index", pro: false },
+      { name: "Pompes", path: "/pompes", pro: false },
       { name: "Stocks Cuves", path: "/stock/cuves", pro: false }
     ],
   },{

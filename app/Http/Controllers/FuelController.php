@@ -7,9 +7,8 @@ use App\Models\Agency;
 use App\Models\Article;
 use App\Models\ArticleCategoryPrice;
 use App\Models\Citerne;
-use App\Models\Client;
-use App\Models\FuelSale;
-use App\Models\Pompe;
+use App\Models\ReleveIndex; // 🟢 Le nouveau modèle remplace FuelSale
+use App\Models\Pistolet; 
 use App\Models\Stock;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
@@ -22,137 +21,93 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class FuelController extends Controller
 {
- 
     /**
-     * Enregistre une vente de carburant (avec tarification dynamique selon la catégorie client)
+     * Enregistre un relevé d'index (Clôture de quart)
      */
-   public function store(Request $request)
+    public function store(Request $request)
     {
         $validated = $request->validate([
-            'pompe_id'   => 'required|exists:pompes,id',
-            'agency_id'  => 'required|exists:agencies,id',
-            'article_id' => 'required|exists:articles,id',
-            'client_id'  => 'required|exists:clients,id',
-            'quantity'   => 'required|numeric|min:0.01',
-            'user_id'    => 'required|exists:users,id',
+            'pistolet_id'     => 'required|exists:pistolets,id',
+            'agency_id'       => 'required|exists:agencies,id',
+            'user_id'         => 'required|exists:users,id',
+            'index_fermeture' => 'required|numeric|min:0',
+            'volume_test'     => 'nullable|numeric|min:0', 
         ]);
 
         try {
             DB::beginTransaction();
 
-            // 1️⃣ Récupération des entités
-            $pompe   = Pompe::with('cuves.stock')->findOrFail($validated['pompe_id']);
-            $article = Article::findOrFail($validated['article_id']);
-            $client  = Client::with('category')->findOrFail($validated['client_id']);
-            $quantiteDemandee = $validated['quantity'];
+            // 1️⃣ Récupération de l'infrastructure
+            $pistolet = Pistolet::with(['citerne.stock', 'citerne.article', 'pompe'])->findOrFail($validated['pistolet_id']);
+            $citerne  = $pistolet->citerne;
+            $article  = $citerne->article ?? null;
 
-            // 2️⃣ Vérifications préliminaires
-            if ($pompe->cuves->isEmpty()) {
-                throw ValidationException::withMessages(['pompe_id' => "Cette pompe n’est reliée à aucune cuve."]);
+            if (!$citerne || !$article) {
+                throw ValidationException::withMessages(['pistolet_id' => "Ce pistolet n'est relié à aucune cuve ou produit valide."]);
             }
 
-            // 3️⃣ Filtrage des cuves compatibles
-            $citernesCompatibles = $pompe->cuves->filter(function ($citerne) use ($article) {
-                return $citerne->current_product_id == $article->id;
-            });
+            // 2️⃣ Calcul du Volume Net Vendu
+            $indexOuverture = $pistolet->current_index;
+            $indexFermeture = $validated['index_fermeture'];
+            $volumeTest     = $validated['volume_test'] ?? 0;
 
-            if ($citernesCompatibles->isEmpty()) {
-                throw ValidationException::withMessages(['article_id' => "Aucune cuve reliée ne contient ce produit."]);
+            // Gestion du Rollover (Remise à zéro du compteur mécanique)
+            $volumeBrut = $indexFermeture - $indexOuverture;
+            if ($volumeBrut < 0) {
+                $volumeBrut = (9999999 - $indexOuverture) + $indexFermeture; 
             }
 
-            // 4️⃣ Calcul du Prix
-            $prixPersonnalise = ArticleCategoryPrice::where('article_id', $article->id)
-                ->where('client_category_id', $client->client_category_id)
-                ->where('agency_id', $request->agency_id)
-                ->first();
-            
-            $unitPrice = $prixPersonnalise ? $prixPersonnalise->price : ($article->unit_price ?? 0);
+            $volumeVendu = $volumeBrut - $volumeTest;
+
+            if ($volumeVendu <= 0) {
+                throw ValidationException::withMessages(['index_fermeture' => "L'index de fermeture est incohérent. Le volume net doit être positif."]);
+            }
+            //$price = ArticleCategoryPrice::where("client_id",1);
+            // 3️⃣ Prix et Montant
+            $unitPrice = $article->unit_price ?? 0;
 
             if ($unitPrice <= 0) {
-                throw ValidationException::withMessages(['article_id' => "Aucun prix défini."]);
+                throw ValidationException::withMessages(['pistolet_id' => "Aucun prix de vente n'est défini pour le carburant contenu dans cette cuve."]);
             }
 
-            // 5️⃣ Gestion du Stock (Hybride : Manuel vs IoT)
-            $quantiteRestante = $quantiteDemandee;
-            $cuvesUtilisees = [];
+            $montantTotal = $volumeVendu * $unitPrice;
 
-            foreach ($citernesCompatibles as $citerne) {
-                $stock = $citerne->stock;
-                
-                // Si pas de stock ou vide, on passe
-                if (!$stock || $stock->quantity <= 0) continue;
-
-                // --- DETECTION IOT ---
-                // Si un token existe, la cuve est gérée par une sonde
-                $isIotManaged = !empty($citerne->sensor_token); 
-
-                if ($stock->quantity >= $quantiteRestante) {
-                    // Cas A : La cuve a assez de carburant pour tout couvrir
-                    
-                    if (!$isIotManaged) {
-                        // MODE MANUEL : On déduit le stock
-                        $stock->quantity -= $quantiteRestante;
-                        $stock->theorical_quantity = $stock->quantity;
-                        $stock->save(); 
-                    } else {
-                        // MODE IOT : On ne fait rien en base de données.
-                        // La quantité baissera physiquement et la sonde mettra à jour le stock au prochain relevé.
-                    }
-
-                    $cuvesUtilisees[] = [
-                        'citerne_id' => $citerne->id,
-                        'quantite_tiree' => $quantiteRestante,
-                    ];
-
-                    $quantiteRestante = 0;
-                    break; // Vente satisfaite, on sort
-                } else {
-                    // Cas B : La cuve n'a pas assez, on la vide (virtuellement) et on passe à la suivante
-                    
-                    $quantitePrelevable = $stock->quantity;
-
-                    if (!$isIotManaged) {
-                        // MODE MANUEL : On vide la cuve à 0
-                        $stock->quantity = 0;
-                        $stock->theorical_quantity = 0;
-                        $stock->save();
-                    } else {
-                        // MODE IOT : On ne touche pas au stock BDD
-                    }
-
-                    $cuvesUtilisees[] = [
-                        'citerne_id' => $citerne->id,
-                        'quantite_tiree' => $quantitePrelevable,
-                    ];
-
-                    $quantiteRestante -= $quantitePrelevable;
-                }
-            }
-
-            // 6️⃣ Vérification finale (On bloque la vente si même théoriquement il n'y a pas assez)
-            if ($quantiteRestante > 0) {
+            // 4️⃣ Déduction du Stock
+            $stock = $citerne->stock;
+            if (!$stock || $stock->quantity < $volumeVendu) {
                 throw ValidationException::withMessages([
-                    'quantity' => "Stock insuffisant dans les cuves (manque $quantiteRestante L).",
+                    'index_fermeture' => "Stock insuffisant dans la cuve '{$citerne->name}' pour couvrir cette sortie de {$volumeVendu} L."
                 ]);
             }
 
-            // 7️⃣ Création de la vente
-            FuelSale::create([
-                'pompe_id'    => $validated['pompe_id'],
-                'agency_id'   => $validated['agency_id'],
-                'article_id'  => $validated['article_id'],
-                'user_id'     => $validated['user_id'],
-                'client_id'   => $validated['client_id'],
-                'quantity'    => $quantiteDemandee,
-                'unitPrice'   => $unitPrice,
-                'sub_total'   => $unitPrice * $quantiteDemandee,
-                'total_price' => $unitPrice * $quantiteDemandee,
-                'status'      => 'VALIDATED',
+            $isIotManaged = !empty($citerne->sensor_token); 
+            if (!$isIotManaged) {
+                $stock->quantity -= $volumeVendu;
+                $stock->theorical_quantity -= $volumeVendu;
+                $stock->save(); 
+            }
+
+            // 5️⃣ Création du Relevé d'Index 🟢
+            ReleveIndex::create([
+                'pistolet_id'     => $pistolet->id,
+                'agency_id'       => $validated['agency_id'],
+                'user_id'         => $validated['user_id'],
+                'index_ouverture' => $indexOuverture,
+                'index_fermeture' => $indexFermeture,
+                'volume_test'     => $volumeTest,
+                'volume_vendu'    => $volumeVendu,
+                'prix_unitaire'   => $unitPrice,
+                'montant_total'   => $montantTotal,
+                'date_saisie'     => now(),
+                'status'          => 'valide',
             ]);
+
+            // 6️⃣ Sauvegarde du nouvel index pour le quart suivant
+            $pistolet->update(['current_index' => $indexFermeture]);
 
             DB::commit();
 
-            return redirect()->back()->with('success', 'Vente enregistrée avec succès.');
+            return redirect()->back()->with('success', 'Relevé d\'index enregistré et stock mis à jour.');
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -160,175 +115,150 @@ class FuelController extends Controller
         }
     }
     
-    public function history(Request $request){
-        $fuelSales = FuelSale::with("article","user","agency","pompe","client")->paginate(350);
-  
-        $articles = Article::where("type","produit_petrolier")->get();
-        $agencies = Agency::all(); 
-        if(Auth::user()->role->name !== "direction"){
-            $agencies= Agency::where("id",Auth::user()->agency_id)->get();
-            $fuelSales = FuelSale::where("agency_id",Auth::user()->agency_id)->with("article","user","agency","client","pompe")->paginate(350);
-        
-        }
-        
-        return Inertia("Fuel/FuelSaleHistory",compact("fuelSales","articles","agencies"));
-    }
-    // app/Http/Controllers/FuelSaleController.php (Exemple)
-
-public function delete(Request $request, $idFuelSale)
+    /**
+     * Historique des Relevés d'Index
+     */
+    public function history(Request $request)
     {
-        // 1. Récupérer la vente
-        $fuelSale = FuelSale::with('article', 'pompe.cuves.stock')
-                            ->where("id", $idFuelSale)
-                            ->first();
+        // 🟢 On charge la chaîne complète pour atteindre l'article via le pistolet
+        $relations = ['user', 'agency', 'pistolet.pompe', 'pistolet.citerne.article'];
+        
+        $query = ReleveIndex::with($relations);
 
-        if (!$fuelSale) {
-            return back()->withErrors(['error' => "Vente de carburant non trouvée."]);
+        if (Auth::user()->role->name !== "direction") {
+            $query->where("agency_id", Auth::user()->agency_id);
+            $agencies = Agency::where("id", Auth::user()->agency_id)->get();
+        } else {
+            $agencies = Agency::all(); 
         }
 
-        $quantiteVendue = $fuelSale->quantity;
-        $articleId = $fuelSale->article_id;
-        $pompe = $fuelSale->pompe;
+        // On garde la variable $fuelSales pour ne pas casser la prop React
+        $fuelSales = $query->orderByDesc('created_at')->paginate(350);
+        $articles = Article::where("type", "produit_petrolier")->get();
+        
+        return Inertia::render("Fuel/FuelSaleHistory", compact("fuelSales", "articles", "agencies"));
+    }
+
+    /**
+     * Suppression (Annulation) d'un Relevé d'Index
+     */
+    public function delete(Request $request, $idReleve)
+    {
+        $releve = ReleveIndex::with('pistolet.citerne.stock')->where("id", $idReleve)->first();
+
+        if (!$releve) {
+            return back()->withErrors(['error' => "Relevé introuvable."]);
+        }
 
         try {
             DB::beginTransaction();
 
-            // 2. Trouver les citernes compatibles (contenant le même article)
-            $citernesCompatibles = $pompe->cuves->filter(function ($citerne) use ($articleId) {
-                return $citerne->current_product_id == $articleId;
-            });
+            $pistolet = $releve->pistolet;
+            $citerneCible = $pistolet->citerne ?? null;
 
-            if ($citernesCompatibles->isEmpty()) {
-                // Si aucune citerne compatible n'est trouvée, on supprime juste la vente
-                // et loggue l'anomalie si besoin, car le stock n'est pas traçable
-                $fuelSale->delete();
-                DB::commit();
-                return back()->with("warning", "Vente de carburant supprimée. ATTENTION: Stock de cuve non rétabli (aucune cuve compatible trouvée).");
+            // Rétablissement du stock avec le champ 'volume_vendu' 🟢
+            if ($citerneCible && $citerneCible->stock) {
+                $stock = $citerneCible->stock;
+                $stock->quantity += $releve->volume_vendu;
+                $stock->theorical_quantity += $releve->volume_vendu;
+                $stock->save();
             }
 
-            // 3. Identifier la citerne où remettre le stock
-            // Stratégie simple : prendre la citerne compatible avec le plus de stock actuel (ou la première)
-            $citerneCible = $citernesCompatibles
-                ->sortByDesc(fn($c) => optional($c->stock)->quantity ?? 0)
-                ->first();
+            // Rembobinage de l'index si c'est le dernier enregistré
+            if ($pistolet && $pistolet->current_index == $releve->index_fermeture) {
+                $pistolet->update(['current_index' => $releve->index_ouverture]);
+            }
 
-            // S'assurer que la citerne cible a une entrée de stock
-            $stock = $citerneCible->stock ?? $citerneCible->stock()->firstOrCreate([
-                'article_id' => $articleId,
-                'agency_id' => $fuelSale->agency_id,
-            ]);
-
-            // 4. Rétablir la quantité dans la citerne cible
-            $stock->quantity += $quantiteVendue;
-            $stock->theorical_quantity = $stock->quantity; // Mettre à jour le stock théorique
-            $stock->save();
-            
-            // 5. Supprimer la vente
-            $fuelSale->delete();
+            $releve->delete();
 
             DB::commit();
 
-            return back()->with("success", "Vente de carburant supprimée et **{$quantiteVendue} litres** rétablis dans la citerne.");
+            return back()->with("success", "Relevé annulé. {$releve->volume_vendu} litres rétablis dans la cuve " . ($citerneCible->name ?? ''));
         } catch (\Exception $e) {
             DB::rollBack();
-            // Gérer l'exception, par exemple pour un problème de base de données
-            return back()->withErrors([
-                'error' => "Erreur lors de la suppression et du rétablissement du stock : " . $e->getMessage()
-            ]);
+            return back()->withErrors(['error' => "Erreur lors de l'annulation : " . $e->getMessage()]);
         }
     }
-public function export(Request $request)
-{
-    // 1. Validation des données d'entrée
-    $request->validate([
-        'start_date' => 'required|date',
-        'end_date' => 'required|date|after_or_equal:start_date',
-        'agency_id' => 'nullable|exists:agencies,id',
-        'article_id' => 'nullable|exists:articles,id',
-    ]);
 
-    // 2. Préparation des dates
-    $startDate = Carbon::parse($request->input('start_date'))->startOfDay();
-    $endDate = Carbon::parse($request->input('end_date'))->endOfDay();
-
-    // 3. Requête avec filtres dynamiques
-    $sales = FuelSale::with(['agency', 'article', 'client', 'user'])
-        ->whereBetween('created_at', [$startDate, $endDate])
-        ->when($request->filled('agency_id'), fn($query) => 
-            $query->where('agency_id', $request->input('agency_id'))
-        )
-        ->when($request->filled('article_id'), fn($query) => 
-            $query->where('article_id', $request->input('article_id'))
-        )
-        ->orderBy('created_at', 'asc')
-        ->get();
-
-    // 4. Détermination du titre et de la période
-    $reportTitle = 'Rapport de Ventes de Carburant';
-    $period = "Du " . $startDate->format('d/m/Y') . " au " . $endDate->format('d/m/Y');
-
-    // 5. Détermination sécurisée des filtres affichés
-    $agencyName = 'Toutes les agences';
-    $articleName = 'Tous les articles';
-
-    if ($request->filled('agency_id') && $sales->isNotEmpty()) {
-        $agencyName = optional($sales->first()->agency)->name ?? 'Inconnue';
-    }
-
-    if ($request->filled('article_id') && $sales->isNotEmpty()) {
-        $articleName = optional($sales->first()->article)->name ?? 'Inconnu';
-    }
-
-    // 6. Génération du PDF
-    $pdf = Pdf::loadView('PDF.fuel_sales_pdf', [
-        'sales' => $sales,
-        'reportTitle' => $reportTitle,
-        'period' => $period,
-        'filters' => [
-            'agency_name' => $agencyName,
-            'article_name' => $articleName,
-        ],
-    ])->setPaper('a4', 'landscape'); // Optionnel : format horizontal pour tableaux larges
-
-    // 7. Nom du fichier exporté
-    $fileName = sprintf(
-        'ventes_carburant_%s_%s.pdf',
-        $startDate->format('Ymd'),
-        $endDate->format('Ymd')
-    );
-
-    // 8. Téléchargement
-    return $pdf->download($fileName);
-}
-public function exportExcel(Request $request)
+    /**
+     * Exportation PDF
+     */
+    public function export(Request $request)
     {
-        // 1. Validation des données de base
         $request->validate([
             'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
-            'agency_id' => 'nullable|exists:agencies,id',
+            'end_date'   => 'required|date|after_or_equal:start_date',
+            'agency_id'  => 'nullable|exists:agencies,id',
             'article_id' => 'nullable|exists:articles,id',
         ]);
 
-        // 2. Préparation des variables de filtre (utiliser toDateString car la classe Export le convertit en Carbon)
+        $startDate = Carbon::parse($request->input('start_date'))->startOfDay();
+        $endDate = Carbon::parse($request->input('end_date'))->endOfDay();
+
+        $query = ReleveIndex::with(['agency', 'user', 'pistolet.pompe', 'pistolet.citerne.article'])
+            ->whereBetween('created_at', [$startDate, $endDate]);
+
+        if ($request->filled('agency_id')) {
+            $query->where('agency_id', $request->input('agency_id'));
+        }
+
+        // 🟢 Filtrage complexe : ReleveIndex n'a pas d'article_id, il faut chercher via le pistolet -> citerne
+        if ($request->filled('article_id')) {
+            $articleId = $request->input('article_id');
+            $query->whereHas('pistolet.citerne', function ($q) use ($articleId) {
+                $q->where('current_product_id', $articleId);
+            });
+        }
+
+        $sales = $query->orderBy('created_at', 'asc')->get();
+
+        $reportTitle = 'Rapport de Saisie des Index et Ventes';
+        $period = "Du " . $startDate->format('d/m/Y') . " au " . $endDate->format('d/m/Y');
+
+        $agencyName = $request->filled('agency_id') && $sales->isNotEmpty() ? $sales->first()->agency->name : 'Toutes les stations';
+        
+        // Pour afficher le nom de l'article dans l'en-tête du PDF
+        $articleName = 'Tous les carburants';
+        if ($request->filled('article_id')) {
+            $article = Article::find($request->input('article_id'));
+            $articleName = $article ? $article->name : 'Inconnu';
+        }
+
+        $pdf = Pdf::loadView('PDF.fuel_sales_pdf', [
+            'sales'       => $sales,
+            'reportTitle' => $reportTitle,
+            'period'      => $period,
+            'filters'     => ['agency_name' => $agencyName, 'article_name' => $articleName],
+        ])->setPaper('a4', 'landscape'); 
+
+        $fileName = sprintf('index_carburant_%s_%s.pdf', $startDate->format('Ymd'), $endDate->format('Ymd'));
+        return $pdf->download($fileName);
+    }
+
+    /**
+     * Exportation Excel
+     */
+    public function exportExcel(Request $request)
+    {
+        $request->validate([
+            'start_date' => 'required|date',
+            'end_date'   => 'required|date|after_or_equal:start_date',
+            'agency_id'  => 'nullable|exists:agencies,id',
+            'article_id' => 'nullable|exists:articles,id',
+        ]);
+
         $startDate = Carbon::parse($request->input('start_date'));
         $endDate = Carbon::parse($request->input('end_date'));
-        $agencyId = $request->input('agency_id');
-        $articleId = $request->input('article_id');
-
-        // 3. Définition du titre
-        $reportTitle = 'Rapport de Ventes de Carburant';
-        $fileNameBase = 'ventes_carburant_' . $startDate->format('Ymd') . '_' . $endDate->format('Ymd');
         
-        // 4. EXPORTATION EXCEL
-        // La classe FuelSaleHistoryExport gère la récupération et le filtrage des données.
+        $fileNameBase = 'index_carburant_' . $startDate->format('Ymd') . '_' . $endDate->format('Ymd');
+        
         return Excel::download(
             new FuelSaleHistoryExport(
                 $startDate->toDateString(), 
                 $endDate->toDateString(),
-                $agencyId,
-                $articleId,
-                $reportTitle 
+                $request->input('agency_id'),
+                $request->input('article_id'),
+                'Rapport de Saisie des Index' 
             ),
             $fileNameBase . '.xlsx'
         );
