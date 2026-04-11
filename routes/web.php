@@ -193,7 +193,7 @@ Route::middleware([MagasinMiddleware::class,isArchivedMiddleWare::class,ClosureM
    //mouvement
    //sale fuel
    Route::post("/magasin-post-sale-fuel",[ControllersFuelController::class,"store"])->name("fuel.store");
-
+   Route::put('/pistolets/{pistolet}/index', [PompeController::class, 'updateIndex'])->name('pistolets.updateIndex');
 //select licence type
 Route::get("/magasin-choose-licence",[MagasinController::class,"licence"])->name("magasin.licence");
 //carburants routes 

@@ -170,4 +170,21 @@ class PompeController extends Controller
             return back()->with('error', "Une erreur est survenue lors de la suppression des pistolets.");
         }
     }
+    
+    public function updateIndex(Request $request, Pistolet $pistolet)
+    {
+        $request->validate([
+            'current_index' => 'required|numeric|min:0',
+        ]);
+
+        try {
+            $pistolet->update([
+                'current_index' => $request->current_index
+            ]);
+
+            return redirect()->back()->with('success', 'L\'index du pistolet a été forcé avec succès.');
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => "Erreur lors de la mise à jour de l'index : " . $e->getMessage()]);
+        }
+    }
 }

@@ -7,6 +7,7 @@ use App\Models\Agency;
 use App\Models\Article;
 use App\Models\ArticleCategoryPrice;
 use App\Models\Citerne;
+use App\Models\ClientCategory;
 use App\Models\ReleveIndex; // 🟢 Le nouveau modèle remplace FuelSale
 use App\Models\Pistolet; 
 use App\Models\Stock;
@@ -33,7 +34,7 @@ class FuelController extends Controller
             'index_fermeture' => 'required|numeric|min:0',
             'volume_test'     => 'nullable|numeric|min:0', 
         ]);
-
+    
         try {
             DB::beginTransaction();
 
@@ -41,7 +42,6 @@ class FuelController extends Controller
             $pistolet = Pistolet::with(['citerne.stock', 'citerne.article', 'pompe'])->findOrFail($validated['pistolet_id']);
             $citerne  = $pistolet->citerne;
             $article  = $citerne->article ?? null;
-
             if (!$citerne || !$article) {
                 throw ValidationException::withMessages(['pistolet_id' => "Ce pistolet n'est relié à aucune cuve ou produit valide."]);
             }
@@ -50,7 +50,6 @@ class FuelController extends Controller
             $indexOuverture = $pistolet->current_index;
             $indexFermeture = $validated['index_fermeture'];
             $volumeTest     = $validated['volume_test'] ?? 0;
-
             // Gestion du Rollover (Remise à zéro du compteur mécanique)
             $volumeBrut = $indexFermeture - $indexOuverture;
             if ($volumeBrut < 0) {
@@ -62,9 +61,11 @@ class FuelController extends Controller
             if ($volumeVendu <= 0) {
                 throw ValidationException::withMessages(['index_fermeture' => "L'index de fermeture est incohérent. Le volume net doit être positif."]);
             }
-            //$price = ArticleCategoryPrice::where("client_id",1);
+            $category= ClientCategory::where("name","client-comptoir")->first();
+            $unitPrice =  ArticleCategoryPrice::where("article_id",$article->id)->where("client_category_id",$category->id)->first();
+            
             // 3️⃣ Prix et Montant
-            $unitPrice = $article->unit_price ?? 0;
+            $unitPrice = $unitPrice->price ?? 0;
 
             if ($unitPrice <= 0) {
                 throw ValidationException::withMessages(['pistolet_id' => "Aucun prix de vente n'est défini pour le carburant contenu dans cette cuve."]);

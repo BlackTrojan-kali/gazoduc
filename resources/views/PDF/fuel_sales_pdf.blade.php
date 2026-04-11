@@ -6,11 +6,11 @@
         /* Styles CSS pour le PDF */
         body { 
             font-family: sans-serif; 
-            font-size: 9px; 
+            font-size: 11px; /* Augmenté de 9px à 11px */
             color: #333;
         }
         h1 { 
-            font-size: 16px; 
+            font-size: 20px; /* Augmenté de 16px à 20px */
             text-align: center; 
             margin-bottom: 5px;
             color: #1f2937;
@@ -21,8 +21,8 @@
             padding-bottom: 10px;
         }
         .header p {
-            margin: 2px 0;
-            font-size: 10px;
+            margin: 4px 0;
+            font-size: 12px; /* Augmenté de 10px à 12px */
         }
         table { 
             width: 100%; 
@@ -31,7 +31,7 @@
         }
         th, td { 
             border: 1px solid #d1d5db; 
-            padding: 5px; 
+            padding: 6px 5px; /* Légèrement plus de hauteur (padding) pour aérer */
             text-align: left; 
         }
         th { 
@@ -39,7 +39,7 @@
             font-weight: bold;
             color: #374151;
             text-transform: uppercase;
-            font-size: 8px;
+            font-size: 10px; /* Augmenté de 8px à 10px */
         }
         td.number {
             text-align: right;
@@ -48,7 +48,7 @@
         tfoot td {
             background-color: #e5e7eb;
             font-weight: bold;
-            font-size: 10px;
+            font-size: 12px; /* Augmenté de 10px à 12px */
         }
     </style>
 </head>
@@ -88,7 +88,8 @@
                 
                 <td>
                     <strong>{{ $sale->pistolet->pompe->name ?? 'N/A' }}</strong><br>
-                    <span style="color: #6b7280; font-size: 8px;">{{ $sale->pistolet->name ?? 'N/A' }}</span>
+                    {{-- Police augmentée de 8px à 10px --}}
+                    <span style="color: #6b7280; font-size: 10px;">{{ $sale->pistolet->name ?? 'N/A' }}</span>
                 </td>
                 
                 {{-- L'article est récupéré via la chaîne pistolet -> citerne -> article --}}
@@ -98,13 +99,12 @@
                 <td class="number">{{ number_format($sale->index_fermeture, 2, ',', ' ') }}</td>
                 <td class="number" style="color: #ef4444;">{{ $sale->volume_test > 0 ? number_format($sale->volume_test, 2, ',', ' ') : '-' }}</td>
                 
-                {{-- Les noms des variables mises à jour --}}
                 <td class="number" style="font-weight: bold;">{{ number_format($sale->volume_vendu, 2, ',', ' ') }}</td>
                 <td class="number">{{ number_format($sale->prix_unitaire, 0, ',', ' ') }}</td>
                 <td class="number" style="font-weight: bold;">{{ number_format($sale->montant_total, 0, ',', ' ') }}</td>
             </tr>
             @php
-                // Accumulation des totaux avec les nouvelles variables
+                // Accumulation des totaux
                 $totalQuantity += $sale->volume_vendu;
                 $totalTotalPrice += $sale->montant_total;
                 $totalTest += $sale->volume_test;
@@ -113,7 +113,6 @@
         </tbody>
         <tfoot>
             <tr>
-                {{-- Le colspan passe à 6 car nous avons supprimé la colonne Client --}}
                 <td colspan="6" style="text-align: right; text-transform: uppercase;">Total de la période :</td>
                 <td class="number" style="color: #ef4444;">{{ $totalTest > 0 ? number_format($totalTest, 2, ',', ' ') : '-' }}</td>
                 <td class="number">{{ number_format($totalQuantity, 2, ',', ' ') }}</td>

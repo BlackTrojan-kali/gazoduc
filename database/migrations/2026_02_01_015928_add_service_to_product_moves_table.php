@@ -15,7 +15,6 @@ return new class extends Migration
             //
             
             $table->string("service")->nullable();
-            $table->float("remaining_stock");
         });
     }
 
