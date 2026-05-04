@@ -8,7 +8,7 @@ import Button from '../../ui/button/Button';
 import Select from 'react-select'; 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
-const FuelSaleFormModal = ({ isOpen, onClose, agencies, pompes }) => {
+const FuelSaleFormModal = ({ isOpen, onClose, pompes }) => {
     const { props: { auth } } = usePage();
     const currentUserId = auth.user ? auth.user.id : null;
     
@@ -16,7 +16,6 @@ const FuelSaleFormModal = ({ isOpen, onClose, agencies, pompes }) => {
     // Le champ 'client_id' a été supprimé
     const { data, setData, post, processing, errors, reset } = useForm({
         pistolet_id: '', 
-        agency_id: '',
         index_fermeture: '', 
         volume_test: '', 
         user_id: currentUserId,
@@ -24,10 +23,6 @@ const FuelSaleFormModal = ({ isOpen, onClose, agencies, pompes }) => {
     
     // --- Gestion des Options Select ---
     
-    const agencyOptions = useMemo(() => agencies.map(agency => ({
-        value: String(agency.id),
-        label: agency.name
-    })), [agencies]);
 
     // Groupement des Pistolets par Pompe (Îlot)
     const pistoletOptions = useMemo(() => {
@@ -128,22 +123,7 @@ const FuelSaleFormModal = ({ isOpen, onClose, agencies, pompes }) => {
                 
                 {/* --- LIGNE 1 : Station et Pistolet --- */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label htmlFor="agency_id" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-2">
-                            <FontAwesomeIcon icon={faBuilding} className="text-slate-400" /> Station <span className="text-red-500">*</span>
-                        </label>
-                        <Select
-                            inputId="agency_id"
-                            styles={selectCustomStyles}
-                            options={agencyOptions}
-                            value={agencyOptions.find(opt => opt.value === String(data.agency_id))}
-                            onChange={(opt) => setData('agency_id', opt ? opt.value : '')}
-                            placeholder="Sélectionnez la station"
-                            isClearable
-                        />
-                        {errors.agency_id && <p className="text-xs text-red-500 mt-1">{errors.agency_id}</p>}
-                    </div>
-
+                    
                     <div>
                         <label htmlFor="pistolet_id" className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1 flex items-center gap-2">
                             <FontAwesomeIcon icon={faGasPump} className="text-blue-500" /> Pistolet Relevé <span className="text-red-500">*</span>

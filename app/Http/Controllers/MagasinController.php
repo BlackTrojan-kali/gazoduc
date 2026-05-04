@@ -80,7 +80,7 @@ class MagasinController extends Controller
             ->where("storage_type", "carburant")
             ->with("article", "citerne")
             ->get();
-
+            
         $agencies = Agency::where("id", $agencyId)
             ->where("entreprise_id", $entrepriseId)
             ->get();

@@ -69,10 +69,10 @@ class FuelPaymentController extends Controller
             'notes' => 'nullable|string|max:1000',
             'amout_notes' => 'nullable|string|max:1000',
             'bordereau' => 'nullable|string|max:255',
-            'agency_id' => 'required|exists:agencies,id',
             'bank_id' => 'nullable|exists:banks,id',
             'client_id' => 'required|exists:clients,id',
         ]);
+        dd($validatedData);
 
         try {
             Payment::create([

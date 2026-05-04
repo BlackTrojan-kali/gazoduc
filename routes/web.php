@@ -108,7 +108,10 @@ Route::middleware(SuperAdminMiddleWare::class)->group(function(){
 Route::get('/subscriptions/{subscription}/invoice', [SubController::class, 'downloadInvoice'])->name('subs.downloadInvoice');
     Route::get("/subs",[SubController::class,"index"])->name("subs");
     Route::post("/subs",[SubController::class,"store"])->name("subs.store");
-    Route::get("/subs/{idSub}",[SubController::class,"renew"])->name("subs.renew");
+    // web.php
+Route::post('/subscriptions/{id}/renew', [SubController::class, 'renew'])->name('subscriptions.renew');
+Route::post('/subscriptions/{id}/cancel', [SubController::class, 'cancel'])->name('subscriptions.cancel');
+Route::get('/subscriptions/{subscription}/invoice', [SubController::class, 'downloadInvoice'])->name('subscriptions.downloadInvoice');
 });
 
 Route::middleware([DirectionMiddleware::class,isArchivedMiddleWare::class])->group(function(){

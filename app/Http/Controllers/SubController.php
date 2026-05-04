@@ -6,6 +6,7 @@ use App\Models\Agency;
 use App\Models\Entreprise;
 use App\Models\Licence;
 use App\Models\Subscription;
+use App\Models\SubscribeHistory; // NE PAS OUBLIER CETTE LIGNE
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -13,94 +14,185 @@ use Inertia\Inertia;
 
 class SubController extends Controller
 {
-    //
-    public function index(){
-        $subs = Subscription::with("entreprise.agency","licence")->orderBy("created_at","desc")->paginate(15);
+    /**
+     * 1. AFFICHER LES SOUSCRIPTIONS
+     */
+    public function index()
+    {
+        $subs = Subscription::with("entreprise.agencies", "licence")->orderBy("created_at", "desc")->paginate(15);
         $licences = Licence::all();
         $entreprises = Entreprise::all();
-        return Inertia("Souscription",compact("subs","licences","entreprises"));
+        return Inertia("Souscription", compact("subs", "licences", "entreprises"));
     }
-   // Dans votre SubscriptionController.php
 
+    /**
+     * 2. CRÉER UNE NOUVELLE SOUSCRIPTION
+     */
+    public function store(Request $request)
+    {
+        $request->validate([
+            "entreprise_id" => "required|exists:entreprises,id",
+            "licence_id" => 'required|exists:licences,id',
+            "price" => "numeric|required",
+            "date_souscription" => "date|required",
+            "date_expiration" => "date|required|after:date_souscription",
+            "is_active" => "required|boolean",
+        ]);
 
-public function store(Request $request)
-{
-    $request->validate([
-        "entreprise_id" => "required|exists:entreprises,id",
-        "licence_id" => 'required|exists:licences,id',
-        "price" => "numeric|required",
-        "nombre_agence" => "numeric|nullable", // Peut être nullable si vous le calculez après
-        "date_souscription" => "date|required",
-        "date_expiration" => "date|required|after:date_souscription",
-        "is_active" => "required|boolean",
-    ]);
+        $agencies = Agency::where("entreprise_id", $request->entreprise_id)->get();
+        $licence = Licence::findOrFail($request->licence_id);
 
-    $agencies = Agency::where("entreprise_id", $request->entreprise_id)->get();
+        $subs = new Subscription();
+        $subs->entreprise_id = $request->entreprise_id;
+        $subs->licence_id = $request->licence_id;
+        $subs->price = $request->price;
+        $subs->nombre_agence = count($agencies); // Calcul automatique
+        $subs->date_souscription = $request->date_souscription;
+        $subs->date_expiration = $request->date_expiration;
+        $subs->is_active = $request->is_active;
+        $subs->save();
 
-    $subs = new Subscription();
-    $subs->entreprise_id = $request->entreprise_id;
-    $subs->licence_id = $request->licence_id;
-    $subs->price = $request->price;
-    // Calculer nombre_agence basé sur le nombre réel d'agences trouvées
-    $subs->nombre_agence = count($agencies);
-    $subs->date_souscription = $request->date_souscription;
-    $subs->date_expiration = $request->date_expiration;
-    $subs->is_active = $request->is_active;
-    $subs->save();
+        // --- GESTION INTELLIGENTE : HISTORISATION ---
+        SubscribeHistory::create([
+            'subs_id' => $subs->id,
+            'new_price' => $subs->price,
+            'new_number_of_agencies' => $subs->nombre_agence,
+            'licence_name_at_time' => $licence->name,
+            'action_type' => 'creation' // Trace la création
+        ]);
 
-    // RETIREZ TOUTE LA LOGIQUE DE GÉNÉRATION ET DE RETOUR DU PDF D'ICI
-    // (Les lignes suivantes doivent être supprimées de cette fonction store)
-    // $price = $request->price;
-    // $nbre_agence = count($agencies);
-    // $total = $price * $nbre_agence;
-    // $pdf = Pdf::loadView('factures.licencePDFView', compact('agencies', "price", "subs", "entreprise", "licence", "total"));
-    // return $pdf->download('facture-' . $subs->id . '.pdf');
+        return back()->with("success", "Souscription réussie.");
+    }
 
+    /**
+     * 3. METTRE À JOUR (Upgrade / Downgrade de licence)
+     */
+    public function update(Request $request, $id)
+    {
+        $request->validate([
+            "licence_id" => 'required|exists:licences,id',
+            "price" => "numeric|required",
+        ]);
 
-    // À LA PLACE, RETOURNEZ SIMPLEMENT UNE RÉPONSE JSON AVEC L'ID DE LA SOUSCRIPTION
-    return back()->with("success","souscription reussiee");
-}
-public function downloadInvoice(Subscription $subscription)
-{
-    // Récupérer les données nécessaires pour la facture
-    // Assurez-vous que les relations sont chargées ou récupérez-les ici
-    $entreprise = $subscription->entreprise;
-    $licence = $subscription->licence;
-    $agencies = Agency::where("entreprise_id", $subscription->entreprise_id)->get();
+        $sub = Subscription::findOrFail($id);
+        $licence = Licence::findOrFail($request->licence_id);
+        
+        $oldPrice = $sub->price;
+        $oldLicenceId = $sub->licence_id;
 
-    // Recalculer le prix total si nécessaire pour la facture
-    $price = $subscription->price; // Utilisez le prix enregistré dans la souscription
-    $nbre_agence = $subscription->nombre_agence; // Utilisez le nombre enregistré
-    $total = $price * $nbre_agence;
+        // Déterminer l'action
+        $actionType = ($oldLicenceId == $request->licence_id) ? 'modification_prix' : 'changement_licence';
 
-    // Générer le PDF
-    // Assurez-vous que 'factures.licencePDFView' est le bon chemin de votre vue Blade
-    $pdf = Pdf::loadView('factures.licencePDFView', compact('agencies', "price", "subscription", "entreprise", "licence", "total"));
+        $sub->licence_id = $request->licence_id;
+        $sub->price = $request->price;
+        $sub->save();
 
-    // Retourner le PDF pour le téléchargement
-    return $pdf->download('facture-' . $subscription->id . '.pdf');
-}
-    public function renew(Request $request,$idsub){
-      
-        $currentDate = Carbon::now();
-        $start = Carbon::now();
-        $newExpirationDate = $currentDate->addDays(30);
-        $subscription =Subscription::where("id",$idsub)->first();
-        $subscription->date_souscription =$currentDate->toDateString(); 
+        // --- GESTION INTELLIGENTE : HISTORISATION ---
+        SubscribeHistory::create([
+            'subs_id' => $sub->id,
+            'old_price' => $oldPrice,
+            'new_price' => $sub->price,
+            'old_number_of_agencies' => $sub->nombre_agence,
+            'new_number_of_agencies' => $sub->nombre_agence,
+            'licence_name_at_time' => $licence->name,
+            'action_type' => $actionType
+        ]);
+
+        return back()->with("success", "Souscription mise à jour avec succès.");
+    }
+
+    /**
+     * 4. RENOUVELER UNE SOUSCRIPTION (Prolonger le temps)
+     */
+    public function renew(Request $request, $id)
+    {
+        // On récupère le nombre de mois ou de jours à ajouter (par défaut 1 mois si non fourni)
+        $monthsToAdd = $request->input('months', 1); 
+
+        $subscription = Subscription::with('licence')->findOrFail($id);
+        $currentExpiration = Carbon::parse($subscription->date_expiration);
+
+        // Si l'abonnement est déjà expiré, on repart d'aujourd'hui. Sinon, on ajoute à la date d'expiration prévue.
+        if ($currentExpiration->isPast()) {
+            $newExpirationDate = Carbon::now()->addMonths($monthsToAdd);
+        } else {
+            $newExpirationDate = $currentExpiration->addMonths($monthsToAdd);
+        }
+
+        // Attention : On NE MODIFIE PAS la date_souscription pour garder l'ancienneté du client.
         $subscription->date_expiration = $newExpirationDate->toDateString();
         $subscription->is_active = true;
         $subscription->save();
-       
-        $entreprise = $subscription->entreprise;
-    $price = $subscription->price;
-            $licence = $subscription->licence;
-              //$total = $price * $nbre_agence;
-         $agencies = Agency::where("entreprise_id", $subscription->entreprise_id)->get();
-    $pdf = Pdf::loadView('factures.licencePDFView', compact('agencies', "price", "subscription","start",'newExpirationDate', "entreprise", "licence"));
 
-    // Retourner le PDF pour le téléchargement
-    return $pdf->download('facture-' . $subscription->id . '.pdf');
+        // --- GESTION INTELLIGENTE : HISTORISATION ---
+        SubscribeHistory::create([
+            'subs_id' => $subscription->id,
+            'old_price' => $subscription->price,
+            'new_price' => $subscription->price, // Le prix reste le même pour un simple renouvellement
+            'old_number_of_agencies' => $subscription->nombre_agence,
+            'new_number_of_agencies' => $subscription->nombre_agence,
+            'licence_name_at_time' => $subscription->licence->name,
+            'action_type' => 'renouvellement'
+        ]);
 
+        // Note avec Inertia : Il vaut mieux retourner un message de succès et laisser
+        // l'utilisateur cliquer sur un bouton "Télécharger la facture" séparément.
+        return back()->with("success", "Abonnement renouvelé jusqu'au " . $newExpirationDate->format('d/m/Y'));
     }
-    
+
+    /**
+     * 5. DÉSACTIVER / ANNULER UNE SOUSCRIPTION
+     */
+    public function cancel($id)
+    {
+        $subscription = Subscription::with('licence')->findOrFail($id);
+        
+        $subscription->is_active = false;
+        $subscription->save();
+
+        SubscribeHistory::create([
+            'subs_id' => $subscription->id,
+            'licence_name_at_time' => $subscription->licence->name,
+            'action_type' => 'annulation'
+        ]);
+
+        return back()->with("success", "Souscription désactivée.");
+    }
+
+   /**
+     * 6. TÉLÉCHARGER LA FACTURE
+     */
+    public function downloadInvoice($id)
+    {
+        // On charge la souscription avec ses relations
+        $subscription = Subscription::with(['entreprise', 'licence'])->findOrFail($id);
+        
+        $entreprise = $subscription->entreprise;
+        $licence = $subscription->licence;
+        
+        // Récupération sécurisée des agences de l'entreprise
+        $agencies = Agency::where("entreprise_id", $entreprise->id)->get();
+
+        $price = $subscription->price; 
+        
+        // --- NOUVEAU : Récupération des dates pour la vue Blade ---
+        $start = $subscription->date_souscription;
+        $newExpirationDate = $subscription->date_expiration;
+
+        // Génération du PDF avec TOUTES les variables requises par la vue
+        $pdf = Pdf::loadView('factures.licencePDFView', compact(
+            'agencies', 
+            'price', 
+            'subscription', 
+            'entreprise', 
+            'licence', 
+            'start', 
+            'newExpirationDate'
+        ));
+
+        // Formatage du nom du fichier pour éviter les erreurs avec les espaces dans le nom de l'entreprise
+        $fileName = 'facture-' . \Illuminate\Support\Str::slug($entreprise->name) . '-' . $subscription->id . '.pdf';
+
+        return $pdf->download($fileName);
+    }
 }

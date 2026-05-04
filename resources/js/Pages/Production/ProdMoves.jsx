@@ -317,7 +317,7 @@ const PageContent = ({ prodMoves, agencies, articles, citernes }) => {
 // Composant Wrapper Principal
 const ProdMoves = (props) => {
   const { auth } = usePage().props;
-  const role = auth.user?.role?.name?.toLowerCase(); // Sécurisation de l'accès au rôle
+  const role = auth.user?.role?.toLowerCase(); // Sécurisation de l'accès au rôle
 
   // Sélection du Layout en fonction du rôle
   let Layout = ProdLayout; // Par défaut

@@ -29,12 +29,10 @@ class FuelController extends Controller
     {
         $validated = $request->validate([
             'pistolet_id'     => 'required|exists:pistolets,id',
-            'agency_id'       => 'required|exists:agencies,id',
             'user_id'         => 'required|exists:users,id',
             'index_fermeture' => 'required|numeric|min:0',
             'volume_test'     => 'nullable|numeric|min:0', 
         ]);
-    
         try {
             DB::beginTransaction();
 
@@ -42,6 +40,7 @@ class FuelController extends Controller
             $pistolet = Pistolet::with(['citerne.stock', 'citerne.article', 'pompe'])->findOrFail($validated['pistolet_id']);
             $citerne  = $pistolet->citerne;
             $article  = $citerne->article ?? null;
+            
             if (!$citerne || !$article) {
                 throw ValidationException::withMessages(['pistolet_id' => "Ce pistolet n'est relié à aucune cuve ou produit valide."]);
             }
@@ -50,6 +49,7 @@ class FuelController extends Controller
             $indexOuverture = $pistolet->current_index;
             $indexFermeture = $validated['index_fermeture'];
             $volumeTest     = $validated['volume_test'] ?? 0;
+        
             // Gestion du Rollover (Remise à zéro du compteur mécanique)
             $volumeBrut = $indexFermeture - $indexOuverture;
             if ($volumeBrut < 0) {
@@ -57,13 +57,14 @@ class FuelController extends Controller
             }
 
             $volumeVendu = $volumeBrut - $volumeTest;
-
+            
             if ($volumeVendu <= 0) {
                 throw ValidationException::withMessages(['index_fermeture' => "L'index de fermeture est incohérent. Le volume net doit être positif."]);
             }
-            $category= ClientCategory::where("name","client-comptoir")->first();
+            $category= ClientCategory::where("name","Comptoir")->first();
+        
             $unitPrice =  ArticleCategoryPrice::where("article_id",$article->id)->where("client_category_id",$category->id)->first();
-            
+           
             // 3️⃣ Prix et Montant
             $unitPrice = $unitPrice->price ?? 0;
 
@@ -91,7 +92,7 @@ class FuelController extends Controller
             // 5️⃣ Création du Relevé d'Index 🟢
             ReleveIndex::create([
                 'pistolet_id'     => $pistolet->id,
-                'agency_id'       => $validated['agency_id'],
+                'agency_id'       => Auth::user()->agency_id,
                 'user_id'         => $validated['user_id'],
                 'index_ouverture' => $indexOuverture,
                 'index_fermeture' => $indexFermeture,

@@ -1,23 +1,25 @@
 import React, { useState } from 'react';
 import AppLayout from "../layout/AppLayout";
-import { Head, Link, usePage } from '@inertiajs/react'; // Retiré `useForm` car nous ne l'utilisons pas pour le téléchargement direct
+import { Head, Link, usePage, router } from '@inertiajs/react'; // Ajout de `router`
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faSyncAlt, faDownload } from '@fortawesome/free-solid-svg-icons'; // Ajout de faDownload pour un exemple
+import { faPlus, faSyncAlt, faDownload, faBan, faCheckCircle, faTimesCircle } from '@fortawesome/free-solid-svg-icons'; // Ajout de nouvelles icônes
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '../components/ui/table';
 import Swal from 'sweetalert2';
 
-import CreateSubscriptionModal from "../components/Modals/SubModal";
+import CreateSubscriptionModal from "../components/Modals/CreateSubscriptionModal";
 import Badge from '../components/ui/badge/Badge';
 
 const Souscription = ({ subs, entreprises, licences }) => {
   const [isCreateSubscriptionModalOpen, setIsCreateSubscriptionModalOpen] = useState(false);
-  const { props: { inertia } } = usePage(); // Accès aux méthodes Inertia comme reload
+  const { props: { inertia } } = usePage();
 
   const openCreateSubscriptionModal = () => setIsCreateSubscriptionModalOpen(true);
-  const closeCreateSubscriptionModal = () => {setIsCreateSubscriptionModalOpen(false) 
-    window.location.reload();};
+  const closeCreateSubscriptionModal = () => {
+    setIsCreateSubscriptionModalOpen(false);
+    router.reload({ only: ['subs'] }); // Utilisation propre de reload via Inertia
+  };
 
-  // --- Fonction pour calculer les jours restants et déterminer la couleur du badge ---
+  // --- Calcul des jours restants ---
   const getDaysRemainingAndBadge = (expirationDateString) => {
     const today = new Date();
     const expirationDate = new Date(expirationDateString);
@@ -45,124 +47,105 @@ const Souscription = ({ subs, entreprises, licences }) => {
     return { diffDays, badgeColor, badgeText };
   };
 
-  /**
-   * Gère le renouvellement d'une souscription et déclenche le téléchargement du PDF.
-   */
+  // --- Actions ---
+
   const handleRenewSubscription = (subscription) => {
     Swal.fire({
-      title: 'Renouveler la souscription, monsieur ?',
-      text: `Voulez-vous renouveler la souscription de l'entreprise "${subscription.entreprise.name}" pour la licence "${subscription.licence.name}" ? Sa date d'expiration sera prolongée et la facture sera générée.`,
+      title: 'Renouveler la souscription ?',
+      text: `Voulez-vous prolonger d'un mois l'abonnement de "${subscription.entreprise.name}" ?`,
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: '#3085d6',
       cancelButtonColor: '#d33',
-      confirmButtonText: 'Oui, renouveler et télécharger !',
+      confirmButtonText: 'Oui, renouveler',
       cancelButtonText: 'Annuler'
     }).then((result) => {
       if (result.isConfirmed) {
-        // --- MÉTHODE RECOMMANDÉE POUR LE TÉLÉCHARGEMENT DE PDF VIA LE NAVIGATEUR ---
-        // Ouvrez l'URL de renouvellement dans un nouvel onglet.
-        // Laravel doit retourner le PDF directement, et le navigateur le téléchargera.
-       
-        window.location.href =`/subs/${subscription.id}`;
-
-        // Affichez un message de succès et rafraîchissez la liste des souscriptions.
-        // On suppose que le renouvellement en base de données a été effectué par Laravel
-        // avant que le PDF ne soit retourné.
-        Swal.fire(
-          'Renouvelée !',
-          'La souscription a été renouvelée et la facture est en cours de téléchargement.',
-          'success'
-        );
-       }
+        // Envoi de la requête via Inertia (en arrière-plan)
+        // Assure-toi que ta route web.php s'appelle bien 'subscriptions.renew' (POST ou PUT)
+        router.post(route('subscriptions.renew', subscription.id), { months: 1 }, {
+          preserveScroll: true,
+          onSuccess: () => {
+            Swal.fire(
+              'Renouvelée !',
+              'La souscription a été prolongée avec succès.',
+              'success'
+            );
+          }
+        });
+      }
     });
   };
 
-  /**
-   * Fonction appelée par CreateSubscriptionModal après une création réussie.
-   * Déclenche le téléchargement du PDF de la facture et rafraîchit la liste.
-   * @param {number} newSubscriptionId - L'ID de la nouvelle souscription créée.
-   */
+  const handleCancelSubscription = (subscription) => {
+    Swal.fire({
+      title: 'Désactiver la souscription ?',
+      text: `Voulez-vous suspendre l'accès pour "${subscription.entreprise.name}" ?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Oui, désactiver',
+      cancelButtonText: 'Retour'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // Assure-toi que ta route s'appelle bien 'subscriptions.cancel'
+        router.post(route('subscriptions.cancel', subscription.id), {}, {
+          preserveScroll: true,
+          onSuccess: () => Swal.fire('Désactivée', 'La souscription est maintenant inactive.', 'info')
+        });
+      }
+    });
+  };
+
   const handleSubscriptionCreated = (newSubscriptionId) => {
-    // 1. Fermez le modal
     closeCreateSubscriptionModal();
 
-
-
-    // 3. Déclenchez le téléchargement du PDF de la facture
     if (newSubscriptionId) {
-      // Assurez-vous d'avoir une route Laravel nommée 'subscriptions.downloadInvoice'
-      // qui prend l'ID de la souscription et retourne le PDF.
       const invoiceUrl = route('subscriptions.downloadInvoice', newSubscriptionId);
       window.open(invoiceUrl, '_blank');
-      Swal.fire(
-        'Facture',
-        'La facture est en cours de téléchargement.',
-        'info'
-      );
-
-    } else { 
-      console.warn("L'ID de la nouvelle souscription n'a pas été fourni pour le téléchargement de la facture, monsieur.");
+      Swal.fire('Succès', 'Souscription créée et facture générée.', 'success');
     }
-
-    // 4. Rafraîchissez la liste des souscriptions sur la page principale
-    inertia.reload({ only: ['subs'] });
   };
 
   return (
     <>
       <Head title='Souscriptions' />
-      Liste des Souscriptions
-      <br /><br />
+      <div className="mb-6">
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Gestion des Souscriptions</h2>
+          <p className="text-gray-500 text-sm">Gérez les abonnements, les renouvellements et l'historique de vos clients.</p>
+      </div>
+      
       <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
         <div className="flex flex-col gap-2 mb-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-              Souscriptions
+              Liste des Contrats
             </h3>
           </div>
 
           <div className="flex items-center gap-3">
             <button
               onClick={openCreateSubscriptionModal}
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
+              className="inline-flex items-center gap-2 rounded-lg border border-transparent bg-blue-600 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-blue-700"
             >
               <FontAwesomeIcon icon={faPlus} />
-              Créer
-            </button>
-            <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200">
-              Voir tout
+              Nouvelle Souscription
             </button>
           </div>
         </div>
+        
         <div className="max-w-full overflow-x-auto">
           <Table>
             <TableHeader className="border-gray-100 dark:border-gray-800 border-y">
               <TableRow>
-                <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                  Entreprise
-                </TableCell>
-                <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                  Licence
-                </TableCell>
-                <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                  Prix
-                </TableCell>
-                <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                  Nombre D'agence
-                </TableCell>
-                <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                  Date Souscription
-                </TableCell>
-                <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                  Date Expiration
-                </TableCell>
-                <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                  Jours Restants
-                </TableCell>
-                <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                  Action
-                </TableCell>
+                <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Entreprise</TableCell>
+                <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Licence</TableCell>
+                <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Prix</TableCell>
+                <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Agences</TableCell>
+                <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Période</TableCell>
+                <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">État</TableCell>
+                <TableCell isHeader className="py-3 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400">Actions</TableCell>
               </TableRow>
             </TableHeader>
 
@@ -171,58 +154,83 @@ const Souscription = ({ subs, entreprises, licences }) => {
                 subs.data.map((sub) => {
                   const { badgeColor, badgeText } = getDaysRemainingAndBadge(sub.date_expiration);
                   return (
-                    <TableRow key={sub.id} className="">
+                    <TableRow key={sub.id}>
                       <TableCell className="py-3">
-                        <div className="flex items-center gap-3">
-                          <div>
-                            <p className="font-medium text-gray-800 text-theme-sm dark:text-white/90">
-                              {sub.entreprise ? sub.entreprise.name : 'N/A'}
-                            </p>
-                          </div>
-                        </div>
+                        <p className="font-medium text-gray-800 text-theme-sm dark:text-white/90">
+                          {sub.entreprise ? sub.entreprise.name : 'N/A'}
+                        </p>
                       </TableCell>
+                      
                       <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
                         {sub.licence ? sub.licence.name : 'N/A'}
                       </TableCell>
-                      <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                        {sub.price || 'N/A'}
+                      
+                      <TableCell className="py-3 font-medium text-gray-800 text-theme-sm dark:text-gray-300">
+                        {sub.price} Fcfa
                       </TableCell>
+                      
                       <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                        {sub.entreprise.agency? sub.entreprise.agency.length: 'N/A'}
+                        {sub.nombre_agence || '0'}
                       </TableCell>
+                      
                       <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                        {sub.date_souscription}
+                        <div className="text-xs">Du: {sub.date_souscription}</div>
+                        <div className="text-xs">Au: {sub.date_expiration}</div>
                       </TableCell>
+                      
                       <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                        {sub.date_expiration}
+                        <div className="flex flex-col gap-1 items-start">
+                          {/* Badge Jours restants */}
+                          <Badge size="sm" color={badgeColor}>{badgeText}</Badge>
+                          
+                          {/* Indicateur Actif/Inactif */}
+                          <span className={`text-[10px] flex items-center gap-1 font-semibold ${sub.is_active ? 'text-green-600' : 'text-red-500'}`}>
+                            <FontAwesomeIcon icon={sub.is_active ? faCheckCircle : faTimesCircle} />
+                            {sub.is_active ? 'ACTIF' : 'INACTIF'}
+                          </span>
+                        </div>
                       </TableCell>
-                      <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                        <Badge size="sm" color={badgeColor}>
-                          {badgeText}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="py-3 text-gray-500 text-theme-sm gap-2 flex dark:text-gray-400">
-                        <button
-                          onClick={() => handleRenewSubscription(sub)}
-                          className="inline-flex items-center gap-2 rounded-lg border border-blue-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-blue-700 shadow-theme-xs hover:bg-blue-50 hover:text-blue-800 dark:border-blue-700 dark:bg-blue-800 dark:text-blue-400 dark:hover:bg-white/[0.03] dark:hover:text-blue-200"
-                        >
-                          <FontAwesomeIcon icon={faSyncAlt} /> Renouveler
-                        </button>
-                        {/* Exemple : bouton pour télécharger une facture existante si vous avez une route dédiée */}
-                        {/* <Link
-                          href={route('subscriptions.downloadInvoice', sub.id)}
-                          target="_blank"
-                          className="inline-flex items-center gap-2 rounded-lg border border-green-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-green-700 shadow-theme-xs hover:bg-green-50 hover:text-green-800 dark:border-green-700 dark:bg-green-800 dark:text-green-400 dark:hover:bg-white/[0.03] dark:hover:text-green-200"
-                        >
-                          <FontAwesomeIcon icon={faDownload} /> Facture
-                        </Link> */}
+                      
+                      <TableCell className="py-3">
+                        <div className="flex items-center justify-center gap-2">
+                          {/* Bouton Renouveler */}
+                          <button
+                            onClick={() => handleRenewSubscription(sub)}
+                            title="Renouveler"
+                            className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50"
+                          >
+                            <FontAwesomeIcon icon={faSyncAlt} />
+                          </button>
+
+                          {/* Bouton Télécharger Facture */}
+                          <a
+                            href={route('subscriptions.downloadInvoice', sub.id)}
+                            target="_blank"
+                            rel="noreferrer"
+                            title="Télécharger la facture"
+                            className="p-2 text-green-600 bg-green-50 hover:bg-green-100 rounded-lg dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50"
+                          >
+                            <FontAwesomeIcon icon={faDownload} />
+                          </a>
+
+                          {/* Bouton Désactiver (si actif) */}
+                          {sub.is_active && (
+                            <button
+                              onClick={() => handleCancelSubscription(sub)}
+                              title="Désactiver"
+                              className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
+                            >
+                              <FontAwesomeIcon icon={faBan} />
+                            </button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={8} className="py-3 text-center text-gray-500 dark:text-gray-400">
+                  <TableCell colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">
                     Aucune Souscription trouvée.
                   </TableCell>
                 </TableRow>
@@ -230,21 +238,20 @@ const Souscription = ({ subs, entreprises, licences }) => {
             </TableBody>
           </Table>
 
-          ---
           {/* CONTRÔLES DE PAGINATION */}
-          {subs.links && subs.links.length > 2 && ( // Condition ajustée pour afficher la pagination
-            <nav className="flex justify-end mt-4">
-              <div className="flex gap-2">
+          {subs.links && subs.links.length > 3 && ( 
+            <nav className="flex justify-end mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+              <div className="flex gap-1">
                 {subs.links.map((link, index) => (
                   <Link
                     key={index}
                     href={link.url || '#'}
-                    className={`px-3 py-1 text-sm font-medium border rounded-lg shadow-sm
+                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors
                       ${link.active
-                        ? 'bg-blue-600 text-white border-blue-600 cursor-default'
+                        ? 'bg-blue-600 text-white cursor-default'
                         : link.url === null
-                          ? 'bg-white border-gray-300 text-gray-700 disabled:opacity-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 cursor-not-allowed'
-                          : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-800 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200'
+                          ? 'text-gray-400 cursor-not-allowed dark:text-gray-600'
+                          : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
                       }`}
                     preserveState
                     preserveScroll
@@ -258,18 +265,14 @@ const Souscription = ({ subs, entreprises, licences }) => {
               </div>
             </nav>
           )}
-          ---
         </div>
       </div>
 
       <CreateSubscriptionModal
         isOpen={isCreateSubscriptionModalOpen}
-        onClose={handleSubscriptionCreated} // Lorsque le modal se ferme après succès, appeler cette fonction
+        onClose={handleSubscriptionCreated}
         licences={licences}
         entreprises={entreprises}
-        // Il est crucial que votre CreateSubscriptionModal appelle `onClose(newSubscriptionId)`
-        // une fois la souscription créée avec succès côté Laravel.
-        // Par exemple, dans le `onSuccess` de votre `form.post` à l'intérieur du modal.
       />
     </>
   );

@@ -19,6 +19,10 @@ class Entreprise extends Model
     public function agency(){
         return $this->hasMany(Agency::class);
     }
+    
+    public function agencies(){
+        return $this->hasMany(Agency::class);
+    }
     public function subscription(){
         return $this->hasOne(Subscription::class);
     }
