@@ -8,15 +8,14 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // 1. On ajoute le coût de transport par tonne directement dans la ville
+        // 1. Ajout du coût de transport dans la table cities
         Schema::table('cities', function (Blueprint $table) {
-            // Permet de stocker le tarif de la grille CSPH (ex: 14096.00 pour Akonolinga)
+            // Le coût officiel en FCFA/Tonne selon la CSPH (ex: 8223 pour Edéa)
             $table->decimal('transport_cost_per_tonne', 10, 2)->default(0)->after('name');
         });
 
-        // 2. On s'assure que le poids de l'article est numérique pour le calcul
+        // 2. Transformation du poids en format décimal pour les calculs
         Schema::table('articles', function (Blueprint $table) {
-            // Changement de string à decimal (assurez-vous d'avoir le package doctrine/dbal installé si vous modifiez une colonne)
             $table->decimal('weight_per_unit', 8, 2)->nullable()->change();
         });
     }

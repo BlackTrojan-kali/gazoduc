@@ -17,6 +17,10 @@ class Article extends Model
             "entreprise_id",
            "weight_per_unit",
     ];
+    // On force Laravel à lire le poids comme un nombre décimal (float)
+    protected $casts = [
+        'weight_per_unit' => 'float',
+    ];
     public function stock(){
         return $this->hasMany(Stock::class);
     }

@@ -115,6 +115,9 @@ Route::get('/subscriptions/{subscription}/invoice', [SubController::class, 'down
 });
 
 Route::middleware([DirectionMiddleware::class,isArchivedMiddleWare::class])->group(function(){
+    Route::get('/direction/export-pdf', [DirectionController::class, 'exportPdf'])->name('direction.export.pdf');
+    // Assurez-vous de la placer dans le même groupe de middleware (auth) que vos autres routes d'articles
+Route::get('/articles/export-pdf', [ArticleController::class, 'exportPdf'])->name('articles.export.pdf');
 //Mouvements direction
 Route::get('/direction/historique-global', [DirBoutiqueController::class, 'history'])
          ->name('direction.history');
