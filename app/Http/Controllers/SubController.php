@@ -100,46 +100,43 @@ class SubController extends Controller
 
         return back()->with("success", "Souscription mise à jour avec succès.");
     }
-
-    /**
+/**
+     /**
      * 4. RENOUVELER UNE SOUSCRIPTION (Prolonger le temps)
      */
     public function renew(Request $request, $id)
     {
-        // On récupère le nombre de mois ou de jours à ajouter (par défaut 1 mois si non fourni)
-        $monthsToAdd = $request->input('months', 1); 
-
         $subscription = Subscription::with('licence')->findOrFail($id);
-        $currentExpiration = Carbon::parse($subscription->date_expiration);
+        
+        // On prend la date du jour (sans les heures/minutes)
+        $today = Carbon::today(); 
+        
+        // La nouvelle date d'expiration est TOUJOURS aujourd'hui + 30 jours
+        $newExpirationDate = $today->copy()->addDays(30);
 
-        // Si l'abonnement est déjà expiré, on repart d'aujourd'hui. Sinon, on ajoute à la date d'expiration prévue.
-        if ($currentExpiration->isPast()) {
-            $newExpirationDate = Carbon::now()->addMonths($monthsToAdd);
-        } else {
-            $newExpirationDate = $currentExpiration->addMonths($monthsToAdd);
-        }
-
-        // Attention : On NE MODIFIE PAS la date_souscription pour garder l'ancienneté du client.
+        // Mise à jour de la souscription
+        $subscription->date_souscription = $today->toDateString();
         $subscription->date_expiration = $newExpirationDate->toDateString();
-        $subscription->is_active = true;
+        $subscription->is_active = true; 
         $subscription->save();
 
         // --- GESTION INTELLIGENTE : HISTORISATION ---
+        // Attention : S'il clique 3 fois le même jour, cela créera 3 lignes d'historique identiques.
         SubscribeHistory::create([
             'subs_id' => $subscription->id,
             'old_price' => $subscription->price,
-            'new_price' => $subscription->price, // Le prix reste le même pour un simple renouvellement
+            'new_price' => $subscription->price, 
             'old_number_of_agencies' => $subscription->nombre_agence,
             'new_number_of_agencies' => $subscription->nombre_agence,
             'licence_name_at_time' => $subscription->licence->name,
             'action_type' => 'renouvellement'
         ]);
 
-        // Note avec Inertia : Il vaut mieux retourner un message de succès et laisser
-        // l'utilisateur cliquer sur un bouton "Télécharger la facture" séparément.
-        return back()->with("success", "Abonnement renouvelé jusqu'au " . $newExpirationDate->format('d/m/Y'));
+        return back()->with(
+            "success", 
+            "Abonnement renouvelé ! Valide du " . $today->format('d/m/Y') . " au " . $newExpirationDate->format('d/m/Y')
+        );
     }
-
     /**
      * 5. DÉSACTIVER / ANNULER UNE SOUSCRIPTION
      */
